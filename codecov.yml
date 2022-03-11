@@ -1,6 +1,5 @@
 ignore:
   - "test"
-
 fixes:
-  - "before/::"        # reduce root e.g., "before/path/" => "path/"
+  - "/home/runner/work/torch_june/torch_june/::"
 
