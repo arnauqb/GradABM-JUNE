@@ -51,10 +51,11 @@ class TestModel:
         assert len(daily_cases) == 10
 
         loss_fn = torch.nn.MSELoss()
-        random_cases = 1e7 * torch.ones(10)
+        random_cases = 1e7 * torch.ones(10, dtype=torch.float64)
         loss = loss_fn(daily_cases, random_cases)
         loss.backward()
-        parameters = [p for p in model.parameters()]
-        for p in parameters:
-            assert p.grad is not None
-            assert p.grad > 0
+        parameters = [p for p in model.parameters()][0]
+        gradient = parameters.grad
+        for v in gradient:
+            assert v is not None
+            assert v != 0
