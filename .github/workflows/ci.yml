@@ -41,4 +41,5 @@ jobs:
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         verbose: true
+        file: "../coverage.xml"
 
