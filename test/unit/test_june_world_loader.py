@@ -3,11 +3,29 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from torch_june.june_world_loader import (
+    AgentDataLoader,
     HouseholdNetworkLoader,
     CompanyNetworkLoader,
     SchoolNetworkLoader,
     GraphLoader,
 )
+
+
+class TestLoadAgentData:
+    @fixture(name="agent_data_loader")
+    def make_agent_loader(self, june_world_path):
+        return AgentDataLoader(june_world_path)
+
+    def test__agent_properties(self, agent_data_loader):
+        data = HeteroData()
+        agent_data_loader.load_agent_data(data)
+        assert len(data["agent"]["id"]) == 6640
+        assert len(data["agent"]["age"]) == 6640
+        assert len(data["agent"]["sex"]) == 6640
+        assert data["agent"]["age"][1234] == 24
+        assert data["agent"]["sex"][1234] == "m"
+        assert data["agent"]["age"][2234] == 47
+        assert data["agent"]["sex"][2234] == "f"
 
 
 class TestHouseholdNetwork:

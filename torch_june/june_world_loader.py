@@ -3,6 +3,18 @@ import h5py
 import torch
 
 
+class AgentDataLoader:
+    def __init__(self, june_world_path):
+        self.june_world_path = june_world_path
+
+    def load_agent_data(self, data):
+        with h5py.File(self.june_world_path, "r") as f:
+            population = f["population"]
+            data["agent"].id = population["id"][:]
+            data["agent"].age = population["age"][:]
+            data["agent"].sex = population["sex"][:].astype(str)
+
+
 class NetworkLoader:
     spec = None
     plural = None
