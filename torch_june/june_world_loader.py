@@ -2,11 +2,13 @@ from collections import defaultdict
 import h5py
 import torch
 
+
 class NetworkLoader:
     spec = None
     plural = None
+
     def __init__(self, june_world_path):
-        self.june_world_path = june_world_path 
+        self.june_world_path = june_world_path
 
     def _get_people_per_group(self):
         ret = defaultdict(lambda: [])
@@ -37,9 +39,11 @@ class NetworkLoader:
             (torch.tensor(adjlist_i), torch.tensor(adjlist_j))
         )
 
+
 class HouseholdNetworkLoader(NetworkLoader):
     spec = "household"
     plural = "households"
+
     def _get_people_per_group(self):
         ret = defaultdict(lambda: [])
         with h5py.File(self.june_world_path, "r") as f:
@@ -48,10 +52,26 @@ class HouseholdNetworkLoader(NetworkLoader):
                 ret[group_id].append(i)
         return ret
 
+
 class CompanyNetworkLoader(NetworkLoader):
     spec = "company"
     plural = "companies"
 
+
 class SchoolNetworkLoader(NetworkLoader):
     spec = "school"
     plural = "schools"
+
+
+class GraphLoader:
+    def __init__(self, june_world_path):
+        self.june_world_path = june_world_path
+
+    def load_graph(self, data):
+        for network_loader_class in [
+            HouseholdNetworkLoader,
+            CompanyNetworkLoader,
+            SchoolNetworkLoader,
+        ]:
+            network_loader = network_loader_class(self.june_world_path)
+            network_loader.load_network(data)

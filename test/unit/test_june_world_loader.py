@@ -6,6 +6,7 @@ from torch_june.june_world_loader import (
     HouseholdNetworkLoader,
     CompanyNetworkLoader,
     SchoolNetworkLoader,
+    GraphLoader,
 )
 
 
@@ -65,3 +66,19 @@ class TestSchoolNetwork:
         school_loader.load_network(data)
         assert len(data["school"]["id"]) == 2
         assert len(data["attends_school"]["edge_index"][0]) == 1620
+
+
+class TestLoadGraph:
+    @fixture(name="graph_loader")
+    def make_graph_loader(self, june_world_path):
+        return GraphLoader(june_world_path)
+
+    def test__graph_loader(self, graph_loader):
+        data = HeteroData()
+        graph_loader.load_graph(data)
+        assert len(data["household"]["id"]) == 2367
+        assert len(data["school"]["id"]) == 2
+        assert len(data["company"]["id"]) == 130
+        assert len(data["attends_company"]["edge_index"][0]) == 2871
+        assert len(data["attends_school"]["edge_index"][0]) == 1620
+        assert len(data["attends_household"]["edge_index"][0]) == 6640
