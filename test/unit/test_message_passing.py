@@ -14,7 +14,7 @@ class TestInfectionPassing:
         data = HeteroData()
         data["agent"].id = torch.arange(6)
         data["agent"].transmission = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-        data["agent"].susceptibility = torch.tensor([1, 2, 3, 4, 5, 6.0])
+        data["agent"].susceptibility = torch.tensor([1, 2, 3, 0.5, 0.7, 1.0])
 
         data["school"].id = torch.arange(2)
         data["school"].beta = 2.0 * torch.ones(2)
@@ -32,5 +32,29 @@ class TestInfectionPassing:
         infection_probabilities = inf_pass(
             data, edge_types=("attends_school",)
         )["attends_school"]
-        expected = 1.0 - torch.exp(-torch.tensor([1.2, 2.4, 3.6, 12, 15, 18]))
-        assert (infection_probabilities == expected).all()
+        expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
+        print(infection_probabilities)
+        print(expected)
+        assert np.allclose(infection_probabilities.numpy(), expected)
+
+    def test__sample_infected(self):
+        inf_pass = InfectionPassing()
+        probs = torch.tensor([0.3])
+        n = 1000
+        ret = 0
+        for _ in range(n): 
+            ret += inf_pass.sample_infected(probs)
+        ret = ret / n
+        assert np.isclose(ret, 0.3, rtol=5e-2)
+
+        probs = torch.tensor([0.2, 0.5, 0.7, 0.3])
+        n = 1000
+        ret = torch.zeros(4)
+        for _ in range(n): 
+            ret += inf_pass.sample_infected(probs)
+
+        ret = ret / n
+        assert np.allclose(ret, probs, rtol=1e-1)
+
+
+

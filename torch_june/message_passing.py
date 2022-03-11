@@ -1,5 +1,7 @@
 import torch
 from torch_geometric.nn.conv import MessagePassing
+from torch.nn.functional import gumbel_softmax
+
 
 
 class InfectionPassing(MessagePassing):
@@ -19,9 +21,19 @@ class InfectionPassing(MessagePassing):
             trans_susc = self.propagate(
                 rev_edge_index, x=transmissions, y=data["agent"].susceptibility
             )
-            probabilities = 1.0 - torch.exp(-trans_susc)
+            probabilities = torch.exp(-trans_susc)
             ret[edge_type] = probabilities
         return ret
 
     def message(self, x_j, y_i):
         return x_j * y_i
+
+    def sample_infected(self, infected_probs):
+        no_infected_probs = 1.0 - infected_probs
+        probs = torch.vstack((infected_probs, no_infected_probs))
+        logits = torch.log(probs)
+        is_infected = gumbel_softmax(logits, tau=1, hard=True, dim=-2)
+        return is_infected[0,:]
+
+
+
