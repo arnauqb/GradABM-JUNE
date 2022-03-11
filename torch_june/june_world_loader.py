@@ -1,3 +1,4 @@
+import torch_geometric.transforms as T
 from collections import defaultdict
 import h5py
 import torch
@@ -87,3 +88,7 @@ class GraphLoader:
         ]:
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
+        data = T.ToUndirected()(data)
+        return data
+
+

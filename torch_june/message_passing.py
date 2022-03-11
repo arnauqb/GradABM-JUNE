@@ -3,13 +3,11 @@ from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
 
 
-
 class InfectionPassing(MessagePassing):
     def __init__(self):
         super().__init__(aggr="add", node_dim=-1)
 
     def forward(self, data, edge_types):
-        n_agents = len(data["agent"]["id"])
         ret = {}
         for edge_type in edge_types:
             edge_index = data[edge_type].edge_index
@@ -33,7 +31,4 @@ class InfectionPassing(MessagePassing):
         probs = torch.vstack((infected_probs, no_infected_probs))
         logits = torch.log(probs)
         is_infected = gumbel_softmax(logits, tau=1, hard=True, dim=-2)
-        return is_infected[0,:]
-
-
-
+        return is_infected[0, :]

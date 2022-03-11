@@ -29,9 +29,9 @@ class TestInfectionPassing:
 
     def test__infection_passing(self, data):
         inf_pass = InfectionPassing()
-        infection_probabilities = inf_pass(
-            data, edge_types=("attends_school",)
-        )["attends_school"]
+        infection_probabilities = inf_pass(data, edge_types=("attends_school",))[
+            "attends_school"
+        ]
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
         print(infection_probabilities)
         print(expected)
@@ -42,7 +42,7 @@ class TestInfectionPassing:
         probs = torch.tensor([0.3])
         n = 1000
         ret = 0
-        for _ in range(n): 
+        for _ in range(n):
             ret += inf_pass.sample_infected(probs)
         ret = ret / n
         assert np.isclose(ret, 0.3, rtol=5e-2)
@@ -50,11 +50,8 @@ class TestInfectionPassing:
         probs = torch.tensor([0.2, 0.5, 0.7, 0.3])
         n = 1000
         ret = torch.zeros(4)
-        for _ in range(n): 
+        for _ in range(n):
             ret += inf_pass.sample_infected(probs)
 
         ret = ret / n
         assert np.allclose(ret, probs, rtol=1e-1)
-
-
-

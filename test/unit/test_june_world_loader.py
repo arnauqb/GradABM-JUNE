@@ -93,10 +93,13 @@ class TestLoadGraph:
 
     def test__graph_loader(self, graph_loader):
         data = HeteroData()
-        graph_loader.load_graph(data)
+        data = graph_loader.load_graph(data)
         assert len(data["household"]["id"]) == 2367
         assert len(data["school"]["id"]) == 2
         assert len(data["company"]["id"]) == 130
         assert len(data["attends_company"]["edge_index"][0]) == 2871
+        assert len(data["rev_attends_company"]["edge_index"][0]) == 2871
         assert len(data["attends_school"]["edge_index"][0]) == 1620
+        assert len(data["rev_attends_school"]["edge_index"][0]) == 1620
         assert len(data["attends_household"]["edge_index"][0]) == 6640
+        assert len(data["rev_attends_household"]["edge_index"][0]) == 6640
