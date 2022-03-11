@@ -36,10 +36,11 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+        ls
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         verbose: true
-        file: "../coverage.xml"
+        file: "/home/runner/work/torch_june/coverage.xml"
 
