@@ -2,7 +2,7 @@ from pytest import fixture
 import numpy as np
 import torch
 
-from torch_june import TorchJune, GraphLoader, AgentDataLoader
+from torch_june import TorchJune, GraphLoader, AgentDataLoader, Timer
 from torch_geometric.data import HeteroData
 
 
@@ -16,7 +16,7 @@ class TestModel:
 
     @fixture(name="model")
     def make_model(self, june_world_path, data):
-        betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure" : 1.0}
+        betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure": 1.0}
         model = TorchJune(data=data, betas=betas)
         return model
 
@@ -30,19 +30,49 @@ class TestModel:
             susc, requires_grad=True
         )
 
-    def test__get_edge_types(self, data):
-        betas = {"company": 1.0, "school": 2.0, "household": 3.0}
-        model = TorchJune(data=data, betas=betas)
-        assert set(model.edge_types) == set(
+    @fixture(name="timer")
+    def make_timer(self):
+        timer = Timer(
+            initial_day="2022-03-18",
+            total_days=2,
+            weekday_step_duration=(8, 8, 8),
+            weekend_step_duration=(
+                12,
+                12,
+            ),
+            weekday_activities=(
+                ("company", "school"),
+                ("leisure",),
+                ("household",),
+            ),
+            weekend_activities=(("leisure",), ("household",)),
+        )
+        return timer
+
+    def test__get_edge_types_from_timer(self, model, timer):
+        assert set(model._get_edge_types_from_timer(timer)) == set(
             [
                 "attends_company",
                 "attends_school",
-                "attends_household",
-                "attends_leisure",
             ]
         )
-        model = TorchJune(data=data, betas=betas, edge_types=("attends_household",))
-        assert set(model.edge_types) == set(["attends_household"])
+        next(timer)
+        assert model._get_edge_types_from_timer(timer) == [
+            "attends_leisure",
+        ]
+        next(timer)
+        assert model._get_edge_types_from_timer(timer) == [
+            "attends_household",
+        ]
+        next(timer)
+        assert timer.is_weekend
+        assert model._get_edge_types_from_timer(timer) == [
+            "attends_leisure",
+        ]
+        next(timer)
+        assert model._get_edge_types_from_timer(timer) == [
+            "attends_household",
+        ]
 
     def test__parameters(self, model):
         parameters = list(model.parameters())[0].data
@@ -52,29 +82,28 @@ class TestModel:
         assert parameters[2].data == 3.0
         assert parameters[3].data == 1.0
 
-    def test__run_model(self, model, trans_susc):
+    def test__run_model(self, model, trans_susc, timer):
         trans, susc = trans_susc
-        n_timesteps = 10
         results = model(
-            n_timesteps=n_timesteps, transmissions=trans, susceptibilities=susc
+            timer=timer, transmissions=trans, susceptibilities=susc
         )
-        assert results.shape == (10, 6640)
+        assert results.shape == (5, 6640)
 
-    def test__model_gradient(self, model, trans_susc):
+    def test__model_gradient(self, model, trans_susc, timer):
         trans, susc = trans_susc
-        n_timesteps = 10
         results = model(
-            n_timesteps=n_timesteps, transmissions=trans, susceptibilities=susc
+            timer=timer, transmissions=trans, susceptibilities=susc
         )
         daily_cases = torch.sum(results, dim=1)
-        assert len(daily_cases) == 10
+        assert len(daily_cases) == 5
 
         loss_fn = torch.nn.MSELoss()
-        random_cases = 1e7 * torch.ones(10, dtype=torch.float64)
+        random_cases = 1e7 * torch.ones(5, dtype=torch.float64)
         loss = loss_fn(daily_cases, random_cases)
         loss.backward()
         parameters = [p for p in model.parameters()][0]
         gradient = parameters.grad
+        print(gradient)
         for v in gradient:
             assert v is not None
-            assert v != 0
+        assert sum(gradient) != 0.0

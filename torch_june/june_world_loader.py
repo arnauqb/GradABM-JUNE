@@ -143,6 +143,7 @@ class LeisureNetworkLoader:
             ret = torch.hstack((ret, edges))
         data["agent", f"attends_leisure", "leisure"].edge_index = ret
 
+
 class GraphLoader:
     def __init__(self, june_world_path):
         self.june_world_path = june_world_path

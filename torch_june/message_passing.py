@@ -9,7 +9,9 @@ class InfectionPassing(MessagePassing):
         super().__init__(aggr="add", node_dim=-1)
         self.device = device
 
-    def forward(self, data, edge_types, betas, transmissions, susceptibilities):
+    def forward(
+        self, data, edge_types, betas, transmissions, susceptibilities, delta_time
+    ):
         trans_susc = torch.zeros(
             len(data["agent"].id), device=self.device, requires_grad=True
         )
@@ -29,7 +31,7 @@ class InfectionPassing(MessagePassing):
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-        return torch.exp(-trans_susc)
+        return torch.exp(-trans_susc * delta_time)
 
     def message(self, x_j, y_i):
         return x_j * y_i
