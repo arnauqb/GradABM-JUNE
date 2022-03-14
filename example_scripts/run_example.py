@@ -14,16 +14,18 @@ from torch_june.utils import generate_erdos_renyi
 from torch.distributions import Normal, LogNormal
 from time import time
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 
 
 betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure": 1.0}
 
-data = HeteroData()
-data = GraphLoader(june_world_path).load_graph(data)
-AgentDataLoader(june_world_path).load_agent_data(data)
-#with open(sys.argv[1], "rb") as f:
-#    data = pickle.load(f)
+#june_world_path = "/cosma7/data/dp004/dc-quer1/JUNE
+#june_world_path = "/cosma/home/dp004/dc-quer1/june/JUNE/example_scripts/tests.hdf5"
+#data = HeteroData()
+#data = GraphLoader(june_world_path).load_graph(data)
+#AgentDataLoader(june_world_path).load_agent_data(data)
+with open(sys.argv[1], "rb") as f:
+    data = pickle.load(f)
 
 max_infectiousness = LogNormal(0, 0.5)  # * 1.7
 shape = Normal(1.56, 0.08)

@@ -1,4 +1,5 @@
 from torch.nn.parameter import Parameter
+import time
 import torch
 
 from torch_june import InfectionPassing
