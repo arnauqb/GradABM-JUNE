@@ -42,8 +42,6 @@ class TorchJune(torch.nn.Module):
                 ret = new_infected
             else:
                 ret = torch.vstack((ret, new_infected))
-            print(timer.activities)
-            print(sum(new_infected))
             next(timer)
             susceptibilities = susceptibilities - new_infected
 

@@ -17,17 +17,17 @@ class InfectionSampler:
 
 
 class Infections:
-    def __init__(self, parameters, initial_infected=None):
-        self.max_infectiousness, self.shape, self.rate, self.shift = parameters
+    def __init__(self, parameters, initial_infected=None, device="cpu"):
+        self.max_infectiousness, self.shape, self.rate, self.shift = parameters.to(device)
         if initial_infected is None:
             initial_infected = torch.zeros(
                 len(self.max_infectiousness), requires_grad=True
             )
-        self.is_infected = initial_infected
+        self.is_infected = initial_infected.to(device)
         self.infection_times = (
             -1.0 * torch.ones(len(self.max_infectiousness), requires_grad=True)
             + initial_infected
-        )
+        ).to(device)
 
     def update(self, new_infected, infection_time):
         self.is_infected = self.is_infected + new_infected
