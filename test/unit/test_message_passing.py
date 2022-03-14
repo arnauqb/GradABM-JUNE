@@ -34,6 +34,7 @@ class TestInfectionPassing:
             betas={"school": 2.0},
             transmissions=data["agent"].transmission,
             susceptibilities=data["agent"].susceptibility,
+            delta_time = 1.0
         )
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
