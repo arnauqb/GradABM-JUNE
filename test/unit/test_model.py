@@ -7,12 +7,16 @@ from torch_geometric.data import HeteroData
 
 
 class TestModel:
-    @fixture(name="model")
-    def make_model(self, june_world_path):
-        betas = {"company": 1.0, "school": 2.0, "household": 3.0}
+    @fixture(name="data")
+    def make_data(self, june_world_path):
         data = HeteroData()
         data = GraphLoader(june_world_path).load_graph(data)
         AgentDataLoader(june_world_path).load_agent_data(data)
+        return data
+
+    @fixture(name="model")
+    def make_model(self, june_world_path, data):
+        betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure" : 1.0}
         model = TorchJune(data=data, betas=betas)
         return model
 
@@ -26,12 +30,27 @@ class TestModel:
             susc, requires_grad=True
         )
 
+    def test__get_edge_types(self, data):
+        betas = {"company": 1.0, "school": 2.0, "household": 3.0}
+        model = TorchJune(data=data, betas=betas)
+        assert set(model.edge_types) == set(
+            [
+                "attends_company",
+                "attends_school",
+                "attends_household",
+                "attends_leisure",
+            ]
+        )
+        model = TorchJune(data=data, betas=betas, edge_types=("attends_household",))
+        assert set(model.edge_types) == set(["attends_household"])
+
     def test__parameters(self, model):
         parameters = list(model.parameters())[0].data
-        assert len(parameters) == 3
+        assert len(parameters) == 4
         assert parameters[0].data == 1.0
         assert parameters[1].data == 2.0
         assert parameters[2].data == 3.0
+        assert parameters[3].data == 1.0
 
     def test__run_model(self, model, trans_susc):
         trans, susc = trans_susc

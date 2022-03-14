@@ -89,56 +89,91 @@ class TestSchoolNetwork:
 
 class TestLeisureNetwork:
     @fixture(name="leisure_loader")
-    def make_leisure_loader(self, june_world_path):
-        return LeisureNetworkLoader(june_world_path, specs=("pub", "gym"))
+    def make_leisure_loader(self, june_world_path_only_people):
+        return LeisureNetworkLoader(june_world_path_only_people)
 
-    def test__get_people_per_area(self, leisure_loader):
-        people_per_area = leisure_loader._get_people_per_area()
-        assert len(people_per_area[0]) == 425
-        assert 60 in people_per_area[0]
-        assert len(people_per_area[6]) == 322
-        assert 2808 in people_per_area[8]
+    def test__get_people_per_super_area(self, leisure_loader):
+        ret = leisure_loader._get_people_per_super_area()
+        assert len(ret[0]) == 8483
+        assert 6103 in ret[0]
+        assert len(ret[2]) == 6640
+        assert 15780 in ret[2]
 
+    def test__generate_super_area_nearest_neighbor(self, leisure_loader):
+        closest_sas = leisure_loader._get_closest_super_areas(0, k=3)
+        assert (closest_sas == [0, 3, 1]).all()
+        closest_sas = leisure_loader._get_closest_super_areas(1, k=3)
+        assert (closest_sas == [1, 3, 0]).all()
+        closest_sas = leisure_loader._get_closest_super_areas(2, k=3)
+        assert (closest_sas == [2, 0, 1]).all()
+        closest_sas = leisure_loader._get_closest_super_areas(3, k=3)
+        assert (closest_sas == [3, 1, 0]).all()
 
-    def test__get_area_of_venues_per_spec(self, leisure_loader):
-        ret = leisure_loader._get_area_of_venues_per_spec()
-        assert len(ret["pub"]) == 5043
-        assert len(ret["gym"]) == 488
-        assert ret["pub"][50] == 12
-        assert ret["pub"][30] == 7
-        assert ret["gym"][3] == 3
-        assert ret["gym"][10] == 2
-
-    def test__get_nearby_venues_per_area_per_spec(self, leisure_loader):
-        ret = leisure_loader._get_nearby_venues_per_area_per_spec()
-        for spec in ret:
-            for area in ret[spec]:
-                assert len(ret[spec][area]) == 7
-        assert set(ret["pub"][5]) == set([2982, 1808, 4944, 2202, 3582, 2173, 2206])
-        assert set(ret["gym"][4]) == set([220, 123, 208, 38, 95, 473, 51])
-
-    def test__get_people_per_area_per_social_spec(self, leisure_loader):
-        ret = leisure_loader._get_people_per_area_per_social_spec()
-        assert len(ret[2]["pub"]) == 625
-        assert 1132 in ret[2]["pub"]
-        assert 1756 in ret[2]["pub"]
-        assert len(ret[4]["pub"]) == 0
-        assert len(ret[0]["pub"]) == 0
-        assert len(ret[1]["pub"]) == 7906
-        assert 574 in ret[1]["pub"]
-        assert len(ret[0]["gym"]) == 435
-        assert 6205 in ret[0]["gym"]
-        assert 6639 in ret[0]["gym"]
-        assert len(ret[1]["gym"]) == 9891
-        assert 1082 in ret[1]["gym"]
+    def test__get_close_people_per_super_area(self, leisure_loader):
+        close_people_per_sa = leisure_loader._get_close_people_per_super_area(k=3)
+        assert len(close_people_per_sa[0]) == 22164
+        assert 7456 in close_people_per_sa[0]
+        assert len(close_people_per_sa[2]) == 22417
+        assert 16776 in close_people_per_sa[2]
 
     def test__load_leisure_network(self, leisure_loader):
         data = HeteroData()
         leisure_loader.load_network(data)
-        assert len(data["pub"]["id"]) == 9 
-        assert len(data["gym"]["id"]) == 10 # one gym per area
-        assert len(data["attends_gym"]["edge_index"][0]) > 6640 # people can attend to more than one area.
-        assert len(data["attends_pub"]["edge_index"][0]) > 6640
+        assert len(data["attends_leisure"]["edge_index"][0]) > 28804
+
+
+# class TestLeisureNetwork:
+#    @fixture(name="leisure_loader")
+#    def make_leisure_loader(self, june_world_path):
+#        return LeisureNetworkLoader(june_world_path, specs=("pub", "gym"))
+#
+#    def test__get_people_per_area(self, leisure_loader):
+#        people_per_area = leisure_loader._get_people_per_area()
+#        assert len(people_per_area[0]) == 425
+#        assert 60 in people_per_area[0]
+#        assert len(people_per_area[6]) == 322
+#        assert 2808 in people_per_area[8]
+#
+#
+#    def test__get_area_of_venues_per_spec(self, leisure_loader):
+#        ret = leisure_loader._get_area_of_venues_per_spec()
+#        assert len(ret["pub"]) == 5043
+#        assert len(ret["gym"]) == 488
+#        assert ret["pub"][50] == 12
+#        assert ret["pub"][30] == 7
+#        assert ret["gym"][3] == 3
+#        assert ret["gym"][10] == 2
+#
+#    def test__get_nearby_venues_per_area_per_spec(self, leisure_loader):
+#        ret = leisure_loader._get_nearby_venues_per_area_per_spec()
+#        for spec in ret:
+#            for area in ret[spec]:
+#                assert len(ret[spec][area]) == 7
+#        assert set(ret["pub"][5]) == set([2982, 1808, 4944, 2202, 3582, 2173, 2206])
+#        assert set(ret["gym"][4]) == set([220, 123, 208, 38, 95, 473, 51])
+#
+#    def test__get_people_per_area_per_social_spec(self, leisure_loader):
+#        ret = leisure_loader._get_people_per_area_per_social_spec()
+#        assert len(ret[2]["pub"]) == 625
+#        assert 1132 in ret[2]["pub"]
+#        assert 1756 in ret[2]["pub"]
+#        assert len(ret[4]["pub"]) == 0
+#        assert len(ret[0]["pub"]) == 0
+#        assert len(ret[1]["pub"]) == 7906
+#        assert 574 in ret[1]["pub"]
+#        assert len(ret[0]["gym"]) == 435
+#        assert 6205 in ret[0]["gym"]
+#        assert 6639 in ret[0]["gym"]
+#        assert len(ret[1]["gym"]) == 9891
+#        assert 1082 in ret[1]["gym"]
+#
+#    def test__load_leisure_network(self, leisure_loader):
+#        data = HeteroData()
+#        leisure_loader.load_network(data)
+#        assert len(data["pub"]["id"]) == 9
+#        assert len(data["gym"]["id"]) == 10 # one gym per area
+#        assert len(data["attends_gym"]["edge_index"][0]) > 6640 # people can attend to more than one area.
+#        assert len(data["attends_pub"]["edge_index"][0]) > 6640
 
 
 class TestLoadGraph:
@@ -158,5 +193,5 @@ class TestLoadGraph:
         assert len(data["rev_attends_school"]["edge_index"][0]) == 1620
         assert len(data["attends_household"]["edge_index"][0]) == 6640
         assert len(data["rev_attends_household"]["edge_index"][0]) == 6640
-        assert len(data["attends_gym"]["edge_index"][0]) > 6640
-        assert len(data["rev_attends_gym"]["edge_index"][0]) > 6640 
+        assert len(data["attends_leisure"]["edge_index"][0]) > 6640
+        assert len(data["rev_attends_leisure"]["edge_index"][0]) > 6640
