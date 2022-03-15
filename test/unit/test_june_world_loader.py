@@ -47,6 +47,9 @@ class TestHouseholdNetwork:
         assert (
             len(data["attends_household"]["edge_index"][0]) == 6640
         )  # everyone has a household
+        assert data["household"]["people"][10] == 3
+        assert data["household"]["people"][50] == 2
+        assert data["household"]["people"][125] == 3
 
 
 class TestCompanyNetwork:
@@ -64,6 +67,8 @@ class TestCompanyNetwork:
         company_loader.load_network(data)
         assert len(data["company"]["id"]) == 130
         assert len(data["attends_company"]["edge_index"][0]) == 2871
+        assert data["company"]["people"][69] == 3
+        assert data["company"]["people"][33] == 6
 
 
 class TestSchoolNetwork:
@@ -85,12 +90,14 @@ class TestSchoolNetwork:
         school_loader.load_network(data)
         assert len(data["school"]["id"]) == 2
         assert len(data["attends_school"]["edge_index"][0]) == 1620
+        assert data["school"]["people"][0] == 1055
+        assert data["school"]["people"][1] == 565
 
 
 class TestLeisureNetwork:
     @fixture(name="leisure_loader")
     def make_leisure_loader(self, june_world_path_only_people):
-        return LeisureNetworkLoader(june_world_path_only_people)
+        return LeisureNetworkLoader(june_world_path_only_people, k=3)
 
     def test__get_people_per_super_area(self, leisure_loader):
         ret = leisure_loader._get_people_per_super_area()
@@ -120,12 +127,15 @@ class TestLeisureNetwork:
         data = HeteroData()
         leisure_loader.load_network(data)
         assert len(data["attends_leisure"]["edge_index"][0]) > (6640 + 8483)
+        assert len(data["leisure"]["id"]) == 4
+        assert data["leisure"]["people"][0] == 22164
+        assert data["leisure"]["people"][2] == 22417
 
 
 class TestLoadGraph:
     @fixture(name="graph_loader")
     def make_graph_loader(self, june_world_path):
-        return GraphLoader(june_world_path)
+        return GraphLoader(june_world_path, k_leisure=1)
 
     def test__graph_loader(self, graph_loader):
         data = HeteroData()

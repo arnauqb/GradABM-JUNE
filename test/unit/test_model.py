@@ -11,7 +11,7 @@ class TestModel:
     @fixture(name="data")
     def make_data(self, june_world_path):
         data = HeteroData()
-        data = GraphLoader(june_world_path).load_graph(data)
+        data = GraphLoader(june_world_path, k_leisure=1).load_graph(data)
         AgentDataLoader(june_world_path).load_agent_data(data)
         return data
 
@@ -105,7 +105,6 @@ class TestModel:
         loss.backward()
         parameters = [p for p in model.parameters()][0]
         gradient = parameters.grad
-        print(gradient)
         for v in gradient:
             assert v is not None
         assert sum(gradient) != 0.0

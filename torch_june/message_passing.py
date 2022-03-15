@@ -12,20 +12,19 @@ class InfectionPassing(MessagePassing):
     def forward(
         self, data, edge_types, betas, transmissions, susceptibilities, delta_time
     ):
-        trans_susc = torch.zeros(
-            len(data["agent"].id), device=self.device#, requires_grad=True
-        )
+        n_agents = len(data["agent"]["id"])
+        trans_susc = torch.zeros(n_agents, device=self.device)
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            if edge_type == "attends_leisure":
-                beta = betas[group_name] * torch.ones(
-                    len(data["agent"]["id"]), device=self.device#, requires_grad=True
-                )
-            else:
-                beta = betas[group_name] * torch.ones(
-                    len(data[group_name]["id"]), device=self.device#, requires_grad=True
-                )
+            beta = betas[group_name] * torch.ones(
+                len(data[group_name]["id"]), device=self.device
+            )
+            people_per_group = data[group_name]["people"]
+            p_contact = torch.minimum(
+                5.0 / people_per_group, torch.tensor(1.0)
+            )  # assumes constant n of contacts, change this in the future
+            beta = beta * p_contact
             cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index
             trans_susc = trans_susc + self.propagate(
@@ -36,9 +35,9 @@ class InfectionPassing(MessagePassing):
     def message(self, x_j, y_i):
         return x_j * y_i
 
-    def sample_infected(self, infected_probs):
-        no_infected_probs = 1.0 - infected_probs
-        probs = torch.vstack((infected_probs, no_infected_probs))
+    def sample_infected(self, not_infected_probs):
+        infected_probs = 1.0 - not_infected_probs
+        probs = torch.vstack((infected_probs, not_infected_probs))
         logits = torch.log(probs + 1e-15)
         is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
-        return is_infected[1, :]
+        return is_infected[0, :]

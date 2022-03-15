@@ -27,7 +27,6 @@ class TorchJune(torch.nn.Module):
             for beta_n in self._betas_to_idcs.keys()
         }
         while timer.date < timer.final_date:
-            print(timer.now)
             transmissions = self.infections.get_transmissions(time=timer.now)
             infection_probs = self.inf_network(
                 data=self.data,

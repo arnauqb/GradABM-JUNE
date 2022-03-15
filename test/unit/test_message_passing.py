@@ -17,6 +17,7 @@ class TestInfectionPassing:
         data["agent"].susceptibility = torch.tensor([1, 2, 3, 0.5, 0.7, 1.0])
 
         data["school"].id = torch.arange(2)
+        data["school"].people = torch.tensor([2,2])
 
         edges_1 = torch.arange(6)
         edges_2 = torch.tensor([0, 0, 0, 1, 1, 1])

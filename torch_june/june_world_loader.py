@@ -53,6 +53,9 @@ class NetworkLoader:
                 adjlist_i.append(person)
                 adjlist_j.append(group_id)
         data[self.spec].id = self._get_group_ids()
+        data[self.spec].people = torch.tensor(
+            [len(people_per_group[i]) for i in data[self.spec].id]
+        )
         data["agent", f"attends_{self.spec}", self.spec].edge_index = torch.vstack(
             (torch.tensor(adjlist_i), torch.tensor(adjlist_j))
         )
@@ -146,21 +149,28 @@ class LeisureNetworkLoader:
             )
             ret = torch.hstack((ret, edges))
         data["agent", f"attends_leisure", "leisure"].edge_index = ret
+        data["leisure"].id = torch.tensor(list(close_people_per_super_area.keys()))
+        data["leisure"].people = torch.tensor(
+            [len(close_people_per_super_area[sa]) for sa in close_people_per_super_area]
+        )
 
 
 class GraphLoader:
-    def __init__(self, june_world_path):
+    def __init__(self, june_world_path, k_leisure=3):
         self.june_world_path = june_world_path
+        self.k_leisure = k_leisure
 
     def load_graph(self, data):
         for network_loader_class in [
             HouseholdNetworkLoader,
             CompanyNetworkLoader,
             SchoolNetworkLoader,
-            LeisureNetworkLoader,
         ]:
             print(f"Loading {network_loader_class}...")
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
+        print(f"Loading leisure ...")
+        leisure_loader = LeisureNetworkLoader(self.june_world_path, k=self.k_leisure)
+        leisure_loader.load_network(data)
         data = T.ToUndirected()(data)
         return data
