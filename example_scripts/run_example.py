@@ -29,10 +29,10 @@ def process_infected(infected, timer):
 
 
 #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = "cuda:8"
+device = "cpu"
 
 
-betas = {"company": 0.5, "school": 0.5, "household": 0.5, "leisure": 0.5}
+betas = {"company": 0.4, "school": 0.6, "household": 0.1, "leisure": 0.5}
 
 with open(sys.argv[1], "rb") as f:
     data = pickle.load(f)
@@ -46,19 +46,19 @@ sampler = InfectionSampler(max_infectiousness, shape, rate, shift)
 
 initial_infected = np.zeros(len(data["agent"]["id"]))
 initial_infected[np.random.randint(0, len(initial_infected), size=100)] = 1
+susc = np.ones(len(data["agent"]["id"]))
+susc[initial_infected.astype(int)] = 0.0
+susc = torch.tensor(susc).to(device)
 initial_infected = torch.tensor(initial_infected)
 infections = Infections(
     sampler(len(data["agent"]["id"])), initial_infected=initial_infected, device=device
 )
 model = TorchJune(data=data, betas=betas, infections=infections, device=device)
 
-susc = np.ones(len(data["agent"]["id"]))
-susc[0] = 0.0
-susc = torch.tensor(susc).to(device)
 
 timer = Timer(
     initial_day="2022-03-18",
-    total_days=15,
+    total_days=30,
     weekday_step_duration=(8, 8, 8),
     weekend_step_duration=(
         12,
@@ -73,8 +73,8 @@ timer = Timer(
 )
 
 time1 = time()
-with torch.no_grad():
-    result = model(timer=timer, susceptibilities=susc)
+#with torch.no_grad():
+result = model(timer=timer, susceptibilities=susc)
 time2 = time()
 print(f"Took {time2-time1} seconds.")
 
