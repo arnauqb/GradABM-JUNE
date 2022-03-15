@@ -1,7 +1,6 @@
 import torch
 from torch_geometric.utils import to_undirected
 
-
 def generate_erdos_renyi(nodes, edge_prob):
     idx = torch.combinations(nodes, r=2)
     mask = torch.rand(idx.size(0)) < edge_prob

@@ -4,6 +4,7 @@ from collections import defaultdict
 import numpy as np
 import h5py
 import torch
+from tqdm import tqdm
 
 from sklearn.neighbors import BallTree
 
@@ -136,7 +137,7 @@ class LeisureNetworkLoader:
     def load_network(self, data):
         close_people_per_super_area = self._get_close_people_per_super_area(k=self.k)
         ret = torch.empty((2, 0), dtype=torch.long)
-        for super_area in close_people_per_super_area:
+        for super_area in tqdm(close_people_per_super_area):
             people = torch.tensor(close_people_per_super_area[super_area])
             p = 5 / len(people)
             edges = generate_erdos_renyi(nodes=people, edge_prob=p)
@@ -155,6 +156,7 @@ class GraphLoader:
             SchoolNetworkLoader,
             LeisureNetworkLoader,
         ]:
+            print(f"Loading {network_loader_class}...")
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
         data = T.ToUndirected()(data)
