@@ -4,6 +4,7 @@ from collections import defaultdict
 import numpy as np
 import h5py
 import torch
+from tqdm import tqdm
 
 from sklearn.neighbors import BallTree
 
@@ -158,6 +159,7 @@ class GraphLoader:
             SchoolNetworkLoader,
             LeisureNetworkLoader,
         ]:
+            print(f"Loading {network_loader_class}...")
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
         data = T.ToUndirected()(data)
