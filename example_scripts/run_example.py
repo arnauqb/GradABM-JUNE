@@ -4,6 +4,7 @@ import sys
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import random
 import pickle
 import h5py
@@ -14,17 +15,25 @@ from torch_june.utils import generate_erdos_renyi
 from torch.distributions import Normal, LogNormal
 from time import time
 
+def process_infected(infected, timer):
+    timer.reset()
+    dates = []
+    while timer.date < timer.final_date:
+        dates.append(timer.date)
+        next(timer)
+    s_infected = infected.sum(1).cpu()
+    df = pd.DataFrame(index=dates, data=s_infected, columns=["new_infected"])
+    df.index.name = "date"
+    df.index = pd.to_datetime(df.index)
+    return df.groupby(df.index.date).sum()
+
+
 #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = "cuda:0"
 
 
-betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure": 1.0}
+betas = {"company": 0.5, "school": 0.5, "household": 0.5, "leisure": 0.5}
 
-#june_world_path = "/cosma7/data/dp004/dc-quer1/JUNE
-#june_world_path = "/cosma/home/dp004/dc-quer1/june/JUNE/example_scripts/tests.hdf5"
-#data = HeteroData()
-#data = GraphLoader(june_world_path).load_graph(data)
-#AgentDataLoader(june_world_path).load_agent_data(data)
 with open(sys.argv[1], "rb") as f:
     data = pickle.load(f)
 
@@ -45,7 +54,7 @@ model = TorchJune(data=data, betas=betas, infections=infections, device=device)
 
 susc = np.ones(len(data["agent"]["id"]))
 susc[0] = 0.0
-susc = torch.tensor(susc, requires_grad=True).to(device)
+susc = torch.tensor(susc).to(device)
 
 timer = Timer(
     initial_day="2022-03-18",
@@ -68,3 +77,10 @@ with torch.no_grad():
     result = model(timer=timer, susceptibilities=susc)
 time2 = time()
 print(f"Took {time2-time1} seconds.")
+
+df = process_infected(infected=result, timer=timer)
+fig, ax = plt.subplots()
+df.plot(ax=ax, style="o-")
+fig.autofmt_xdate()
+fig.savefig("./results.pdf")
+plt.show()

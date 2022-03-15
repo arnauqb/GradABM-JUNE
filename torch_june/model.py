@@ -1,5 +1,4 @@
 from torch.nn.parameter import Parameter
-import time
 import torch
 
 from torch_june import InfectionPassing
@@ -22,7 +21,7 @@ class TorchJune(torch.nn.Module):
         return ret
 
     def forward(self, timer, susceptibilities):
-        ret = None #torch.empty(0)
+        ret = None  # torch.empty(0)
         betas = {
             beta_n: self.beta_parameters[self._betas_to_idcs[beta_n]]
             for beta_n in self._betas_to_idcs.keys()
@@ -41,9 +40,9 @@ class TorchJune(torch.nn.Module):
             new_infected = self.inf_network.sample_infected(infection_probs)
             self.infections.update(new_infected=new_infected, infection_time=timer.now)
             if ret is None:
-               ret = new_infected
+                ret = new_infected
             else:
-               ret = torch.vstack((ret, new_infected))
+                ret = torch.vstack((ret, new_infected))
             next(timer)
             susceptibilities = susceptibilities - new_infected
 
