@@ -1,5 +1,6 @@
 from torch.nn.parameter import Parameter
 import torch
+from time import time
 
 from torch_june import InfectionPassing
 
@@ -27,6 +28,7 @@ class TorchJune(torch.nn.Module):
             for beta_n in self._betas_to_idcs.keys()
         }
         while timer.date < timer.final_date:
+            t1 = time()
             transmissions = self.infections.get_transmissions(time=timer.now)
             infection_probs = self.inf_network(
                 data=self.data,
@@ -44,5 +46,7 @@ class TorchJune(torch.nn.Module):
                 ret = torch.vstack((ret, new_infected))
             next(timer)
             susceptibilities = susceptibilities - new_infected
+            t2 = time()
+            print(f"Time-step took {t2-t1} seconds")
 
         return ret
