@@ -13,18 +13,18 @@ class InfectionPassing(MessagePassing):
         self, data, edge_types, betas, transmissions, susceptibilities, delta_time
     ):
         trans_susc = torch.zeros(
-            len(data["agent"].id), device=self.device, requires_grad=True
+            len(data["agent"].id), device=self.device#, requires_grad=True
         )
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
             if edge_type == "attends_leisure":
                 beta = betas[group_name] * torch.ones(
-                    len(data["agent"]["id"]), device=self.device, requires_grad=True
+                    len(data["agent"]["id"]), device=self.device#, requires_grad=True
                 )
             else:
                 beta = betas[group_name] * torch.ones(
-                    len(data[group_name]["id"]), device=self.device, requires_grad=True
+                    len(data[group_name]["id"]), device=self.device#, requires_grad=True
                 )
             cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index

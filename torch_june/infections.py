@@ -21,11 +21,11 @@ class Infections:
         self.max_infectiousness, self.shape, self.rate, self.shift = parameters.to(device)
         if initial_infected is None:
             initial_infected = torch.zeros(
-                len(self.max_infectiousness), requires_grad=True
+                len(self.max_infectiousness)#, requires_grad=True
             )
         self.is_infected = initial_infected.to(device)
         self.infection_times = (
-            -1.0 * torch.ones(len(self.max_infectiousness), requires_grad=True)
+            -1.0 * torch.ones(len(self.max_infectiousness)) #, requires_grad=True)
             + initial_infected
         ).to(device)
 
