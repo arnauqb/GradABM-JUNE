@@ -33,9 +33,7 @@ class TestModel:
         trans[0] = 0.2
         susc = np.ones(6640)
         susc[0] = 0.0
-        return torch.tensor(trans, requires_grad=True), torch.tensor(
-            susc, requires_grad=True
-        )
+        return torch.tensor(trans), torch.tensor(susc)
 
     @fixture(name="timer")
     def make_timer(self):

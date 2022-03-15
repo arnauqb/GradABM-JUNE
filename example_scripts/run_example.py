@@ -14,7 +14,8 @@ from torch_june.utils import generate_erdos_renyi
 from torch.distributions import Normal, LogNormal
 from time import time
 
-device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cuda:0"
 
 
 betas = {"company": 1.0, "school": 2.0, "household": 3.0, "leisure": 1.0}
@@ -36,7 +37,7 @@ sampler = InfectionSampler(max_infectiousness, shape, rate, shift)
 
 initial_infected = np.zeros(len(data["agent"]["id"]))
 initial_infected[np.random.randint(0, len(initial_infected), size=100)] = 1
-initial_infected = torch.tensor(initial_infected, requires_grad=True)
+initial_infected = torch.tensor(initial_infected)
 infections = Infections(
     sampler(len(data["agent"]["id"])), initial_infected=initial_infected, device=device
 )
