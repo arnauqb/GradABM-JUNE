@@ -63,6 +63,11 @@ timer = Timer(
 )
 
 time1 = time()
-result = model(timer=timer, susceptibilities=susc)
+with torch.no_grad():
+    result = model(timer=timer, susceptibilities=susc)
 time2 = time()
 print(f"Took {time2-time1} seconds.")
+
+fig, ax = plt.subplots()
+ax.plot(torch.sum(result, 1).cpu().detach(), "o-")
+fig.savefig("./result.png")
