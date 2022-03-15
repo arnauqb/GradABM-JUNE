@@ -1,0 +1,14 @@
+total_days: 30
+initial_day: "2020-03-01" 
+step_duration: 
+    weekday:
+        0: 12 
+        1: 12
+    weekend:
+        0: 24 
+step_activities:
+    weekday:
+        0: ['medical_facility', 'residence', 'commute'] 
+        1: ['medical_facility', 'primary_activity', 'leisure', 'residence'] 
+    weekend:
+        0: ['medical_facility', 'leisure', 'residence']
