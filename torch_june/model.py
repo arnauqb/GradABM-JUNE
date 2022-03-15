@@ -3,6 +3,11 @@ import torch
 
 from torch_june import InfectionPassing
 
+def get_free_memory(i):
+    r = torch.cuda.memory_reserved(i)
+    a = torch.cuda.memory_allocated(i)
+    f = r-a  # free inside reserved
+    return f
 
 class TorchJune(torch.nn.Module):
     def __init__(self, betas, data, infections, device="cpu"):
@@ -27,6 +32,7 @@ class TorchJune(torch.nn.Module):
             for beta_n in self._betas_to_idcs.keys()
         }
         while timer.date < timer.final_date:
+            print(get_free_memory(0))
             transmissions = self.infections.get_transmissions(time=timer.now)
             infection_probs = self.inf_network(
                 data=self.data,
