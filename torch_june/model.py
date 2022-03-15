@@ -1,13 +1,16 @@
 from torch.nn.parameter import Parameter
 import torch
+from time import time
 
 from torch_june import InfectionPassing
+
 
 def get_free_memory(i):
     r = torch.cuda.memory_reserved(i)
     a = torch.cuda.memory_allocated(i)
-    f = r-a  # free inside reserved
+    f = r - a  # free inside reserved
     return f
+
 
 class TorchJune(torch.nn.Module):
     def __init__(self, betas, data, infections, device="cpu"):
@@ -33,6 +36,7 @@ class TorchJune(torch.nn.Module):
         }
         while timer.date < timer.final_date:
             print(get_free_memory(0))
+            t1 = time()
             transmissions = self.infections.get_transmissions(time=timer.now)
             infection_probs = self.inf_network(
                 data=self.data,
@@ -50,5 +54,7 @@ class TorchJune(torch.nn.Module):
                 ret = torch.vstack((ret, new_infected))
             next(timer)
             susceptibilities = susceptibilities - new_infected
+            t2 = time()
+            print(f"Time-step took {t2-t1} seconds")
 
         return ret

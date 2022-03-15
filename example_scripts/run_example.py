@@ -1,7 +1,7 @@
+import torch
 from torch_june import GraphLoader, InfectionPassing, AgentDataLoader, TorchJune, Timer
 from torch_geometric.data import HeteroData
 import sys
-import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ def process_infected(infected, timer):
     while timer.date < timer.final_date:
         dates.append(timer.date)
         next(timer)
-    s_infected = infected.sum(1).cpu()
+    s_infected = infected.sum(1).detach().cpu()
     df = pd.DataFrame(index=dates, data=s_infected, columns=["new_infected"])
     df.index.name = "date"
     df.index = pd.to_datetime(df.index)
@@ -36,6 +36,8 @@ betas = {"company": 0.4, "school": 0.6, "household": 0.1, "leisure": 0.5}
 
 with open(sys.argv[1], "rb") as f:
     data = pickle.load(f)
+
+print(data)
 
 max_infectiousness = LogNormal(0, 0.5)  # * 1.7
 shape = Normal(1.56, 0.08)
