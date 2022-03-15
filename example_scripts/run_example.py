@@ -29,7 +29,7 @@ def process_infected(infected, timer):
 
 
 #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = "cuda:0"
+device = "cuda:8"
 
 
 betas = {"company": 0.5, "school": 0.5, "household": 0.5, "leisure": 0.5}
@@ -78,15 +78,9 @@ with torch.no_grad():
 time2 = time()
 print(f"Took {time2-time1} seconds.")
 
-<<<<<<< HEAD
-fig, ax = plt.subplots()
-ax.plot(torch.sum(result, 1).cpu().detach(), "o-")
-fig.savefig("./result.png")
-=======
 df = process_infected(infected=result, timer=timer)
 fig, ax = plt.subplots()
 df.plot(ax=ax, style="o-")
 fig.autofmt_xdate()
 fig.savefig("./results.pdf")
 plt.show()
->>>>>>> f5ee6e695dd28d70daff70880720742ccee844a8
