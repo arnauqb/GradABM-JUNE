@@ -1,4 +1,6 @@
 from pytest import fixture
+from pathlib import Path
+import yaml
 
 from torch_june import Timer
 
@@ -17,9 +19,10 @@ class TestTimer:
         assert timer.shift == 0
         assert timer.is_weekend is False
         assert timer.day_of_week == "Tuesday"
+        assert timer.day_type == "weekday"
         assert timer.date_str == "2020-03-10"
 
-    def test_time_is_passing(self, timer):
+    def test__time_is_passing(self, timer):
         assert timer.now == 0
         next(timer)
         assert timer.now == 0.5
@@ -27,7 +30,7 @@ class TestTimer:
         next(timer)
         assert timer.now == 1.0
 
-    def test_time_reset(self, timer):
+    def test__time_reset(self, timer):
         start_time = timer.initial_date
         assert timer.date_str == "2020-03-10"
         next(timer)
@@ -48,17 +51,37 @@ class TestTimer:
         next(timer)
         assert timer.day == 2
 
-    def test_weekend_transition(self, timer):
+    def test__weekend_transition(self, timer):
         for _ in range(0, 8):  # 5 days for 3 time steps per day
             next(timer)
         assert timer.is_weekend is True
+        assert timer.day_type == "weekend"
         assert timer.activities == ("residence",)
         next(timer)
+        assert timer.day_type == "weekend"
         assert timer.is_weekend is True
         assert timer.activities == ("residence",)
         next(timer)
         assert timer.is_weekend is False
+        assert timer.day_type == "weekday"
         assert timer.activities == (
             "primary_activity",
             "residence",
         )
+
+    def test__read_from_file(self):
+        path = Path(__file__).parent / "time_config_test.yaml"
+        timer = Timer.from_file(path)
+        assert timer.date_str == "2020-03-01"
+        assert timer.total_days == 30
+        assert timer.weekday_step_duration == {0: 12, 1: 12}
+        assert timer.weekend_step_duration == {0: 24}
+        assert timer.weekday_activities == {
+            0: ["medical_facility", "residence", "commute"],
+            1: ["medical_facility", "primary_activity", "leisure", "residence"],
+        }
+        assert timer.weekend_activities == {
+            0: ["medical_facility", "leisure", "residence"]
+        }
+        assert timer.day_of_week == "Sunday"
+        assert timer.day_type == "weekend"

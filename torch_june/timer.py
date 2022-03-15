@@ -41,8 +41,7 @@ class Timer:
     @classmethod
     def from_file(cls, config_filename):
         with open(config_filename) as f:
-            config = yaml.load(f, Loader=yaml.FullLoader)
-        time_config = config["time"]
+            time_config = yaml.safe_load(f)
         return cls(
             initial_day=time_config["initial_day"],
             total_days=time_config["total_days"],
