@@ -3,7 +3,7 @@ from torch.nn.parameter import Parameter
 from time import time
 
 from torch_june import InfectionPassing, InfectionUpdater, IsInfectedSampler
-from torch_june.utils import get_fraction_gpu_used
+from torch_june.cuda_utils import get_fraction_gpu_used
 
 
 class TorchJune(torch.nn.Module):
