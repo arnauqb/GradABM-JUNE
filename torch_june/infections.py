@@ -16,29 +16,16 @@ class InfectionSampler:
         return torch.vstack((maxi, shape, rate, shift))
 
 
-class Infections:
-    def __init__(self, parameters, initial_infected=None, device="cpu"):
-        self.max_infectiousness, self.shape, self.rate, self.shift = parameters.to(device)
-        if initial_infected is None:
-            initial_infected = torch.zeros(
-                len(self.max_infectiousness)#, requires_grad=True
-            )
-        self.is_infected = initial_infected.to(device)
-        self.infection_times = (
-            -1.0 * torch.ones(len(self.max_infectiousness)) #, requires_grad=True)
-            + initial_infected
-        ).to(device)
-
-    def update(self, new_infected, infection_time):
-        self.is_infected = self.is_infected + new_infected
-        self.infection_times = self.infection_times + new_infected * (
-            1.0 + infection_time
+class InfectionUpdater(torch.nn.Module):
+    def forward(self, data, timer):
+        shape = data["agent"]["infection_parameters"]["shape"]
+        shift = data["agent"]["infection_parameters"]["shift"]
+        rate = data["agent"]["infection_parameters"]["rate"]
+        max_infectiousness = data["agent"]["infection_parameters"]["max_infectiousness"]
+        time = timer.now
+        sign = (torch.sign(time - data["agent"].infection_time) + 1.0) / 2.0
+        aux = torch.exp(torch.lgamma(shape)) * torch.pow(
+            (time - shift) * rate, shape - 1.0
         )
-
-    def get_transmissions(self, time):
-        sign = (torch.sign(time - self.infection_times) + 1.0) / 2.0
-        aux = torch.exp(torch.lgamma(self.shape)) * torch.pow(
-            (time - self.shift) * self.rate, self.shape - 1.0
-        )
-        aux2 = torch.exp((self.shift - time) * self.rate) * self.rate
-        return sign * aux * aux2 * self.is_infected
+        aux2 = torch.exp((shift - time) * rate) * rate
+        return max_infectiousness * sign * aux * aux2 * data["agent"].is_infected

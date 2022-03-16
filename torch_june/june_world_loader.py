@@ -4,7 +4,6 @@ from collections import defaultdict
 import numpy as np
 import h5py
 import torch
-from tqdm import tqdm
 
 from sklearn.neighbors import BallTree
 
@@ -16,9 +15,12 @@ class AgentDataLoader:
     def load_agent_data(self, data):
         with h5py.File(self.june_world_path, "r") as f:
             population = f["population"]
-            data["agent"].id = population["id"][:]
-            data["agent"].age = population["age"][:]
-            data["agent"].sex = population["sex"][:].astype(str)
+            data["agent"].id = torch.tensor(population["id"][:])
+            data["agent"].age = torch.tensor(population["age"][:])
+            sexes = population["sex"][:].astype(str).astype(object)
+            sexes[sexes == "m"] = 0
+            sexes[sexes == "f"] = 1
+            data["agent"].sex = torch.tensor(sexes.astype(int))
 
 
 class NetworkLoader:

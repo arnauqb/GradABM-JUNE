@@ -1,4 +1,5 @@
 from .june_world_loader import GraphLoader, AgentDataLoader
-from .message_passing import InfectionPassing
+from .message_passing import InfectionPassing, IsInfectedSampler
+from .infections import InfectionUpdater
 from .model import TorchJune
 from .timer import Timer

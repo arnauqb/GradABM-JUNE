@@ -9,6 +9,7 @@ from typing import List
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
+
 class Timer:
     def __init__(
         self,

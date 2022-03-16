@@ -24,9 +24,9 @@ class TestLoadAgentData:
         assert len(data["agent"]["age"]) == 6640
         assert len(data["agent"]["sex"]) == 6640
         assert data["agent"]["age"][1234] == 24
-        assert data["agent"]["sex"][1234] == "m"
+        assert data["agent"]["sex"][1234] == 0
         assert data["agent"]["age"][2234] == 47
-        assert data["agent"]["sex"][2234] == "f"
+        assert data["agent"]["sex"][2234] == 1
 
 
 class TestHouseholdNetwork:

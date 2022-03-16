@@ -1,60 +1,26 @@
-from torch.nn.parameter import Parameter
 import torch
+from torch.nn.parameter import Parameter
 from time import time
 
-from torch_june import InfectionPassing
-
-
-def get_free_memory(i):
-    r = torch.cuda.memory_reserved(i)
-    a = torch.cuda.memory_allocated(i)
-    f = r - a  # free inside reserved
-    return f
+from torch_june import InfectionPassing, InfectionUpdater, IsInfectedSampler
+from torch_june.utils import get_fraction_gpu_used
 
 
 class TorchJune(torch.nn.Module):
-    def __init__(self, betas, data, infections, device="cpu"):
+    def __init__(self, beta_priors, device="cpu"):
         super().__init__()
-        self.data = data.to(device)
-        self._betas_to_idcs = {name: i for i, name in enumerate(betas.keys())}
         self.device = device
-        self.beta_parameters = Parameter(torch.tensor(list(betas.values())))
-        self.inf_network = InfectionPassing(device=device)
-        self.infections = infections
+        self.infection_passing = InfectionPassing(beta_priors=beta_priors).to(device)
+        self.infection_updater = InfectionUpdater().to(device)
+        self.is_infected_sampler = IsInfectedSampler().to(device)
 
-    def _get_edge_types_from_timer(self, timer):
-        ret = []
-        for activity in timer.activities:
-            ret.append("attends_" + activity)
-        return ret
-
-    def forward(self, timer, susceptibilities):
-        ret = None  # torch.empty(0)
-        betas = {
-            beta_n: self.beta_parameters[self._betas_to_idcs[beta_n]]
-            for beta_n in self._betas_to_idcs.keys()
-        }
-        while timer.date < timer.final_date:
-            print(get_free_memory(0))
-            t1 = time()
-            transmissions = self.infections.get_transmissions(time=timer.now)
-            infection_probs = self.inf_network(
-                data=self.data,
-                edge_types=self._get_edge_types_from_timer(timer),
-                betas=betas,
-                delta_time=timer.duration,
-                transmissions=transmissions,
-                susceptibilities=susceptibilities,
-            )
-            new_infected = self.inf_network.sample_infected(infection_probs)
-            self.infections.update(new_infected=new_infected, infection_time=timer.now)
-            if ret is None:
-                ret = new_infected
-            else:
-                ret = torch.vstack((ret, new_infected))
-            next(timer)
-            susceptibilities = susceptibilities - new_infected
-            t2 = time()
-            print(f"Time-step took {t2-t1} seconds")
-
-        return ret
+    def forward(self, data, timer):
+        data["agent"].transmission = self.infection_updater(data=data, timer=timer)
+        not_infected_probs = self.infection_passing(data=data, timer=timer)
+        new_infected = self.is_infected_sampler(not_infected_probs)
+        data["agent"].susceptibility = data["agent"].susceptibility - new_infected
+        data["agent"].is_infected = data["agent"].is_infected + new_infected
+        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
+            1.0 + timer.now
+        )
+        return data

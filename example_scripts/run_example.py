@@ -28,8 +28,8 @@ def process_infected(infected, timer):
     return df.groupby(df.index.date).sum()
 
 
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
 
 
 betas = {"company": 0.4, "school": 0.6, "household": 0.1, "leisure": 0.5}
@@ -37,7 +37,7 @@ betas = {"company": 0.4, "school": 0.6, "household": 0.1, "leisure": 0.5}
 with open(sys.argv[1], "rb") as f:
     data = pickle.load(f)
 
-print(data)
+#print(data)
 
 max_infectiousness = LogNormal(0, 0.5)  # * 1.7
 shape = Normal(1.56, 0.08)
@@ -60,7 +60,7 @@ model = TorchJune(data=data, betas=betas, infections=infections, device=device)
 
 timer = Timer(
     initial_day="2022-03-18",
-    total_days=30,
+    total_days=5,
     weekday_step_duration=(8, 8, 8),
     weekend_step_duration=(
         12,
@@ -77,6 +77,11 @@ timer = Timer(
 time1 = time()
 #with torch.no_grad():
 result = model(timer=timer, susceptibilities=susc)
+y = result.sum().sum()
+y.backward()
+ps = [p for p in model.parameters()][0]
+gradient = ps.grad
+print(gradient)
 time2 = time()
 print(f"Took {time2-time1} seconds.")
 
