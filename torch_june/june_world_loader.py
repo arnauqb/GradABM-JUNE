@@ -150,7 +150,7 @@ class LeisureNetworkLoader:
                 (people, super_area * torch.ones(len(people), dtype=torch.long))
             )
             ret = torch.hstack((ret, edges))
-        data["agent", f"attends_leisure", "leisure"].edge_index = ret
+        data["agent", "attends_leisure", "leisure"].edge_index = ret
         data["leisure"].id = torch.tensor(list(close_people_per_super_area.keys()))
         data["leisure"].people = torch.tensor(
             [len(close_people_per_super_area[sa]) for sa in close_people_per_super_area]

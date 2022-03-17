@@ -1,6 +1,7 @@
 from pytest import fixture
 import numpy as np
 import torch
+import torch_geometric.transforms as T
 
 from torch_june import TorchJune, GraphLoader, AgentDataLoader, Timer
 from torch_geometric.data import HeteroData
@@ -53,9 +54,69 @@ class TestModel:
         loss.backward()
         parameters = list(model.parameters())
         for param in parameters:
-            print("---")
-            print(param)
             gradient = param.grad
-            print(gradient)
             assert gradient is not None
             assert gradient != 0.0
+
+    def test__individual_gradients(self, model, agent_data):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        # create decoupled companies and schools
+        # 50 / 50
+        data = agent_data
+        data["school"].id = torch.tensor([0])
+        data["school"].people = torch.tensor([50])
+        data["company"].id = torch.tensor([0])
+        data["company"].people = torch.tensor([50])
+        data["agent", "attends_school", "school"].edge_index = torch.vstack(
+            (torch.arange(0, 50), torch.zeros(50, dtype=torch.long))
+        )
+        data["agent", "attends_company", "company"].edge_index = torch.vstack(
+            (torch.arange(50, 100), torch.zeros(50, dtype=torch.long))
+        )
+        data = T.ToUndirected()(data)
+        # infect some people
+        susc = data["agent"]["susceptibility"].numpy()
+        susc[0:100:10] = 0.0
+        is_inf = data["agent"]["is_infected"].numpy()
+        is_inf[0:100:10] = 1.0
+        inf_t = data["agent"]["infection_time"].numpy()
+        inf_t[0:100:10] = 0.0
+        data["agent"].susceptibility = torch.tensor(susc)
+        data["agent"].is_infected = torch.tensor(is_inf)
+        data["agent"].infection_time = torch.tensor(inf_t)
+
+        # run 
+        results = model(timer=timer, data=data)
+        cases = results["agent"]["is_infected"]
+        assert cases.sum() > 0
+
+        # this person goes to school
+        cases[0].backward(retain_graph=True)
+        parameters_dict = model.state_dict()
+        for parameter in parameters_dict:
+            if "household" in parameter:
+                assert parameters_dict[parameter].grad is None
+            if "leisure" in parameter:
+                assert parameters_dict[parameter].grad is None
+            if "company" in parameter:
+                assert parameters_dict[parameter].grad is None
+            if "school" in parameter:
+                assert parameters_dict[parameter].grad != 0 
+
+        # this person goes to a company
+        cases[78].backward(retain_graph=True)
+        parameters_dict = model.state_dict()
+        for parameter in parameters_dict:
+            if "household" in parameter:
+                assert parameters_dict[parameter].grad is None
+            if "leisure" in parameter:
+                assert parameters_dict[parameter].grad is None
+            if "company" in parameter:
+                assert parameters_dict[parameter].grad != 0 
+            if "school" in parameter:
+                assert parameters_dict[parameter].grad is None

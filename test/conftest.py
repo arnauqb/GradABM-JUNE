@@ -28,9 +28,8 @@ def make_sampler():
     shift = Normal(-2.12, 0.1)
     return InfectionSampler(max_infectiousness, shape, rate, shift)
 
-
-@fixture(name="data")
-def make_data(sampler):
+@fixture(name="agent_data")
+def make_agent_data(sampler):
     n_agents = 100
     data = HeteroData()
     data["agent"].id = torch.arange(0, n_agents)
@@ -47,6 +46,11 @@ def make_data(sampler):
     data["agent"].susceptibility = torch.ones(n_agents)
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = -1.0 * torch.ones(n_agents)
+    return data
+
+@fixture(name="data")
+def make_data(agent_data):
+    data = agent_data
     data["school"].id = torch.arange(0, 4)
     data["school"].people = 25 * torch.ones(4)
     data["company"].id = torch.arange(0, 4)
@@ -58,7 +62,7 @@ def make_data(sampler):
     data["agent", "attends_school", "school"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
     )
-    data["agent", "attends_company", "school"].edge_index = torch.vstack(
+    data["agent", "attends_company", "company"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
     )
     data["agent", "attends_leisure", "leisure"].edge_index = torch.vstack(
