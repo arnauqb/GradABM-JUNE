@@ -8,11 +8,15 @@ class InfectionPassing(MessagePassing):
     def __init__(self, beta_priors):
         super().__init__(aggr="add", node_dim=-1)
         self._betas_to_idcs = {name: i for i, name in enumerate(beta_priors.keys())}
-        self.beta_parameters = Parameter(torch.tensor(list(beta_priors.values())))
-        self.betas = {
-            beta_n: self.beta_parameters[self._betas_to_idcs[beta_n]]
-            for beta_n in self._betas_to_idcs.keys()
-        }
+        #self.beta_parameters_log = Parameter(
+        #    torch.log10(torch.tensor(list(beta_priors.values())))
+        #)
+        for beta_n, beta_v in beta_priors.items():
+            setattr(self, beta_n, Parameter(torch.log10(torch.tensor(beta_v))))
+
+    def _get_log_beta(self, group_name):
+        idx = self._betas_to_idcs[group_name]
+        return self.beta_parameters_log[idx]
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
@@ -29,9 +33,11 @@ class InfectionPassing(MessagePassing):
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            beta = self.betas[group_name] * torch.ones(
+            log_beta = getattr(self, group_name) #self._get_log_beta(group_name)
+            log_beta = log_beta * torch.ones(
                 len(data[group_name]["id"]), device=device
             )
+            beta = torch.pow(10.0, log_beta)
             people_per_group = data[group_name]["people"]
             p_contact = torch.minimum(
                 5.0 / people_per_group, torch.tensor(1.0)
@@ -49,6 +55,7 @@ class InfectionPassing(MessagePassing):
 
     def message(self, x_j, y_i):
         return x_j * y_i
+
 
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):

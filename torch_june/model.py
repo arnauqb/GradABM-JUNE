@@ -7,12 +7,11 @@ from torch_june.cuda_utils import get_fraction_gpu_used
 
 
 class TorchJune(torch.nn.Module):
-    def __init__(self, beta_priors, device="cpu"):
+    def __init__(self, beta_priors):
         super().__init__()
-        self.device = device
-        self.infection_passing = InfectionPassing(beta_priors=beta_priors).to(device)
-        self.infection_updater = InfectionUpdater().to(device)
-        self.is_infected_sampler = IsInfectedSampler().to(device)
+        self.infection_passing = InfectionPassing(beta_priors=beta_priors)
+        self.infection_updater = InfectionUpdater()
+        self.is_infected_sampler = IsInfectedSampler()
 
     def forward(self, data, timer):
         data["agent"].transmission = self.infection_updater(data=data, timer=timer)

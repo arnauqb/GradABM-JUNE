@@ -1,93 +1,66 @@
-import torch
-from torch_june import GraphLoader, InfectionPassing, AgentDataLoader, TorchJune, Timer
-from torch_geometric.data import HeteroData
-import sys
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import random
+import matplotlib.pyplot as plt
 import pickle
-import h5py
-import networkx
-from torch_june.june_world_loader import LeisureNetworkLoader
-from torch_june.infections import Infections, InfectionSampler
-from torch_june.utils import generate_erdos_renyi
+import pandas as pd
+import sys
+from random import random
+import torch
 from torch.distributions import Normal, LogNormal
-from time import time
 
-def process_infected(infected, timer):
+from torch_june import TorchJune, Timer, InfectionSampler
+
+
+def make_sampler():
+    max_infectiousness = LogNormal(0, 0.5)
+    shape = Normal(1.56, 0.08)
+    rate = Normal(0.53, 0.03)
+    shift = Normal(-2.12, 0.1)
+    return InfectionSampler(max_infectiousness, shape, rate, shift)
+
+def make_data(june_data_path, n_seed=1):
+    with open(june_data_path, "rb") as f:
+        data = pickle.load(f)
+    n_agents = len(data["agent"]["id"])
+    sampler = make_sampler()
+    inf_params = {}
+    inf_params_values = sampler(n_agents)
+    inf_params["max_infectiousness"] = inf_params_values[0]
+    inf_params["shape"] = inf_params_values[1]
+    inf_params["rate"] = inf_params_values[2]
+    inf_params["shift"] = inf_params_values[3]
+    data["agent"].infection_parameters = inf_params_values
+    data["agent"].transmission = torch.zeros(n_agents)
+
+    inf_choice = np.random.choice(range(len(data["agent"]["id"])), n_seed, replace=False)
+    susceptibility = np.ones(n_agents)
+    is_infected = np.zeros(n_agents)
+    infection_time = -1.0 * np.ones(n_agents)
+    susceptibility[inf_choice] = 0.0
+    is_infected[inf_choice] = 1
+    infection_time[inf_choice] = 0.0
+    data["agent"].susceptibility = torch.tensor(susceptibility, dtype=torch.float)
+    data["agent"].is_infected = torch.tensor(is_infected, dtype=torch.int)
+    data["agent"].infection_time = torch.tensor(infection_time, dtype=torch.float)
+    return data
+
+def get_cases(data):
+    return float(data["agent"].is_infected.detach().sum())
+
+def get_cases_tensor(data):
+    return data["agent"].is_infected.sum()
+
+def get_daily_cases(active_cases, timer):
+    daily_cases = np.diff(active_cases)
     timer.reset()
     dates = []
     while timer.date < timer.final_date:
         dates.append(timer.date)
         next(timer)
-    s_infected = infected.sum(1).detach().cpu()
-    df = pd.DataFrame(index=dates, data=s_infected, columns=["new_infected"])
+    df = pd.DataFrame(index=dates[:-1], data=daily_cases, columns=["daily_cases"])
     df.index.name = "date"
     df.index = pd.to_datetime(df.index)
     return df.groupby(df.index.date).sum()
-
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = "cpu"
-
-
-betas = {"company": 0.4, "school": 0.6, "household": 0.1, "leisure": 0.5}
-
-with open(sys.argv[1], "rb") as f:
-    data = pickle.load(f)
-
-#print(data)
-
-max_infectiousness = LogNormal(0, 0.5)  # * 1.7
-shape = Normal(1.56, 0.08)
-rate = Normal(0.53, 0.03)
-shift = Normal(-2.12, 0.1)
-sampler = InfectionSampler(max_infectiousness, shape, rate, shift)
-
-
-initial_infected = np.zeros(len(data["agent"]["id"]))
-initial_infected[np.random.randint(0, len(initial_infected), size=100)] = 1
-susc = np.ones(len(data["agent"]["id"]))
-susc[initial_infected.astype(int)] = 0.0
-susc = torch.tensor(susc).to(device)
-initial_infected = torch.tensor(initial_infected)
-infections = Infections(
-    sampler(len(data["agent"]["id"])), initial_infected=initial_infected, device=device
-)
-model = TorchJune(data=data, betas=betas, infections=infections, device=device)
-
-
-timer = Timer(
-    initial_day="2022-03-18",
-    total_days=5,
-    weekday_step_duration=(8, 8, 8),
-    weekend_step_duration=(
-        12,
-        12,
-    ),
-    weekday_activities=(
-        ("company", "school"),
-        ("leisure",),
-        ("household",),
-    ),
-    weekend_activities=(("leisure",), ("household",)),
-)
-
-time1 = time()
-#with torch.no_grad():
-result = model(timer=timer, susceptibilities=susc)
-y = result.sum().sum()
-y.backward()
-ps = [p for p in model.parameters()][0]
-gradient = ps.grad
-print(gradient)
-time2 = time()
-print(f"Took {time2-time1} seconds.")
-
-df = process_infected(infected=result, timer=timer)
-fig, ax = plt.subplots()
-df.plot(ax=ax, style="o-")
-fig.autofmt_xdate()
-fig.savefig("./results.pdf")
-plt.show()
+        
+june_data_path = sys.argv[1]
+data = make_data(june_data_path, 10).to("cuda:0")
+data
