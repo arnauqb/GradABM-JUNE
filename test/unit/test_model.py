@@ -90,33 +90,46 @@ class TestModel:
         data["agent"].is_infected = torch.tensor(is_inf)
         data["agent"].infection_time = torch.tensor(inf_t)
 
-        # run 
+        # run
         results = model(timer=timer, data=data)
         cases = results["agent"]["is_infected"]
         assert cases.sum() > 0
 
-        # this person goes to school
-        cases[0].backward(retain_graph=True)
-        parameters_dict = model.state_dict()
-        for parameter in parameters_dict:
-            if "household" in parameter:
-                assert parameters_dict[parameter].grad is None
-            if "leisure" in parameter:
-                assert parameters_dict[parameter].grad is None
-            if "company" in parameter:
-                assert parameters_dict[parameter].grad is None
-            if "school" in parameter:
-                assert parameters_dict[parameter].grad != 0 
+        # Find person who got infected in school
+        k = 0
+        for i in range(50):
+            if cases[i] == 1.0:
+                if is_inf[i] == 1.0: # not infected in the seed.
+                    continue
+                k = i
+                break
+        assert cases[k] == 1.0
 
-        # this person goes to a company
-        cases[78].backward(retain_graph=True)
-        parameters_dict = model.state_dict()
-        for parameter in parameters_dict:
-            if "household" in parameter:
-                assert parameters_dict[parameter].grad is None
-            if "leisure" in parameter:
-                assert parameters_dict[parameter].grad is None
-            if "company" in parameter:
-                assert parameters_dict[parameter].grad != 0 
-            if "school" in parameter:
-                assert parameters_dict[parameter].grad is None
+        cases[k].backward(retain_graph=True)
+        grads = np.array(
+            [p.grad.cpu() for p in model.parameters() if p.grad is not None]
+        )
+        assert len(grads) == 2
+        assert grads[0] == 0.0
+        assert grads[1] != 0.0
+
+        model.zero_grad()
+
+        # Find person who got infected at woork
+        k = 50
+        reached = False
+        for i in range(50, 100):
+            if cases[i] == 1.0:
+                if is_inf[i] == 1.0: # not infected in the seed.
+                    continue
+                k = i
+                reached = True
+                break
+        assert reached
+        cases[k].backward(retain_graph=True)
+        grads = np.array(
+            [p.grad.cpu() for p in model.parameters() if p.grad is not None]
+        )
+        assert len(grads) == 2
+        assert grads[0] != 0.0
+        assert grads[1] == 0.0
