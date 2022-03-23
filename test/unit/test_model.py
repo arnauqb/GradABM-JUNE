@@ -16,7 +16,7 @@ class TestModel:
             "household": 30.0,
             "leisure": 10.0,
         }
-        model = TorchJune(beta_priors=beta_priors)
+        model = TorchJune(parameters=beta_priors)
         return model
 
     def test__parameters(self, model):

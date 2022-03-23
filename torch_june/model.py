@@ -7,9 +7,9 @@ from torch_june.cuda_utils import get_fraction_gpu_used
 
 
 class TorchJune(torch.nn.Module):
-    def __init__(self, beta_priors):
+    def __init__(self, parameters):
         super().__init__()
-        self.infection_passing = InfectionPassing(beta_priors=beta_priors)
+        self.infection_passing = InfectionPassing(beta_priors=parameters)
         self.infection_updater = InfectionUpdater()
         self.is_infected_sampler = IsInfectedSampler()
 

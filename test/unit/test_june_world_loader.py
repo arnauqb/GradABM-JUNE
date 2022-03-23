@@ -151,3 +151,8 @@ class TestLoadGraph:
         assert len(data["rev_attends_household"]["edge_index"][0]) == 6640
         assert len(data["attends_leisure"]["edge_index"][0]) == 6640
         assert len(data["rev_attends_leisure"]["edge_index"][0]) == 6640
+
+        goes_to_school = set(data["attends_school"].edge_index[0,:])
+        goes_to_company = set(data["attends_company"].edge_index[0,:])
+        assert len(goes_to_school.intersection(goes_to_company)) == 0
+
