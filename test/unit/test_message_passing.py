@@ -17,7 +17,7 @@ class TestInfectionPassing:
 
     @fixture(name="inf_pass")
     def make_ip(self, beta_priors):
-        return InfectionPassing(beta_priors)
+        return InfectionPassing(log_beta_school=torch.log10(torch.tensor(2.0)))
 
     @fixture(name="data")
     def make_data(self):

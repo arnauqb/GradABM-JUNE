@@ -28,7 +28,7 @@ def run_model(model):
         cases = model(data, timer)["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
         next(timer)
-    return time_curve
+    return time_curve / time_curve.max()
 
 
 def get_model_prediction(beta_company, beta_household, beta_leisure, beta_school):
@@ -64,7 +64,7 @@ def log_prob_func(params):
     # time_curve = run_model(model)
     loglikelihood = (
         torch.distributions.Normal(
-            time_curve, torch.ones(time_curve.shape[0], device=device)
+            time_curve, 2*torch.ones(time_curve.shape[0], device=device)
         )
         .log_prob(true_data)
         .sum()
@@ -115,11 +115,11 @@ true_data = get_model_prediction(
 # log_likelihood.backward()
 # print([p.grad for p in true_model.parameters()])
 
-num_samples = 100
+num_samples = 1000
 burn=10
 step_size = 1e-3
-num_steps_per_sample = 10
-params_init = torch.tensor([-2.0, -1.0, 0.5, 1.0], device=device)
+num_steps_per_sample = 25
+params_init = torch.tensor([-2.0, 2.0, -2.0, 1.0], device=device)
 
 #
 # beta_dict = {"company": -1.0, "school": 1.0, "household": -1.0, "leisure": 1.0}

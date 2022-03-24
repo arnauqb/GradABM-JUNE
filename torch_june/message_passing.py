@@ -5,15 +5,18 @@ from torch.nn.parameter import Parameter
 
 
 class InfectionPassing(MessagePassing):
-    def __init__(self, beta_company, beta_school, beta_household, beta_leisure):
+    def __init__(
+        self,
+        log_beta_company=torch.tensor(-10.0),
+        log_beta_school=torch.tensor(-10.0),
+        log_beta_household=torch.tensor(-10.0),
+        log_beta_leisure=torch.tensor(-10.0),
+    ):
         super().__init__(aggr="add", node_dim=-1)
-        #self._betas_to_idcs = {name: i for i, name in enumerate(beta_priors.keys())}
-        #for beta_n, beta_v in beta_priors.items():
-        #    setattr(self, beta_n, Parameter(beta_v))
-        self.beta_company = beta_company
-        self.beta_school = beta_school
-        self.beta_household = beta_household
-        self.beta_leisure = beta_leisure
+        self.log_beta_company = log_beta_company
+        self.log_beta_school = log_beta_school
+        self.log_beta_household = log_beta_household
+        self.log_beta_leisure = log_beta_leisure
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
@@ -30,11 +33,9 @@ class InfectionPassing(MessagePassing):
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            log_beta = getattr(self, "beta_" + group_name)
-            log_beta = log_beta * torch.ones(
-                len(data[group_name]["id"]), device=device
-            )
-            beta = torch.pow(10.0, log_beta)
+            log_beta = getattr(self, "log_beta_" + group_name)
+            log_beta = log_beta * torch.ones(len(data[group_name]["id"]), device=device)
+            beta = torch.pow(10., log_beta)
             people_per_group = data[group_name]["people"]
             p_contact = torch.minimum(
                 5.0 / people_per_group, torch.tensor(1.0)

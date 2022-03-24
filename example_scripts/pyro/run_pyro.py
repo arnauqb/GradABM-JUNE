@@ -22,40 +22,52 @@ device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cp
 DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
 
 
-def get_model_prediction(b1, b2, b3, b4):
+def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
-    beta_dict = {"company": b1, "school": b2, "household": b3, "leisure": b4}
-    with torch.no_grad():
-        model = TorchJune(parameters=beta_dict)
-        time_curve = torch.zeros(0, dtype=torch.float).to(device)
-        while timer.date < timer.final_date:
-            cases = model(data, timer)["agent"].is_infected.sum()
-            time_curve = torch.hstack((time_curve, cases))
-            next(timer)
-        return time_curve
+    time_curve = torch.zeros(0, dtype=torch.float).to(device)
+    while timer.date < timer.final_date:
+        cases = model(data, timer)["agent"].is_infected.sum()
+        time_curve = torch.hstack((time_curve, cases))
+        next(timer)
+    return time_curve / time_curve.max()
+
+
+def get_model_prediction(
+    log_beta_company, log_beta_household, log_beta_leisure, log_beta_school
+):
+    model = TorchJune(
+        log_beta_leisure=log_beta_leisure,
+        log_beta_household=log_beta_household,
+        log_beta_school=log_beta_school,
+        log_beta_company=log_beta_company,
+    )
+    return run_model(model)
 
 
 def pyro_model(true_time_curve):
-    beta_company = pyro.sample("beta_company", pyro.distributions.Uniform(-1, 1)).to(
-        device
-    )
-    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1, 1)).to(
+    beta_company = pyro.sample(
+        "beta_company", pyro.distributions.Uniform(-0.5, 1.5)
+    ).to(device)
+    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1.5, 1.5)).to(
         device
     )
     beta_household = pyro.sample(
-        "beta_household", pyro.distributions.Uniform(-1, 1)
+        "beta_household", pyro.distributions.Uniform(-1.5, 1.5)
     ).to(device)
-    beta_leisure = pyro.sample("beta_leisure", pyro.distributions.Uniform(-1, 1)).to(
-        device
-    )
+    beta_leisure = pyro.sample(
+        "beta_leisure", pyro.distributions.Uniform(-1.5, 1.5)
+    ).to(device)
     time_curve = get_model_prediction(
-        beta_company, beta_school, beta_household, beta_leisure
+        log_beta_company=log_beta_company,
+        log_beta_household=log_beta_household,
+        log_beta_leisure=log_beta_leisure,
+        log_beta_school=log_beta_school,
     )
     pyro.sample(
         "obs",
         pyro.distributions.Normal(
-            time_curve, 2.0 * torch.ones(time_curve.shape[0], device=device)
+            time_curve, torch.ones(time_curve.shape[0], device=device)
         ),
         obs=true_time_curve,
     )
@@ -66,16 +78,24 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
+log_beta_company = torch.tensor(0.2, device=device)
+log_beta_school = torch.tensor(0.4, device=device)
+log_beta_household = torch.tensor(0.5, device=device)
+log_beta_leisure = torch.tensor(0.8, device=device)
+
 true_data = get_model_prediction(
-    *torch.log10(torch.tensor([2.0, 3.0, 4.0, 1.0], device=device))
+    log_beta_company=log_beta_company,
+    log_beta_household=log_beta_household,
+    log_beta_school=log_beta_school,
+    log_beta_leisure=log_beta_leisure,
 )
 
-hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=10, adapt_step_size=False)
-nuts_kernel = pyro.infer.NUTS(pyro_model)
+hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=25)
+nuts_kernel = pyro.infer.NUTS(pyro_model, step_size=0.01)
 
 mcmc = pyro.infer.MCMC(
-    hmc_kernel,
-    num_samples=1000,
+    nuts_kernel,
+    num_samples=2000,
     warmup_steps=200,
 )
 mcmc.run(true_data)
