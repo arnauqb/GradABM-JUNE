@@ -11,10 +11,10 @@ class TestModel:
     @fixture(name="model")
     def make_model(self):
         beta_priors = {
-            "company": 10.0,
-            "school": 20.0,
-            "household": 30.0,
-            "leisure": 10.0,
+            "company": torch.log10(torch.tensor(10.0)),
+            "school": torch.log10(torch.tensor(20.0)),
+            "household": torch.log10(torch.tensor(30.0)),
+            "leisure": torch.log10(torch.tensor(10.0)),
         }
         model = TorchJune(parameters=beta_priors)
         return model
@@ -58,16 +58,7 @@ class TestModel:
             assert gradient is not None
             assert gradient != 0.0
 
-    def test__individual_gradients(self, model, agent_data):
-        timer = Timer(
-            initial_day="2022-02-01",
-            total_days=10,
-            weekday_step_duration=(24,),
-            weekday_activities=(("company", "school"),),
-        )
-        # create decoupled companies and schools
-        # 50 / 50
-        data = agent_data
+    def setup_inf_data(self, data):
         data["school"].id = torch.tensor([0])
         data["school"].people = torch.tensor([50])
         data["company"].id = torch.tensor([0])
@@ -89,6 +80,18 @@ class TestModel:
         data["agent"].susceptibility = torch.tensor(susc)
         data["agent"].is_infected = torch.tensor(is_inf)
         data["agent"].infection_time = torch.tensor(inf_t)
+        return data, is_inf
+
+    def test__individual_gradients(self, model, agent_data):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        # create decoupled companies and schools
+        # 50 / 50
+        data, is_inf = self.setup_inf_data(agent_data)
 
         # run
         results = model(timer=timer, data=data)
@@ -99,7 +102,7 @@ class TestModel:
         k = 0
         for i in range(50):
             if cases[i] == 1.0:
-                if is_inf[i] == 1.0: # not infected in the seed.
+                if is_inf[i] == 1.0:  # not infected in the seed.
                     continue
                 k = i
                 break
@@ -120,7 +123,7 @@ class TestModel:
         reached = False
         for i in range(50, 100):
             if cases[i] == 1.0:
-                if is_inf[i] == 1.0: # not infected in the seed.
+                if is_inf[i] == 1.0:  # not infected in the seed.
                     continue
                 k = i
                 reached = True
@@ -133,3 +136,30 @@ class TestModel:
         assert len(grads) == 2
         assert grads[0] != 0.0
         assert grads[1] == 0.0
+
+    def test__likelihood_gradient(self, model, agent_data):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        data, _ = self.setup_inf_data(agent_data)
+        results = model(timer=timer, data=data)
+        cases = results["agent"]["is_infected"]
+        true_cases = 10 * torch.rand(1)
+        log_likelihood = (
+            torch.distributions.Normal(
+                cases, torch.ones(1)
+            )
+            .log_prob(true_cases)
+            .sum()
+        )
+        log_likelihood.backward()
+        grads = np.array(
+            [p.grad.cpu() for p in model.parameters() if p.grad is not None]
+        )
+        assert len(grads) == 2
+        assert grads[0] != 0.0
+        assert grads[1] != 0.0
+

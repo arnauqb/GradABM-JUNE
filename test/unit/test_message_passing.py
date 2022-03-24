@@ -12,7 +12,7 @@ class TestInfectionPassing:
     @fixture(name="beta_priors")
     def make_b(self):
         return {
-            "school": 2.0,
+            "school": torch.log10(torch.tensor(2.0)),
         }
 
     @fixture(name="inf_pass")
@@ -27,7 +27,7 @@ class TestInfectionPassing:
         data["agent"].susceptibility = torch.tensor([1, 2, 3, 0.5, 0.7, 1.0])
 
         data["school"].id = torch.arange(2)
-        data["school"].people = torch.tensor([2,2])
+        data["school"].people = torch.tensor([2, 2])
 
         edges_1 = torch.arange(6)
         edges_2 = torch.tensor([0, 0, 0, 1, 1, 1])
@@ -36,7 +36,6 @@ class TestInfectionPassing:
         )
         data = T.ToUndirected()(data)
         return data
-
 
     def test__get_edge_types_from_timer(self, timer, inf_pass):
         assert timer.day_of_week == "Tuesday"
@@ -67,10 +66,7 @@ class TestInfectionPassing:
 
     def test__infection_passing(self, inf_pass, data, school_timer):
         print(data)
-        infection_probabilities = inf_pass(
-            data=data,
-            timer=school_timer
-        )
+        infection_probabilities = inf_pass(data=data, timer=school_timer)
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
 
