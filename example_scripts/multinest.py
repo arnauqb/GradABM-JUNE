@@ -2,11 +2,19 @@ import numpy as np
 import pickle
 import torch
 import pymultinest
+from mpi4py import MPI
+import numpy as np
+
+mpi_comm = MPI.COMM_WORLD
+mpi_rank = mpi_comm.Get_rank()
+
 from torch.distributions import Normal, LogNormal
 
 from torch_june import TorchJune, Timer, InfectionSampler
 
-device = "cpu" #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = f"cuda:{mpi_rank+2}" #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
+print(device)
 
 
 def make_sampler():
@@ -69,6 +77,8 @@ def restore_data(data, backup):
 
 def get_model_prediction(betas):
     b1, b2, b3, b4 = betas[0], betas[1], betas[2], betas[3]
+    #print("----betas-----")
+    #print(b1, b2, b3, b4)
     timer.reset()
     data = restore_data(DATA, BACKUP)
     beta_dict = {"company" : b1, "school" : b2, "household" : b3, "leisure" : b4}
@@ -83,7 +93,7 @@ def get_model_prediction(betas):
 
 def prior(cube, ndim, nparams):
     for i in range(4):
-        cube[i] = 10.0**(cube[i] * 2.0 - 4.0) # log-uniform between 1e-4, 1e2)
+        cube[i] = 10.0**(cube[i] * 3.0 - 1.0) # log-uniform between 1e-4, 1e2)
 
 def loglike(cube, ndim, nparams):
     time_curve = get_model_prediction(cube)
@@ -93,8 +103,8 @@ def loglike(cube, ndim, nparams):
 
 
 
-# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ney.pkl"
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
 
 DATA = get_data(DATA_PATH, device, n_seed=100)
 BACKUP = backup_inf_data(DATA)
@@ -119,4 +129,4 @@ true_data = get_model_prediction([2., 3., 4., 1.])
 
 n_params = 4
 output_file = "multinest"
-pymultinest.run(loglike, prior, n_params, verbose = True, outputfiles_basename=output_file, resume=False, n_live_points=10)
+pymultinest.run(loglike, prior, n_params, verbose = True, outputfiles_basename=output_file, resume=False)
