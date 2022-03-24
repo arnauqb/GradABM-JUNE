@@ -18,8 +18,9 @@ from script_utils import (
 
 from torch_june import TorchJune
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
+device = "cuda:9"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 
 
 def run_model(model):
