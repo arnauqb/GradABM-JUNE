@@ -46,17 +46,17 @@ def get_model_prediction(
 
 
 def pyro_model(true_time_curve):
-    beta_company = pyro.sample(
+    log_beta_company = pyro.sample(
         "beta_company", pyro.distributions.Uniform(-0.5, 1.5)
     ).to(device)
-    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1.5, 1.5)).to(
+    log_beta_school = pyro.sample("log_beta_school", pyro.distributions.Uniform(-1.5, 1.5)).to(
         device
     )
-    beta_household = pyro.sample(
-        "beta_household", pyro.distributions.Uniform(-1.5, 1.5)
+    log_beta_household = pyro.sample(
+        "log_beta_household", pyro.distributions.Uniform(-1.5, 1.5)
     ).to(device)
-    beta_leisure = pyro.sample(
-        "beta_leisure", pyro.distributions.Uniform(-1.5, 1.5)
+    log_beta_leisure = pyro.sample(
+        "log_beta_leisure", pyro.distributions.Uniform(-1.5, 1.5)
     ).to(device)
     time_curve = get_model_prediction(
         log_beta_company=log_beta_company,
@@ -78,16 +78,16 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-log_beta_company = torch.tensor(0.2, device=device)
-log_beta_school = torch.tensor(0.4, device=device)
-log_beta_household = torch.tensor(0.5, device=device)
-log_beta_leisure = torch.tensor(0.8, device=device)
+true_log_beta_company = torch.tensor(0.2, device=device)
+true_log_beta_school = torch.tensor(0.4, device=device)
+true_log_beta_household = torch.tensor(0.5, device=device)
+true_log_beta_leisure = torch.tensor(0.8, device=device)
 
 true_data = get_model_prediction(
-    log_beta_company=log_beta_company,
-    log_beta_household=log_beta_household,
-    log_beta_school=log_beta_school,
-    log_beta_leisure=log_beta_leisure,
+    log_beta_company=true_log_beta_company,
+    log_beta_household=true_log_beta_household,
+    log_beta_school=true_log_beta_school,
+    log_beta_leisure=true_log_beta_leisure,
 )
 
 hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=25)
@@ -95,7 +95,7 @@ nuts_kernel = pyro.infer.NUTS(pyro_model, step_size=0.01)
 
 mcmc = pyro.infer.MCMC(
     nuts_kernel,
-    num_samples=2000,
+    num_samples=1000,
     warmup_steps=200,
 )
 mcmc.run(true_data)
