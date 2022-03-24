@@ -58,16 +58,7 @@ class TestModel:
             assert gradient is not None
             assert gradient != 0.0
 
-    def test__individual_gradients(self, model, agent_data):
-        timer = Timer(
-            initial_day="2022-02-01",
-            total_days=10,
-            weekday_step_duration=(24,),
-            weekday_activities=(("company", "school"),),
-        )
-        # create decoupled companies and schools
-        # 50 / 50
-        data = agent_data
+    def setup_inf_data(self, data):
         data["school"].id = torch.tensor([0])
         data["school"].people = torch.tensor([50])
         data["company"].id = torch.tensor([0])
@@ -89,6 +80,18 @@ class TestModel:
         data["agent"].susceptibility = torch.tensor(susc)
         data["agent"].is_infected = torch.tensor(is_inf)
         data["agent"].infection_time = torch.tensor(inf_t)
+        return data, is_inf
+
+    def test__individual_gradients(self, model, agent_data):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        # create decoupled companies and schools
+        # 50 / 50
+        data, is_inf = self.setup_inf_data(agent_data)
 
         # run
         results = model(timer=timer, data=data)
@@ -133,3 +136,30 @@ class TestModel:
         assert len(grads) == 2
         assert grads[0] != 0.0
         assert grads[1] == 0.0
+
+    def test__likelihood_gradient(self, model, agent_data):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        data, _ = self.setup_inf_data(agent_data)
+        results = model(timer=timer, data=data)
+        cases = results["agent"]["is_infected"]
+        true_cases = 10 * torch.rand(1)
+        log_likelihood = (
+            torch.distributions.Normal(
+                cases, torch.ones(1)
+            )
+            .log_prob(true_cases)
+            .sum()
+        )
+        log_likelihood.backward()
+        grads = np.array(
+            [p.grad.cpu() for p in model.parameters() if p.grad is not None]
+        )
+        assert len(grads) == 2
+        assert grads[0] != 0.0
+        assert grads[1] != 0.0
+
