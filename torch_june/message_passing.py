@@ -9,7 +9,7 @@ class InfectionPassing(MessagePassing):
         super().__init__(aggr="add", node_dim=-1)
         self._betas_to_idcs = {name: i for i, name in enumerate(beta_priors.keys())}
         for beta_n, beta_v in beta_priors.items():
-            setattr(self, beta_n, Parameter(torch.log10(torch.tensor(beta_v))))
+            setattr(self, beta_n, Parameter(beta_v))
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
