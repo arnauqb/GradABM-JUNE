@@ -19,7 +19,7 @@ from script_utils import (
 from torch_june import TorchJune
 
 device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
 
 
 def run_model(model):
@@ -33,12 +33,14 @@ def run_model(model):
     return time_curve / time_curve.max()
 
 
-def get_model_prediction(beta_company, beta_household, beta_leisure, beta_school):
+def get_model_prediction(
+    log_beta_company, log_beta_household, log_beta_leisure, log_beta_school
+):
     model = TorchJune(
-        beta_leisure=beta_leisure,
-        beta_household=beta_household,
-        beta_school=beta_school,
-        beta_company=beta_company,
+        log_beta_leisure=log_beta_leisure,
+        log_beta_household=log_beta_household,
+        log_beta_school=log_beta_school,
+        log_beta_company=log_beta_company,
     )
     return run_model(model)
 
@@ -57,10 +59,10 @@ def pyro_model(true_time_curve):
         "beta_leisure", pyro.distributions.Uniform(-1.5, 1.5)
     ).to(device)
     time_curve = get_model_prediction(
-        beta_company=beta_company,
-        beta_household=beta_household,
-        beta_leisure=beta_leisure,
-        beta_school=beta_school,
+        log_beta_company=log_beta_company,
+        log_beta_household=log_beta_household,
+        log_beta_leisure=log_beta_leisure,
+        log_beta_school=log_beta_school,
     )
     pyro.sample(
         "obs",
@@ -76,26 +78,24 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-beta_company = torch.tensor(0.2, device=device)
-beta_school = torch.tensor(0.4, device=device)
-beta_household = torch.tensor(0.5, device=device)
-beta_leisure = torch.tensor(0.8, device=device)
+log_beta_company = torch.tensor(0.2, device=device)
+log_beta_school = torch.tensor(0.4, device=device)
+log_beta_household = torch.tensor(0.5, device=device)
+log_beta_leisure = torch.tensor(0.8, device=device)
 
 true_data = get_model_prediction(
-    beta_company=beta_company,
-    beta_household=beta_household,
-    beta_school=beta_school,
-    beta_leisure=beta_leisure,
+    log_beta_company=log_beta_company,
+    log_beta_household=log_beta_household,
+    log_beta_school=log_beta_school,
+    log_beta_leisure=log_beta_leisure,
 )
 
-hmc_kernel = pyro.infer.HMC(
-    pyro_model, step_size=0.05, num_steps=25
-)
+hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=25)
 nuts_kernel = pyro.infer.NUTS(pyro_model, step_size=0.01)
 
 mcmc = pyro.infer.MCMC(
-    hmc_kernel,
-    num_samples=1000,
+    nuts_kernel,
+    num_samples=2000,
     warmup_steps=200,
 )
 mcmc.run(true_data)
