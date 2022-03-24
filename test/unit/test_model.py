@@ -11,10 +11,10 @@ class TestModel:
     @fixture(name="model")
     def make_model(self):
         beta_priors = {
-            "company": 10.0,
-            "school": 20.0,
-            "household": 30.0,
-            "leisure": 10.0,
+            "company": torch.log10(torch.tensor(10.0)),
+            "school": torch.log10(torch.tensor(20.0)),
+            "household": torch.log10(torch.tensor(30.0)),
+            "leisure": torch.log10(torch.tensor(10.0)),
         }
         model = TorchJune(parameters=beta_priors)
         return model
@@ -99,7 +99,7 @@ class TestModel:
         k = 0
         for i in range(50):
             if cases[i] == 1.0:
-                if is_inf[i] == 1.0: # not infected in the seed.
+                if is_inf[i] == 1.0:  # not infected in the seed.
                     continue
                 k = i
                 break
@@ -120,7 +120,7 @@ class TestModel:
         reached = False
         for i in range(50, 100):
             if cases[i] == 1.0:
-                if is_inf[i] == 1.0: # not infected in the seed.
+                if is_inf[i] == 1.0:  # not infected in the seed.
                     continue
                 k = i
                 reached = True

@@ -26,27 +26,36 @@ def get_model_prediction(b1, b2, b3, b4):
     timer.reset()
     data = restore_data(DATA, BACKUP)
     beta_dict = {"company": b1, "school": b2, "household": b3, "leisure": b4}
-    model = TorchJune(parameters=beta_dict)
-    time_curve = torch.zeros(0, dtype=torch.float).to(device)
-    while timer.date < timer.final_date:
-        cases = model(data, timer)["agent"].is_infected.sum()
-        time_curve = torch.hstack((time_curve, cases))
-        next(timer)
-    return time_curve
+    with torch.no_grad():
+        model = TorchJune(parameters=beta_dict)
+        time_curve = torch.zeros(0, dtype=torch.float).to(device)
+        while timer.date < timer.final_date:
+            cases = model(data, timer)["agent"].is_infected.sum()
+            time_curve = torch.hstack((time_curve, cases))
+            next(timer)
+        return time_curve
 
 
 def pyro_model(true_time_curve):
-    beta_company = pyro.sample("beta_company", pyro.distributions.Uniform(-1, 1))
-    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1, 1))
-    beta_household = pyro.sample("beta_household", pyro.distributions.Uniform(-1, 1))
-    beta_leisure = pyro.sample("beta_leisure", pyro.distributions.Uniform(-1, 1))
+    beta_company = pyro.sample("beta_company", pyro.distributions.Uniform(-1, 1)).to(
+        device
+    )
+    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1, 1)).to(
+        device
+    )
+    beta_household = pyro.sample(
+        "beta_household", pyro.distributions.Uniform(-1, 1)
+    ).to(device)
+    beta_leisure = pyro.sample("beta_leisure", pyro.distributions.Uniform(-1, 1)).to(
+        device
+    )
     time_curve = get_model_prediction(
         beta_company, beta_school, beta_household, beta_leisure
     )
     pyro.sample(
         "obs",
         pyro.distributions.Normal(
-            time_curve, torch.ones(time_curve.shape[0], device=device)
+            time_curve, 2.0 * torch.ones(time_curve.shape[0], device=device)
         ),
         obs=true_time_curve,
     )
@@ -57,14 +66,17 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_data = get_model_prediction(*torch.tensor([2.0, 3.0, 4.0, 1.0], device=device))
+true_data = get_model_prediction(
+    *torch.log10(torch.tensor([2.0, 3.0, 4.0, 1.0], device=device))
+)
 
-hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=10)
+hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=10, adapt_step_size=False)
+nuts_kernel = pyro.infer.NUTS(pyro_model)
 
 mcmc = pyro.infer.MCMC(
     hmc_kernel,
     num_samples=1000,
-    warmup_steps=20,
+    warmup_steps=200,
 )
 mcmc.run(true_data)
 
