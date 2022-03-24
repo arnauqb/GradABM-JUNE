@@ -5,11 +5,15 @@ from torch.nn.parameter import Parameter
 
 
 class InfectionPassing(MessagePassing):
-    def __init__(self, beta_priors):
+    def __init__(self, beta_company, beta_school, beta_household, beta_leisure):
         super().__init__(aggr="add", node_dim=-1)
-        self._betas_to_idcs = {name: i for i, name in enumerate(beta_priors.keys())}
-        for beta_n, beta_v in beta_priors.items():
-            setattr(self, beta_n, Parameter(beta_v))
+        #self._betas_to_idcs = {name: i for i, name in enumerate(beta_priors.keys())}
+        #for beta_n, beta_v in beta_priors.items():
+        #    setattr(self, beta_n, Parameter(beta_v))
+        self.beta_company = beta_company
+        self.beta_school = beta_school
+        self.beta_household = beta_household
+        self.beta_leisure = beta_leisure
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
@@ -26,7 +30,7 @@ class InfectionPassing(MessagePassing):
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            log_beta = getattr(self, group_name)
+            log_beta = getattr(self, "beta_" + group_name)
             log_beta = log_beta * torch.ones(
                 len(data[group_name]["id"]), device=device
             )
