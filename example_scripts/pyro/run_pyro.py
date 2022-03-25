@@ -1,5 +1,6 @@
 from pathlib import Path
 import torch
+import numpy as np
 import pyro
 import pandas as pd
 import json
@@ -18,9 +19,9 @@ from script_utils import (
 
 from torch_june import TorchJune
 
-device = "cuda:9"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+device = "cuda:1"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
 
 
 def run_model(model):
@@ -31,7 +32,7 @@ def run_model(model):
         cases = model(data, timer)["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
         next(timer)
-    return time_curve / time_curve.max()
+    return time_curve / data["agent"].id.shape[0]
 
 
 def get_model_prediction(
@@ -47,18 +48,24 @@ def get_model_prediction(
 
 
 def pyro_model(true_time_curve):
-    beta_company = pyro.sample(
-        "beta_company", pyro.distributions.Uniform(-0.5, 1.5)
+    log_beta_company = pyro.sample(
+        "log_beta_company", pyro.distributions.Uniform(-2.0, 2.0)
     ).to(device)
-    beta_school = pyro.sample("beta_school", pyro.distributions.Uniform(-1.5, 1.5)).to(
-        device
-    )
-    beta_household = pyro.sample(
-        "beta_household", pyro.distributions.Uniform(-1.5, 1.5)
+    log_beta_school = pyro.sample(
+        "log_beta_school", pyro.distributions.Uniform(-2.0, 2.0)
     ).to(device)
-    beta_leisure = pyro.sample(
-        "beta_leisure", pyro.distributions.Uniform(-1.5, 1.5)
+    log_beta_household = pyro.sample(
+        "log_beta_household", pyro.distributions.Uniform(-2.0, 2.0)
     ).to(device)
+    log_beta_leisure = pyro.sample(
+        "log_beta_leisure", pyro.distributions.Uniform(-2.0, 2.0)
+    ).to(device)
+    #print("----")
+    #print(log_beta_company.item())
+    #print(log_beta_school.item())
+    #print(log_beta_household.item())
+    #print(log_beta_leisure.item())
+    #print("----")
     time_curve = get_model_prediction(
         log_beta_company=log_beta_company,
         log_beta_household=log_beta_household,
@@ -79,25 +86,47 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-log_beta_company = torch.tensor(0.2, device=device)
-log_beta_school = torch.tensor(0.4, device=device)
-log_beta_household = torch.tensor(0.5, device=device)
-log_beta_leisure = torch.tensor(0.8, device=device)
+true_log_beta_company = torch.tensor(np.log10(2.0), device=device)
+true_log_beta_school = torch.tensor(np.log10(3.0), device=device)
+true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
+true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
 
 true_data = get_model_prediction(
-    log_beta_company=log_beta_company,
-    log_beta_household=log_beta_household,
-    log_beta_school=log_beta_school,
-    log_beta_leisure=log_beta_leisure,
+    log_beta_company=true_log_beta_company,
+    log_beta_household=true_log_beta_household,
+    log_beta_school=true_log_beta_school,
+    log_beta_leisure=true_log_beta_leisure,
 )
 
-hmc_kernel = pyro.infer.HMC(pyro_model, step_size=0.05, num_steps=25)
-nuts_kernel = pyro.infer.NUTS(pyro_model, step_size=0.01)
+temp_df = pd.DataFrame(
+    columns=[
+        "log_beta_company",
+        "log_beta_school",
+        "log_beta_household",
+        "log_beta_leisure",
+    ]
+)
 
+
+def logger(kernel, samples, stage, i, temp_df):
+    if stage != "Warmup":
+        for key in samples:
+            unconstrained_samples = samples[key]
+            constrained_samples = kernel.transforms[key].inv(unconstrained_samples)
+            temp_df.loc[i, key] = constrained_samples.cpu().item()
+    if i % 10 == 0:
+        temp_df.to_csv("./pyro_temp_results.csv", index=False)
+
+
+kernel = pyro.infer.NUTS(pyro_model)
+#kernel = pyro.infer.HMC(pyro_model)
 mcmc = pyro.infer.MCMC(
-    nuts_kernel,
-    num_samples=2000,
-    warmup_steps=200,
+    kernel,
+    num_samples=100,
+    warmup_steps=2,
+    hook_fn=lambda kernel, samples, stage, i: logger(
+        kernel, samples, stage, i, temp_df
+    ),
 )
 mcmc.run(true_data)
 
