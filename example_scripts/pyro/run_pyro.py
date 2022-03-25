@@ -19,9 +19,9 @@ from script_utils import (
 
 from torch_june import TorchJune
 
-device = "cuda:9"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
 
 gaussian_kernel = torch.autograd.Variable(
     torch.tensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006]]], device=device)
@@ -32,21 +32,27 @@ def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
     time_curve = torch.zeros(0, dtype=torch.float).to(device)
-    last_cases = 0.0
+    #last_cases = 0.0
     while timer.date < timer.final_date:
         cases = model(data, timer)["agent"].is_infected.sum()
-        daily_cases = cases - last_cases
-        last_cases = daily_cases.item()
-        time_curve = torch.hstack((time_curve, daily_cases))
+        #daily_cases = cases - last_cases
+        #last_cases = daily_cases.item()
+        time_curve = torch.hstack((time_curve, cases))
         next(timer)
-    time_curve = time_curve.reshape((1, time_curve.shape[0]))
-    time_curve = torch.nn.functional.conv1d(time_curve, gaussian_kernel)
-    return time_curve.squeeze() / data["agent"].id.shape[0]
+    #time_curve = time_curve.reshape((1, time_curve.shape[0]))
+    #time_curve = torch.nn.functional.conv1d(time_curve, gaussian_kernel)
+    return time_curve / data["agent"].id.shape[0]
 
 
 def get_model_prediction(
     log_beta_company, log_beta_household, log_beta_leisure, log_beta_school
 ):
+    #print("----")
+    #print(log_beta_company.item())
+    #print(log_beta_school.item())
+    #print(log_beta_household.item())
+    #print(log_beta_leisure.item())
+    #print("----")
     model = TorchJune(
         log_beta_leisure=log_beta_leisure,
         log_beta_household=log_beta_household,
@@ -57,20 +63,23 @@ def get_model_prediction(
 
 
 def pyro_model(true_time_curve):
-    log_beta_company = pyro.sample(
-        "log_beta_company", pyro.distributions.Uniform(0.0, 1.0)
-    ).to(device)
-    log_beta_school = pyro.sample(
-        "log_beta_school", pyro.distributions.Uniform(0.0, 1.0)
-    ).to(device)
-    log_beta_household = pyro.sample(
-        "log_beta_household", pyro.distributions.Uniform(0.0, 1.0)
-    ).to(device)
+    log_beta_company = true_log_beta_company
+    log_beta_school = true_log_beta_school
+    log_beta_household = true_log_beta_household
+    #log_beta_company = pyro.sample(
+    #    "log_beta_company", pyro.distributions.Uniform(-2.0, 2.0)
+    #).to(device)
+    #log_beta_school = pyro.sample(
+    #    "log_beta_school", pyro.distributions.Uniform(-2.0, 2.0)
+    #).to(device)
+    #log_beta_household = pyro.sample(
+    #    "log_beta_household", pyro.distributions.Uniform(-2.0, 2.0)
+    #).to(device)
     log_beta_leisure = pyro.sample(
-        "log_beta_leisure", pyro.distributions.Uniform(0.0, 1.0)
+        "log_beta_leisure", pyro.distributions.Uniform(-2.0, 2.0)
     ).to(device)
-    # print("----")
-    # print(log_beta_company.item())
+    #print("----")
+    #print(log_beta_company.item())
     # print(log_beta_school.item())
     # print(log_beta_household.item())
     # print(log_beta_leisure.item())
@@ -98,9 +107,9 @@ timer = make_timer()
 # true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
 # true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
 true_log_beta_company = torch.tensor(np.log10(3.0), device=device)
-true_log_beta_school = torch.tensor(np.log10(4.0), device=device)
-true_log_beta_household = torch.tensor(np.log10(2.0), device=device)
-true_log_beta_leisure = torch.tensor(np.log10(6.0), device=device)
+true_log_beta_school = torch.tensor(np.log10(2.0), device=device)
+true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
+true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
 
 true_data = get_model_prediction(
     log_beta_company=true_log_beta_company,
@@ -128,12 +137,12 @@ def logger(kernel, samples, stage, i, temp_df):
         temp_df.to_csv("./pyro_results.csv", index=False)
 
 
-mcmc_kernel = pyro.infer.NUTS(pyro_model)
-# mcmc_kernel = pyro.infer.HMC(pyro_model)
+mcmc_kernel = pyro.infer.NUTS(pyro_model)#, step_size=1e-7, adapt_step_size=False)
+#mcmc_kernel = pyro.infer.HMC(pyro_model, step_size=5e-5, num_steps=25)
 mcmc = pyro.infer.MCMC(
     mcmc_kernel,
     num_samples=10000,
-    warmup_steps=1000,
+    warmup_steps=500,
     hook_fn=lambda kernel, samples, stage, i: logger(
         kernel, samples, stage, i, temp_df
     ),
