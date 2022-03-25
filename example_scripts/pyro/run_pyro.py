@@ -19,20 +19,29 @@ from script_utils import (
 
 from torch_june import TorchJune
 
-device = "cuda:1"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data.pkl"
+# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
+
+gaussian_kernel = torch.autograd.Variable(
+    torch.tensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006]]], device=device)
+)
 
 
 def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
     time_curve = torch.zeros(0, dtype=torch.float).to(device)
+    last_cases = 0.0
     while timer.date < timer.final_date:
         cases = model(data, timer)["agent"].is_infected.sum()
-        time_curve = torch.hstack((time_curve, cases))
+        daily_cases = cases - last_cases
+        last_cases = daily_cases.item()
+        time_curve = torch.hstack((time_curve, daily_cases))
         next(timer)
-    return time_curve / data["agent"].id.shape[0]
+    time_curve = time_curve.reshape((1, time_curve.shape[0]))
+    time_curve = torch.nn.functional.conv1d(time_curve, gaussian_kernel)
+    return time_curve.squeeze() / data["agent"].id.shape[0]
 
 
 def get_model_prediction(
@@ -49,16 +58,16 @@ def get_model_prediction(
 
 def pyro_model(true_time_curve):
     log_beta_company = pyro.sample(
-        "log_beta_company", pyro.distributions.Uniform(-2.0, 2.0)
+        "log_beta_company", pyro.distributions.Uniform(0.0, 1.0)
     ).to(device)
     log_beta_school = pyro.sample(
-        "log_beta_school", pyro.distributions.Uniform(-2.0, 2.0)
+        "log_beta_school", pyro.distributions.Uniform(0.0, 1.0)
     ).to(device)
     log_beta_household = pyro.sample(
-        "log_beta_household", pyro.distributions.Uniform(-2.0, 2.0)
+        "log_beta_household", pyro.distributions.Uniform(0.0, 1.0)
     ).to(device)
     log_beta_leisure = pyro.sample(
-        "log_beta_leisure", pyro.distributions.Uniform(-2.0, 2.0)
+        "log_beta_leisure", pyro.distributions.Uniform(0.0, 1.0)
     ).to(device)
     #print("----")
     #print(log_beta_company.item())
@@ -75,7 +84,7 @@ def pyro_model(true_time_curve):
     pyro.sample(
         "obs",
         pyro.distributions.Normal(
-            time_curve, torch.ones(time_curve.shape[0], device=device)
+            time_curve, 3 * torch.ones(time_curve.shape[0], device=device)
         ),
         obs=true_time_curve,
     )
@@ -86,10 +95,14 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_log_beta_company = torch.tensor(np.log10(2.0), device=device)
-true_log_beta_school = torch.tensor(np.log10(3.0), device=device)
-true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
-true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
+# true_log_beta_company = torch.tensor(np.log10(2.0), device=device)
+# true_log_beta_school = torch.tensor(np.log10(3.0), device=device)
+# true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
+# true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
+true_log_beta_company = torch.tensor(np.log10(3.0), device=device)
+true_log_beta_school = torch.tensor(np.log10(4.0), device=device)
+true_log_beta_household = torch.tensor(np.log10(2.0), device=device)
+true_log_beta_leisure = torch.tensor(np.log10(6.0), device=device)
 
 true_data = get_model_prediction(
     log_beta_company=true_log_beta_company,
@@ -114,22 +127,17 @@ def logger(kernel, samples, stage, i, temp_df):
             unconstrained_samples = samples[key]
             constrained_samples = kernel.transforms[key].inv(unconstrained_samples)
             temp_df.loc[i, key] = constrained_samples.cpu().item()
-    if i % 10 == 0:
-        temp_df.to_csv("./pyro_temp_results.csv", index=False)
+        temp_df.to_csv("./pyro_results.csv", index=False)
 
 
-kernel = pyro.infer.NUTS(pyro_model)
-#kernel = pyro.infer.HMC(pyro_model)
+mcmc_kernel = pyro.infer.NUTS(pyro_model)
+#mcmc_kernel = pyro.infer.HMC(pyro_model)
 mcmc = pyro.infer.MCMC(
-    kernel,
-    num_samples=100,
-    warmup_steps=2,
+    mcmc_kernel,
+    num_samples=10000,
+    warmup_steps=1000,
     hook_fn=lambda kernel, samples, stage, i: logger(
         kernel, samples, stage, i, temp_df
     ),
 )
 mcmc.run(true_data)
-
-samples = {k: v.detach().cpu().numpy() for k, v in mcmc.get_samples().items()}
-samples_df = pd.DataFrame.from_dict(samples)
-samples_df.to_csv("./pyro_results.csv", index=False)
