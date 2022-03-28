@@ -16,13 +16,13 @@ from script_utils import (
 )
 
 from torch_june import TorchJune
-#from mpi4py import MPI
+from mpi4py import MPI
 
-#mpi_comm = MPI.COMM_WORLD
-#mpi_rank = mpi_comm.Get_rank()
+mpi_comm = MPI.COMM_WORLD
+mpi_rank = mpi_comm.Get_rank()
 
-#device = f"cuda:{mpi_rank+2}"
-device = f"cuda:0"
+device = f"cuda:{mpi_rank+1}"
+#device = f"cuda:0"
 
 
 def run_model(model):
@@ -72,8 +72,8 @@ def loglike(cube, ndim, nparams):
     return loglikelihood
 
 
-#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
 
 DATA = get_data(DATA_PATH, device, n_seed=100)
 BACKUP = backup_inf_data(DATA)
