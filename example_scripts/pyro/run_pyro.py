@@ -106,10 +106,10 @@ timer = make_timer()
 # true_log_beta_school = torch.tensor(np.log10(3.0), device=device)
 # true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
 # true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
-true_log_beta_company = torch.tensor(np.log10(3.0), device=device)
-true_log_beta_school = torch.tensor(np.log10(2.0), device=device)
-true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
+true_log_beta_company = torch.tensor(np.log10(2.0), device=device)
+true_log_beta_school = torch.tensor(np.log10(3.0), device=device)
 true_log_beta_leisure = torch.tensor(np.log10(1.0), device=device)
+true_log_beta_household = torch.tensor(np.log10(4.0), device=device)
 
 true_data = get_model_prediction(
     log_beta_company=true_log_beta_company,
