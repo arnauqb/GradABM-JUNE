@@ -45,7 +45,7 @@ def make_agent_data(sampler):
     data["agent"].transmission = torch.zeros(n_agents)
     data["agent"].susceptibility = torch.ones(n_agents)
     data["agent"].is_infected = torch.zeros(n_agents)
-    data["agent"].infection_time = -1.0 * torch.ones(n_agents)
+    data["agent"].infection_time = torch.zeros(n_agents)
     return data
 
 @fixture(name="data")

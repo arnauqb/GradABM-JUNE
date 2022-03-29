@@ -23,7 +23,7 @@ class InfectionUpdater(torch.nn.Module):
         rate = data["agent"]["infection_parameters"]["rate"]
         max_infectiousness = data["agent"]["infection_parameters"]["max_infectiousness"]
         #print(f"------{timer.now}------")
-        time_from_infection = timer.now + timer.duration - data["agent"].infection_time
+        time_from_infection = timer.now - data["agent"].infection_time
         #print(time_from_infection)
         #print(data["agent"].is_infected)
         sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2

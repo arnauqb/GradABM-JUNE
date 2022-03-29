@@ -23,24 +23,34 @@ def make_timer():
         weekend_activities=(("household",),),
     )
 
-#def make_sampler():
+
+# def make_sampler():
 #    max_infectiousness = LogNormal(0, 0.5)
 #    shape = Normal(1.56, 0.08)
 #    rate = Normal(0.53, 0.03)
 #    shift = Normal(-2.12, 0.1)
 #    return InfectionSampler(max_infectiousness, shape, rate, shift)
 
+
 def get_data(june_data_path, device, n_seed=1):
     with open(june_data_path, "rb") as f:
         data = pickle.load(f).to(device)
     n_agents = len(data["agent"]["id"])
-    #sampler = make_sampler()
+    # sampler = make_sampler()
     inf_params = {}
-    #inf_params_values = sampler(n_agents)
-    inf_params["max_infectiousness"] = torch.ones(n_agents, device=device) #inf_params_values[0].to(device)
-    inf_params["shape"] = torch.ones(n_agents, device=device) #inf_params_values[1].to(device)
-    inf_params["rate"] = torch.ones(n_agents, device=device) #inf_params_values[2].to(device)
-    inf_params["shift"] = torch.ones(n_agents, device=device) #inf_params_values[3].to(device)
+    # inf_params_values = sampler(n_agents)
+    inf_params["max_infectiousness"] = torch.ones(
+        n_agents, device=device
+    )  # inf_params_values[0].to(device)
+    inf_params["shape"] = torch.ones(
+        n_agents, device=device
+    )  # inf_params_values[1].to(device)
+    inf_params["rate"] = torch.ones(
+        n_agents, device=device
+    )  # inf_params_values[2].to(device)
+    inf_params["shift"] = torch.ones(
+        n_agents, device=device
+    )  # inf_params_values[3].to(device)
     data["agent"].infection_parameters = inf_params
     data["agent"].transmission = torch.zeros(n_agents, device=device)
     inf_choice = np.random.choice(
@@ -80,13 +90,14 @@ def restore_data(data, backup):
     data["agent"].infection_time = backup["infection_time"].detach().clone()
     return data
 
+
 device = f"cuda:0"
 
 
 def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
-    time_curve = torch.zeros(0, dtype=torch.float).to(device)
+    #time_curve = torch.zeros(0, dtype=torch.float).to(device)
     time_curve = model(data, timer)["agent"].is_infected.sum()
     while timer.date < timer.final_date:
         next(timer)

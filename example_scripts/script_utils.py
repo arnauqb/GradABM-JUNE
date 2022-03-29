@@ -32,7 +32,7 @@ def get_data(june_data_path, device, n_seed=1):
     )
     susceptibility = np.ones(n_agents)
     is_infected = np.zeros(n_agents)
-    infection_time = -1.0 * np.ones(n_agents)
+    infection_time = np.zeros(n_agents)
     susceptibility[inf_choice] = 0.0
     is_infected[inf_choice] = 1
     infection_time[inf_choice] = 0.0

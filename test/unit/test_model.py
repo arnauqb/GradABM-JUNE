@@ -19,16 +19,6 @@ class TestModel:
         model = TorchJune(**beta_priors)
         return model
 
-    # def test__parameters(self, model):
-    #    parameters = list(model.parameters())
-    #    print(parameters[0].data)
-    #    print(parameters[1])
-    #    assert len(parameters) == 4
-    #    assert np.isclose(10 ** parameters[0].data, 10.0)
-    #    assert np.isclose(10 ** parameters[1].data, 20.0)
-    #    assert np.isclose(10 ** parameters[2].data, 30.0)
-    #    assert np.isclose(10 ** parameters[3].data, 10.0)
-
     def test__run_model(self, model, inf_data, timer):
         # let transmission advance
         while timer.now < 5:
