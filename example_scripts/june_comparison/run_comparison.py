@@ -18,9 +18,11 @@ def make_timer():
         initial_day="2022-02-01",
         total_days=15,
         weekday_step_duration=(12,12),
+        #weekday_step_duration=(24,),
         weekend_step_duration=(24,),
-        weekday_activities=(("household",),("school",)),
-        weekend_activities=(("household",),),
+        weekday_activities=(("school", "household",),("household",)),
+        #weekday_activities=(("school",),),
+        weekend_activities=(("school","household"),),
     )
 
 
@@ -53,9 +55,10 @@ def get_data(june_data_path, device, n_seed=1):
     )  # inf_params_values[3].to(device)
     data["agent"].infection_parameters = inf_params
     data["agent"].transmission = torch.zeros(n_agents, device=device)
-    inf_choice = np.random.choice(
-        range(len(data["agent"]["id"])), n_seed, replace=False
-    )
+    #inf_choice = np.random.choice(
+    #    range(len(data["agent"]["id"])), n_seed, replace=False
+    #)
+    inf_choice = np.arange(0, n_seed)
     susceptibility = np.ones(n_agents)
     is_infected = np.zeros(n_agents)
     infection_time = np.zeros(n_agents)
@@ -99,11 +102,13 @@ def run_model(model):
     data = restore_data(DATA, BACKUP)
     #time_curve = torch.zeros(0, dtype=torch.float).to(device)
     time_curve = model(data, timer)["agent"].is_infected.sum()
+    dates = [timer.date]
     while timer.date < timer.final_date:
         next(timer)
         cases = model(data, timer)["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
-    return time_curve
+        dates.append(timer.date)
+    return dates, time_curve
 
 
 def get_model_prediction(
@@ -126,17 +131,20 @@ BACKUP = backup_inf_data(DATA)
 timer = make_timer()
 
 log_beta_company = torch.tensor(np.log10(5.0), device=device)
-log_beta_school = torch.tensor(np.log10(5.0), device=device)
+log_beta_school = torch.tensor(np.log10(2.0), device=device)
 log_beta_leisure = torch.tensor(np.log10(5.0), device=device)
 log_beta_household = torch.tensor(np.log10(5.0), device=device)
 
-true_data = get_model_prediction(
+dates, true_data = get_model_prediction(
     log_beta_company=log_beta_company,
     log_beta_household=log_beta_household,
     log_beta_school=log_beta_school,
     log_beta_leisure=log_beta_leisure,
 )
 
-df = pd.DataFrame()
-df["infected"] = true_data.cpu().numpy()
-df.to_csv("results.csv", index=False)
+df = pd.DataFrame(index=dates)
+df.index.name = "time_stamp"
+cases = true_data.cpu().numpy()
+daily_cases = np.diff(cases, prepend=cases[0])
+df["daily_infected"] = daily_cases
+df.to_csv("results.csv")
