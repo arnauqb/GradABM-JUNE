@@ -28,6 +28,7 @@ def make_sampler():
     shift = Normal(-2.12, 0.1)
     return InfectionSampler(max_infectiousness, shape, rate, shift)
 
+
 @fixture(name="agent_data")
 def make_agent_data(sampler):
     n_agents = 100
@@ -47,6 +48,7 @@ def make_agent_data(sampler):
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
     return data
+
 
 @fixture(name="data")
 def make_data(agent_data):
@@ -100,13 +102,14 @@ def make_timer():
             12,
         ),
         weekday_activities=(
-            ("company", "school"),
-            ("leisure",),
+            ("company", "school", "household"),
+            ("leisure", "household"),
             ("household",),
         ),
         weekend_activities=(("leisure",), ("household",)),
     )
     return timer
+
 
 @fixture(name="school_timer")
 def make_school_timer():

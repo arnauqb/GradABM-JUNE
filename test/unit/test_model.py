@@ -46,10 +46,11 @@ class TestModel:
             getattr(model.infection_passing, "log_beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
-        for param in parameters:
-            gradient = param.grad
-            assert gradient is not None
-            assert gradient != 0.0
+        # all to school, none to work.
+        assert parameters[0].grad is not None
+        assert parameters[0].grad == 0
+        assert parameters[1].grad is not None
+        assert parameters[1].grad != 0
 
     def setup_inf_data(self, data):
         data["school"].id = torch.tensor([0])

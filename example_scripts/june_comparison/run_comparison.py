@@ -17,9 +17,9 @@ def make_timer():
     return Timer(
         initial_day="2022-02-01",
         total_days=15,
-        weekday_step_duration=(24,),
+        weekday_step_duration=(12,12),
         weekend_step_duration=(24,),
-        weekday_activities=(("household",),),
+        weekday_activities=(("household",),("school",)),
         weekend_activities=(("household",),),
     )
 
