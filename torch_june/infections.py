@@ -22,10 +22,21 @@ class InfectionUpdater(torch.nn.Module):
         shift = data["agent"]["infection_parameters"]["shift"]
         rate = data["agent"]["infection_parameters"]["rate"]
         max_infectiousness = data["agent"]["infection_parameters"]["max_infectiousness"]
-        time = timer.now
-        sign = (torch.sign(time - data["agent"].infection_time) + 1.0) / 2.0
-        aux = torch.exp(torch.lgamma(shape)) * torch.pow(
-            (time - shift) * rate, shape - 1.0
+        #print(f"------{timer.now}------")
+        time_from_infection = timer.now + timer.duration - data["agent"].infection_time
+        #print(time_from_infection)
+        #print(data["agent"].is_infected)
+        sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
+        #print("sign")
+        #print(sign)
+        #print(sign)
+        aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
+            (time_from_infection - shift) * rate, shape - 1.0
         )
-        aux2 = torch.exp((shift - time) * rate) * rate
-        return max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
+        #print(aux)
+        aux2 = torch.exp((shift - time_from_infection) * rate) * rate
+        #print(aux2)
+        ret = max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
+        #print("ret")
+        #print(ret)
+        return ret

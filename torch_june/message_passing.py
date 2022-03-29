@@ -38,7 +38,7 @@ class InfectionPassing(MessagePassing):
             beta = torch.pow(10., log_beta)
             people_per_group = data[group_name]["people"]
             p_contact = torch.minimum(
-                5.0 / people_per_group, torch.tensor(1.0)
+                1.0 / (people_per_group-1), torch.tensor(1.0)
             )  # assumes constant n of contacts, change this in the future
             beta = beta * p_contact
             cumulative_trans = self.propagate(
@@ -48,6 +48,8 @@ class InfectionPassing(MessagePassing):
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=data["agent"].susceptibility
             )
+        print("cum trans")
+        print(cumulative_trans)
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         return not_infected_probs
 

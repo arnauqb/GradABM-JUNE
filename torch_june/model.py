@@ -21,12 +21,10 @@ class TorchJune(torch.nn.Module):
         self.is_infected_sampler = IsInfectedSampler()
 
     def forward(self, data, timer):
-        data["agent"].transmission = self.infection_updater(data=data, timer=timer)
         not_infected_probs = self.infection_passing(data=data, timer=timer)
         new_infected = self.is_infected_sampler(not_infected_probs)
         data["agent"].susceptibility = data["agent"].susceptibility - new_infected
         data["agent"].is_infected = data["agent"].is_infected + new_infected
-        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
-            1.0 + timer.now
-        )
+        data["agent"].infection_time[new_infected.bool()] = timer.now
+        data["agent"].transmission = self.infection_updater(data=data, timer=timer)
         return data

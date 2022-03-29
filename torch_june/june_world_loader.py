@@ -162,7 +162,7 @@ class GraphLoader:
         self.june_world_path = june_world_path
         self.k_leisure = k_leisure
 
-    def load_graph(self, data):
+    def load_graph(self, data, load_leisure = True):
         for network_loader_class in [
             HouseholdNetworkLoader,
             CompanyNetworkLoader,
@@ -171,8 +171,9 @@ class GraphLoader:
             print(f"Loading {network_loader_class}...")
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
-        print(f"Loading leisure ...")
-        leisure_loader = LeisureNetworkLoader(self.june_world_path, k=self.k_leisure)
-        leisure_loader.load_network(data)
+        if load_leisure:
+            print(f"Loading leisure ...")
+            leisure_loader = LeisureNetworkLoader(self.june_world_path, k=self.k_leisure)
+            leisure_loader.load_network(data)
         data = T.ToUndirected()(data)
         return data
