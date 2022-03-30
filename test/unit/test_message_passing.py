@@ -89,7 +89,7 @@ class TestInfectionPassing:
     def test__sample_infected(self):
         sampler = IsInfectedSampler()
         probs = torch.tensor([0.3])
-        n = 1000
+        n = 2000
         ret = 0
         for _ in range(n):
             ret += sampler(probs)
@@ -97,7 +97,7 @@ class TestInfectionPassing:
         assert np.isclose(ret, 0.7, rtol=1e-1)
 
         probs = torch.tensor([0.2, 0.5, 0.7, 0.3])
-        n = 1000
+        n = 2000
         ret = torch.zeros(4)
         for _ in range(n):
             ret += sampler(probs)
