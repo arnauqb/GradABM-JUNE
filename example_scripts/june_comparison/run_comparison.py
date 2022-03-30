@@ -20,9 +20,9 @@ def make_timer():
         weekday_step_duration=(12,12),
         #weekday_step_duration=(24,),
         weekend_step_duration=(24,),
-        weekday_activities=(("school", "household",),("household",)),
+        weekday_activities=(("company", "household",),("household",)),
         #weekday_activities=(("school",),),
-        weekend_activities=(("school","household"),),
+        weekend_activities=(("company", "household"),),
     )
 
 
@@ -130,7 +130,7 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-log_beta_company = torch.tensor(np.log10(5.0), device=device)
+log_beta_company = torch.tensor(np.log10(1.0), device=device)
 log_beta_school = torch.tensor(np.log10(2.0), device=device)
 log_beta_leisure = torch.tensor(np.log10(5.0), device=device)
 log_beta_household = torch.tensor(np.log10(5.0), device=device)

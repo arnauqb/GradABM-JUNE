@@ -1,12 +1,16 @@
 import torch
+import pytest
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from torch_june.june_world_loader import (
     AgentDataLoader,
+    CareHomeNetworkLoader,
     HouseholdNetworkLoader,
+    CareHomeNetworkLoader,
     CompanyNetworkLoader,
     SchoolNetworkLoader,
+    UniversityNetworkLoader,
     LeisureNetworkLoader,
     GraphLoader,
 )
@@ -20,116 +24,108 @@ class TestLoadAgentData:
     def test__agent_properties(self, agent_data_loader):
         data = HeteroData()
         agent_data_loader.load_agent_data(data)
-        assert len(data["agent"]["id"]) == 6640
-        assert len(data["agent"]["age"]) == 6640
-        assert len(data["agent"]["sex"]) == 6640
-        assert data["agent"]["age"][1234] == 24
-        assert data["agent"]["sex"][1234] == 0
-        assert data["agent"]["age"][2234] == 47
-        assert data["agent"]["sex"][2234] == 1
+        assert len(data["agent"]["id"]) == 769
+        assert len(data["agent"]["age"]) == 769
+        assert len(data["agent"]["sex"]) == 769
+        assert data["agent"]["age"][14] == 6
+        assert data["agent"]["sex"][14] == 1
+        assert data["agent"]["age"][22] == 8
+        assert data["agent"]["sex"][22] == 0
 
 
-class TestHouseholdNetwork:
-    @fixture(name="household_loader")
-    def make_household_loader(self, june_world_path):
-        return HouseholdNetworkLoader(june_world_path)
+class TestNetworks:
+    @pytest.mark.parametrize(
+        "loader_class, ids, expected",
+        [
+            (HouseholdNetworkLoader, (0, 50), ([272], [220, 248])),
+            (
+                CompanyNetworkLoader,
+                (0, 11),
+                ([177, 551], [69, 75, 136, 570, 695]),
+            ),
+            (
+                SchoolNetworkLoader,
+                (0,),
+                ([4, 5],),
+            ),
+            (
+                UniversityNetworkLoader,
+                (38,),
+                ([57, 58, 65, 59, 60, 61, 64, 62, 63],),
+            ),
+        ],
+    )
+    def test__get_people_per_group(self, june_world_path, loader_class, ids, expected):
+        loader = loader_class(june_world_path)
+        print(loader)
+        ret = loader._get_people_per_group()
+        for id, exp in zip(ids, expected):
+            assert set(exp).issubset(set(ret[id]))
 
-    def test__get_people_per_household(self, household_loader):
-        ret = household_loader._get_people_per_group()
-        assert set(ret[10]) == set([154, 314, 421])
-        assert set(ret[50]) == set([113, 275])
-        assert set(ret[125]) == set([227, 370, 402])
-
-    def test__load_household_network(self, household_loader):
+    @pytest.mark.parametrize(
+        "spec, loader_class, n_groups, total_people, group_ids, n_people_per_group",
+        [
+            ("household", HouseholdNetworkLoader, 355, 745, (2, 20, 209), (1, 6, 1)),
+            ("care_home", CareHomeNetworkLoader, 1, 27, (0,), (27,)),
+            ("company", CompanyNetworkLoader, 1980, 333, (0, 10, 1455), (2, 0, 7)),
+            ("school", SchoolNetworkLoader, 1, 78, (0,), (78,)),
+            ("university", UniversityNetworkLoader, 39, 43, (38, 23), (9, 17)),
+        ],
+    )
+    def test__load_network(
+        self,
+        june_world_path,
+        spec,
+        loader_class,
+        n_groups,
+        total_people,
+        group_ids,
+        n_people_per_group,
+    ):
         data = HeteroData()
-        household_loader.load_network(data)
-        assert len(data["household"]["id"]) == 2367  # number of households
-        assert (
-            len(data["attends_household"]["edge_index"][0]) == 6640
-        )  # everyone has a household
-        assert data["household"]["people"][10] == 3
-        assert data["household"]["people"][50] == 2
-        assert data["household"]["people"][125] == 3
-
-
-class TestCompanyNetwork:
-    @fixture(name="company_loader")
-    def make_company_loader(self, june_world_path):
-        return CompanyNetworkLoader(june_world_path)
-
-    def test__get_people_per_company(self, company_loader):
-        ret = company_loader._get_people_per_group()
-        assert set(ret[69]) == set([4116, 4554, 5648])
-        assert set(ret[33]) == set([1277, 2957, 3265, 3660, 4540, 5715])
-
-    def test__load_company_network(self, company_loader):
-        data = HeteroData()
-        company_loader.load_network(data)
-        assert len(data["company"]["id"]) == 130
-        assert len(data["attends_company"]["edge_index"][0]) == 2871
-        assert data["company"]["people"][69] == 3
-        assert data["company"]["people"][33] == 6
-
-
-class TestSchoolNetwork:
-    @fixture(name="school_loader")
-    def make_school_loader(self, june_world_path):
-        return SchoolNetworkLoader(june_world_path)
-
-    def test__get_people_per_school(self, school_loader):
-        ret = school_loader._get_people_per_group()
-        people_in_school1 = set(ret[0])
-        people_in_school2 = set(ret[1])
-        assert len(people_in_school1) == 1055
-        assert len(people_in_school2) == 565
-        assert set([1213, 1808, 2134, 2460, 3154]).issubset(people_in_school1)
-        assert set([4409, 5022, 6340, 6350]).issubset(people_in_school2)
-
-    def test__load_school_network(self, school_loader):
-        data = HeteroData()
-        school_loader.load_network(data)
-        assert len(data["school"]["id"]) == 2
-        assert len(data["attends_school"]["edge_index"][0]) == 1620
-        assert data["school"]["people"][0] == 1055
-        assert data["school"]["people"][1] == 565
+        loader = loader_class(june_world_path)
+        loader.load_network(data)
+        assert len(data[spec].id) == n_groups
+        assert len(data[f"attends_{spec}"].edge_index[0]) == total_people
+        for group_id, n_people in zip(group_ids, n_people_per_group):
+            assert data[spec].people[group_id] == n_people
 
 
 class TestLeisureNetwork:
     @fixture(name="leisure_loader")
-    def make_leisure_loader(self, june_world_path_only_people):
-        return LeisureNetworkLoader(june_world_path_only_people, k=3)
+    def make_leisure_loader(self, june_world_path):
+        return LeisureNetworkLoader(june_world_path, k=3)
 
     def test__get_people_per_super_area(self, leisure_loader):
         ret = leisure_loader._get_people_per_super_area()
-        assert len(ret[0]) == 8483
-        assert 6103 in ret[0]
-        assert len(ret[2]) == 6640
-        assert 15780 in ret[2]
+        assert len(ret[0]) == 294
+        assert 50 in ret[0]
+        assert len(ret[2]) == 325
+        assert 464 in ret[2]
 
     def test__generate_super_area_nearest_neighbor(self, leisure_loader):
         closest_sas = leisure_loader._get_closest_super_areas(0, k=3)
-        assert (closest_sas == [0, 3, 1]).all()
+        assert (closest_sas == [0, 2, 1]).all()
         closest_sas = leisure_loader._get_closest_super_areas(1, k=3)
-        assert (closest_sas == [1, 3, 0]).all()
+        assert (closest_sas == [1, 0, 2]).all()
         closest_sas = leisure_loader._get_closest_super_areas(2, k=3)
         assert (closest_sas == [2, 0, 1]).all()
-        closest_sas = leisure_loader._get_closest_super_areas(3, k=3)
-        assert (closest_sas == [3, 1, 0]).all()
 
     def test__get_close_people_per_super_area(self, leisure_loader):
         close_people_per_sa = leisure_loader._get_close_people_per_super_area(k=3)
-        assert len(close_people_per_sa[0]) == 22164
-        assert 7456 in close_people_per_sa[0]
-        assert len(close_people_per_sa[2]) == 22417
-        assert 16776 in close_people_per_sa[2]
+        assert len(close_people_per_sa[0]) == 769
+        assert len(close_people_per_sa[1]) == 769
+        assert len(close_people_per_sa[2]) == 769
+        close_people_per_sa = leisure_loader._get_close_people_per_super_area(k=2)
+        assert len(close_people_per_sa[1]) == 444
 
     def test__load_leisure_network(self, leisure_loader):
         data = HeteroData()
         leisure_loader.load_network(data)
-        assert len(data["attends_leisure"]["edge_index"][0]) > (6640 + 8483)
-        assert len(data["leisure"]["id"]) == 4
-        assert data["leisure"]["people"][0] == 22164
-        assert data["leisure"]["people"][2] == 22417
+        assert len(data["attends_leisure"]["edge_index"][0]) > 1500
+        assert len(data["leisure"]["id"]) == 3
+        assert data["leisure"]["people"][0] == 769 
+        assert data["leisure"]["people"][2] == 769 
 
 
 class TestLoadGraph:
@@ -140,19 +136,26 @@ class TestLoadGraph:
     def test__graph_loader(self, graph_loader):
         data = HeteroData()
         data = graph_loader.load_graph(data)
-        assert len(data["household"]["id"]) == 2367
-        assert len(data["school"]["id"]) == 2
-        assert len(data["company"]["id"]) == 130
-        assert len(data["attends_company"]["edge_index"][0]) == 2871
-        assert len(data["rev_attends_company"]["edge_index"][0]) == 2871
-        assert len(data["attends_school"]["edge_index"][0]) == 1620
-        assert len(data["rev_attends_school"]["edge_index"][0]) == 1620
-        assert len(data["attends_household"]["edge_index"][0]) == 6640
-        assert len(data["rev_attends_household"]["edge_index"][0]) == 6640
-        assert len(data["attends_leisure"]["edge_index"][0]) == 6640
-        assert len(data["rev_attends_leisure"]["edge_index"][0]) == 6640
+        assert len(data["household"]["id"]) == 355
+        assert len(data["school"]["id"]) == 1
+        assert len(data["company"]["id"]) == 1980
+        assert len(data["attends_company"]["edge_index"][0]) == 333
+        assert len(data["rev_attends_company"]["edge_index"][0]) == 333
+        assert len(data["attends_school"]["edge_index"][0]) == 78
+        assert len(data["rev_attends_school"]["edge_index"][0]) == 78
+        assert len(data["attends_household"]["edge_index"][0]) == 745
+        assert len(data["rev_attends_household"]["edge_index"][0]) == 745
+        assert (
+            len(data["attends_care_home"]["edge_index"][0]) == 27
+        )  # residents + workers
+        assert len(data["rev_attends_care_home"]["edge_index"][0]) == 27
+        assert len(data["attends_leisure"]["edge_index"][0]) == 769
+        assert len(data["rev_attends_leisure"]["edge_index"][0]) == 769
 
-        goes_to_school = set(data["attends_school"].edge_index[0,:])
-        goes_to_company = set(data["attends_company"].edge_index[0,:])
+        goes_to_school = set(data["attends_school"].edge_index[0, :].numpy())
+        goes_to_company = set(data["attends_company"].edge_index[0, :].numpy())
         assert len(goes_to_school.intersection(goes_to_company)) == 0
 
+        goes_to_household = set(data["attends_household"].edge_index[0, :].numpy())
+        goes_to_care_home = set(data["attends_care_home"].edge_index[0, :].numpy())
+        assert len(goes_to_care_home.intersection(goes_to_household)) == 3

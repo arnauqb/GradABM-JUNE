@@ -26,6 +26,7 @@ class AgentDataLoader:
 class NetworkLoader:
     spec = None
     plural = None
+    columns = None
 
     def __init__(self, june_world_path):
         self.june_world_path = june_world_path
@@ -33,12 +34,13 @@ class NetworkLoader:
     def _get_people_per_group(self):
         ret = defaultdict(lambda: [])
         with h5py.File(self.june_world_path, "r") as f:
-            group_ids = f["population"]["group_ids"][:, 1]
-            group_specs = f["population"]["group_specs"][:, 1]
-            for (i, (group_id, group_spec)) in enumerate(zip(group_ids, group_specs)):
-                if group_spec.decode() != self.spec:
-                    continue
-                ret[group_id].append(i)
+            for column in self.columns:
+                group_ids = f["population"]["group_ids"][:, column]
+                group_specs = f["population"]["group_specs"][:, column]
+                for (i, (group_id, group_spec)) in enumerate(zip(group_ids, group_specs)):
+                    if group_spec.decode() != self.spec:
+                        continue
+                    ret[group_id].append(i)
         return ret
 
     def _get_group_ids(self):
@@ -58,35 +60,44 @@ class NetworkLoader:
         data[self.spec].people = torch.tensor(
             [len(people_per_group[i]) for i in data[self.spec].id]
         )
-        data["agent", f"attends_{self.spec}", self.spec].edge_index = torch.vstack(
-            (torch.tensor(adjlist_i), torch.tensor(adjlist_j))
-        )
+        edge_type = ("agent", f"attends_{self.spec}", self.spec)
+        new_edges = torch.vstack((torch.tensor(adjlist_i), torch.tensor(adjlist_j)))
+        if edge_type in data.edge_types:
+            data[edge_type].edge_index = torch.hstack(
+                (data[edge_type].edge_index, new_edges)
+            )
+        else:
+            data[edge_type].edge_index = new_edges
 
 
 class HouseholdNetworkLoader(NetworkLoader):
     spec = "household"
     plural = "households"
+    columns = (0, )
 
-    def __init__(self, june_world_path):
-        self.june_world_path = june_world_path
 
-    def _get_people_per_group(self):
-        ret = defaultdict(lambda: [])
-        with h5py.File(self.june_world_path, "r") as f:
-            group_ids = f["population"]["group_ids"][:, 0]
-            for i, group_id in enumerate(group_ids):
-                ret[group_id].append(i)
-        return ret
+class CareHomeNetworkLoader(NetworkLoader):
+    spec = "care_home"
+    plural = "care_homes"
+    columns = (0, 1)
 
 
 class CompanyNetworkLoader(NetworkLoader):
     spec = "company"
     plural = "companies"
+    columns = (1, )
 
 
 class SchoolNetworkLoader(NetworkLoader):
     spec = "school"
     plural = "schools"
+    columns = (1, )
+
+
+class UniversityNetworkLoader(NetworkLoader):
+    spec = "university"
+    plural = "universities"
+    columns = (1, )
 
 
 class LeisureNetworkLoader:
@@ -162,18 +173,27 @@ class GraphLoader:
         self.june_world_path = june_world_path
         self.k_leisure = k_leisure
 
-    def load_graph(self, data, load_leisure = True):
-        for network_loader_class in [
+    def load_graph(
+        self,
+        data,
+        load_leisure=True,
+        loaders=(
             HouseholdNetworkLoader,
+            CareHomeNetworkLoader,
             CompanyNetworkLoader,
             SchoolNetworkLoader,
-        ]:
+            UniversityNetworkLoader,
+        ),
+    ):
+        for network_loader_class in loaders:
             print(f"Loading {network_loader_class}...")
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
         if load_leisure:
             print(f"Loading leisure ...")
-            leisure_loader = LeisureNetworkLoader(self.june_world_path, k=self.k_leisure)
+            leisure_loader = LeisureNetworkLoader(
+                self.june_world_path, k=self.k_leisure
+            )
             leisure_loader.load_network(data)
         data = T.ToUndirected()(data)
         return data

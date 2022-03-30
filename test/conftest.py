@@ -12,7 +12,7 @@ from torch_june.timer import Timer
 
 @fixture(scope="session", name="june_world_path")
 def get_june_world_path():
-    return Path(__file__).parent / "data/june_world.hdf5"
+    return Path(__file__).parent / "data/june_small_world.h5"
 
 
 @fixture(scope="session", name="june_world_path_only_people")
