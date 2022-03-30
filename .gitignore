@@ -133,3 +133,4 @@ notebooks
 my_scripts
 worlds
 **/*.pdf
+example_scripts/**/*

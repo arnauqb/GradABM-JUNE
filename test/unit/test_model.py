@@ -21,7 +21,7 @@ class TestModel:
 
     def test__run_model(self, model, inf_data, timer):
         # let transmission advance
-        while timer.now < 5:
+        while timer.now < 3:
             next(timer)
         results = model(timer=timer, data=inf_data)
         # check at least someone infected
