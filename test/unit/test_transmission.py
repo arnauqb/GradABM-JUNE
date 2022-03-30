@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from pytest import fixture
 
-from torch_june.infections import InfectionUpdater
+from torch_june.transmission import TransmissionUpdater
 
 
 class TestInfections:
@@ -14,8 +14,8 @@ class TestInfections:
         assert sampler(10).shape == (4, 10)
 
     def test__generate_infections(self, data, timer):
-        inf_updater = InfectionUpdater()
-        transmissions = inf_updater(data=data, timer=timer)
+        trans_updater = TransmissionUpdater()
+        transmissions = trans_updater(data=data, timer=timer)
         assert (transmissions == torch.zeros(100)).all()
         is_infected = np.zeros(100)
         infection_time = -1.0 * np.ones(100)
@@ -27,7 +27,7 @@ class TestInfections:
         data["agent"].infection_time = torch.tensor(infection_time)
         while timer.now != 5:
             next(timer)
-        transmissions = inf_updater(data=data, timer=timer)
+        transmissions = trans_updater(data=data, timer=timer)
         assert (transmissions[1:99] == torch.zeros(98)).all()
         assert transmissions[0] > 0.0
         assert transmissions[99] > 0.0

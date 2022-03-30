@@ -5,7 +5,8 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
 
-from torch_june import InfectionPassing, IsInfectedSampler, InfectionUpdater
+from torch_june import InfectionPassing, IsInfectedSampler, TransmissionUpdater
+from torch_june.transmission import TransmissionUpdater
 
 
 class TestInfectionPassing:
@@ -113,8 +114,8 @@ class TestInfectionPassing:
             next(timer)
         assert timer.day_of_week == "Friday"
         assert timer.now == 3
-        inf_updater = InfectionUpdater()
-        data["agent"].transmission = inf_updater(data=data, timer=timer)
+        trans_updater = TransmissionUpdater()
+        data["agent"].transmission = trans_updater(data=data, timer=timer)
         assert data["agent"].transmission.sum() > 0
         # People that go to schools should not be infected.
         inf_pass = InfectionPassing(

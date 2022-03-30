@@ -7,7 +7,7 @@ from torch.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.infections import InfectionSampler
+from torch_june.transmission import TransmissionSampler 
 from torch_june.timer import Timer
 
 @fixture(autouse=True)
@@ -33,7 +33,7 @@ def make_sampler():
     shape = Normal(1.56, 0.08)
     rate = Normal(0.53, 0.03)
     shift = Normal(-2.12, 0.1)
-    return InfectionSampler(max_infectiousness, shape, rate, shift)
+    return TransmissionSampler(max_infectiousness, shape, rate, shift)
 
 
 @fixture(name="agent_data")
