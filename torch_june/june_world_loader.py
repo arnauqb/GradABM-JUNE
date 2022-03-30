@@ -62,12 +62,7 @@ class NetworkLoader:
         )
         edge_type = ("agent", f"attends_{self.spec}", self.spec)
         new_edges = torch.vstack((torch.tensor(adjlist_i), torch.tensor(adjlist_j)))
-        if edge_type in data.edge_types:
-            data[edge_type].edge_index = torch.hstack(
-                (data[edge_type].edge_index, new_edges)
-            )
-        else:
-            data[edge_type].edge_index = new_edges
+        data[edge_type].edge_index = new_edges
 
 
 class HouseholdNetworkLoader(NetworkLoader):
