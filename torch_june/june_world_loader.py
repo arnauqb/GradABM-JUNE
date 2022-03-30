@@ -1,5 +1,4 @@
 import torch_geometric.transforms as T
-from torch_june.utils import generate_erdos_renyi
 from collections import defaultdict
 import numpy as np
 import h5py
