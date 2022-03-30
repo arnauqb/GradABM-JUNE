@@ -20,9 +20,9 @@ def make_timer():
         weekday_step_duration=(12,12),
         #weekday_step_duration=(24,),
         weekend_step_duration=(24,),
-        weekday_activities=(("company", "household",),("household",)),
+        weekday_activities=(("school", "university", "company", "care_home", "household",),("household",)),
         #weekday_activities=(("school",),),
-        weekend_activities=(("company", "household"),),
+        weekend_activities=(("household"),),
     )
 
 

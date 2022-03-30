@@ -5,7 +5,9 @@ from torch.nn.parameter import Parameter
 
 activity_hierarchy = [
     "attends_school",
+    "attends_university",
     "attends_company",
+    "attends_care_home",
     "attends_leisure",
     "attends_household",
 ]
@@ -14,16 +16,20 @@ activity_hierarchy = [
 class InfectionPassing(MessagePassing):
     def __init__(
         self,
-        log_beta_company=torch.tensor(-10.0),
-        log_beta_school=torch.tensor(-10.0),
-        log_beta_household=torch.tensor(-10.0),
-        log_beta_leisure=torch.tensor(-10.0),
+        beta_company=torch.tensor(1.0),
+        beta_school=torch.tensor(1.0),
+        beta_household=torch.tensor(1.0),
+        beta_university=torch.tensor(1.0),
+        beta_leisure=torch.tensor(1.0),
+        beta_care_home=torch.tensor(1.0),
     ):
         super().__init__(aggr="add", node_dim=-1)
-        self.log_beta_company = log_beta_company
-        self.log_beta_school = log_beta_school
-        self.log_beta_household = log_beta_household
-        self.log_beta_leisure = log_beta_leisure
+        self.beta_company = beta_company
+        self.beta_school = beta_school
+        self.beta_household = beta_household
+        self.beta_leisure = beta_leisure
+        self.beta_university = beta_university
+        self.beta_care_home = beta_care_home
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
@@ -58,9 +64,8 @@ class InfectionPassing(MessagePassing):
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            log_beta = getattr(self, "log_beta_" + group_name)
-            log_beta = log_beta * torch.ones(len(data[group_name]["id"]), device=device)
-            beta = torch.pow(10.0, log_beta)
+            beta = getattr(self, "beta_" + group_name)
+            beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
             p_contact = torch.minimum(
                 1.0 / (people_per_group - 1), torch.tensor(1.0)
@@ -68,16 +73,14 @@ class InfectionPassing(MessagePassing):
             beta = beta * p_contact
             # remove people who are not really in this group
             transmissions = data["agent"].transmission * is_free
-            cumulative_trans = self.propagate(
-                edge_index, x=transmissions, y=beta
-            )
+            cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
             susceptibilities = data["agent"].susceptibility * is_free
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-            is_free[edge_index[0,:]] = 0.0
+            is_free[edge_index[0, :]] = 0.0
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         return not_infected_probs
 

@@ -17,7 +17,7 @@ class TestInfectionPassing:
 
     @fixture(name="inf_pass")
     def make_ip(self, beta_priors):
-        return InfectionPassing(log_beta_school=torch.log10(torch.tensor(2.0)))
+        return InfectionPassing(beta_school=torch.tensor(2.0))
 
     @fixture(name="small_data")
     def make_small_data(self):
@@ -118,10 +118,10 @@ class TestInfectionPassing:
         assert data["agent"].transmission.sum() > 0
         # People that go to schools should not be infected.
         inf_pass = InfectionPassing(
-            log_beta_school=torch.log10(torch.tensor(0.0)),
-            log_beta_company=torch.log10(torch.tensor(10.0)),
-            log_beta_household=torch.log10(torch.tensor(2.0)),
-            log_beta_leisure=torch.log10(torch.tensor(20.0)),
+            beta_school=torch.tensor(0.0),
+            beta_company=torch.tensor(10.0),
+            beta_household=torch.tensor(2.0),
+            beta_leisure=torch.tensor(20.0),
         )
         not_inf_probs = inf_pass(data=data, timer=timer)
         assert np.allclose(not_inf_probs, np.ones(len(not_inf_probs)))
@@ -129,10 +129,10 @@ class TestInfectionPassing:
 
         # People that go to leisure should all be infected.
         inf_pass = InfectionPassing(
-            log_beta_school=torch.log10(torch.tensor(0.0)),
-            log_beta_company=torch.log10(torch.tensor(10.0)),
-            log_beta_household=torch.log10(torch.tensor(20.0)),
-            log_beta_leisure=torch.log10(torch.tensor(20000.0)),
+            beta_school=torch.tensor(0.0),
+            beta_company=torch.tensor(10.0),
+            beta_household=torch.tensor(20.0),
+            beta_leisure=torch.tensor(20000.0),
         )
         not_inf_probs = inf_pass(data=data, timer=timer)
         # only not infected should be the ones already infected

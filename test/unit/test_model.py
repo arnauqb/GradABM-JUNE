@@ -11,10 +11,10 @@ class TestModel:
     @fixture(name="model")
     def make_model(self):
         beta_priors = {
-            "log_beta_company": torch.tensor(1.0, requires_grad=True),
-            "log_beta_school": torch.tensor(np.log10(20.0), requires_grad=True),
-            "log_beta_household": torch.tensor(np.log10(30.0), requires_grad=True),
-            "log_beta_leisure": torch.tensor(1.0, requires_grad=True),
+            "beta_company": torch.tensor(1.0, requires_grad=True),
+            "beta_school": torch.tensor(20.0, requires_grad=True),
+            "beta_household": torch.tensor(30.0, requires_grad=True),
+            "beta_leisure": torch.tensor(1.0, requires_grad=True),
         }
         model = TorchJune(**beta_priors)
         return model
@@ -43,7 +43,7 @@ class TestModel:
         loss = loss_fn(cases, random_cases)
         loss.backward()
         parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
+            getattr(model.infection_passing, "beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         # all to school, none to work.
@@ -104,7 +104,7 @@ class TestModel:
 
         cases[k].backward(retain_graph=True)
         parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
+            getattr(model.infection_passing, "beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
@@ -141,7 +141,7 @@ class TestModel:
         assert reached
         cases[k].backward(retain_graph=True)
         parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
+            getattr(model.infection_passing, "beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
@@ -165,7 +165,7 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
+            getattr(model.infection_passing, "beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
