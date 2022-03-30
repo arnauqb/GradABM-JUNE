@@ -39,7 +39,7 @@ class SymptomsSampler:
             if stage not in transition_times:
                 ret[i] = None
             else:
-                dist_name = transition_times[stage].pop("distribution")
+                dist_name = transition_times[stage].pop("dist")
                 dist_class = getattr(dist, dist_name)
                 ret[i] = dist_class(**transition_times[stage])
         return ret
@@ -57,38 +57,28 @@ class SymptomsSampler:
         new_stages = current_stages.clone()
         new_times = time_to_next_stages.clone()
         probs = self._get_prob_next_symptoms_stage(ages, current_stages)
-        mask_transition = self._get_need_to_transition(current_stages, time_to_next_stages, time)
-        #print(probs)
+        mask_transition = self._get_need_to_transition(
+            current_stages, time_to_next_stages, time
+        )
         mask_symp_transition = torch.bernoulli(probs).to(torch.bool)
         mask_recovered_transition = ~mask_symp_transition
-        for i, stage in enumerate(self.stages[:-1]): # skip dead
-            #print(stage)
+        for i, stage in enumerate(self.stages[:-1]):  # skip dead
             mask_stage = current_stages == i
             mask_updating = mask_transition * mask_stage
-            #print("needs updating")
-            #print(mask_updating)
-
             mask_symp = mask_updating * mask_symp_transition
-            #print("wins roll")
-            #print(mask_symp)
             n_symp = mask_symp.sum()
             if n_symp > 0:
                 if i < len(self.stages) - 2:
-                    new_times[mask_symp] = new_times[mask_symp] + self.symptom_transition_times[i+1].sample((n_symp.item(),))
+                    new_times[mask_symp] = new_times[
+                        mask_symp
+                    ] + self.symptom_transition_times[i + 1].sample((n_symp.item(),))
                 new_stages[mask_symp] = new_stages[mask_symp] + 1
 
             mask_rec = mask_updating * mask_recovered_transition
             n_rec = mask_rec.sum()
             if n_rec > 0:
-                new_times[mask_rec] = new_times[mask_rec] + self.recovery_times[i].sample((n_rec.item(),))
+                new_times[mask_rec] = new_times[mask_rec] + self.recovery_times[
+                    i
+                ].sample((n_rec.item(),))
                 new_stages[mask_rec] = torch.zeros(n_rec)
-            #print("\n")
-        #print("---")
         return new_stages, new_times
-
-        
-
-
-
-
-

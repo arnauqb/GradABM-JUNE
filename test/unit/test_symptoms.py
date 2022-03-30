@@ -23,14 +23,14 @@ class TestSymptomsSampler:
                 "critical": {"0-100": 0.1},
             },
             "symptom_transition_times": {
-                "asymptomatic": {"distribution": "LogNormal", "loc": 1.1, "scale": 0.2},
-                "symptomatic": {"distribution": "Normal", "loc": 10.2, "scale": 3.0},
-                "critical": {"distribution": "LogNormal", "loc": 1.7, "scale": 0.5},
+                "asymptomatic": {"dist": "LogNormal", "loc": 1.1, "scale": 0.2},
+                "symptomatic": {"dist": "Normal", "loc": 10.2, "scale": 3.0},
+                "critical": {"dist": "LogNormal", "loc": 1.7, "scale": 0.5},
             },
             "recovery_times": {
-                "asymptomatic": {"distribution": "LogNormal", "loc": 1.2, "scale": 0.3},
-                "symptomatic": {"distribution": "LogNormal", "loc": 1.3, "scale": 0.5},
-                "critical": {"distribution": "LogNormal", "loc": 1.4, "scale": 0.8},
+                "asymptomatic": {"dist": "LogNormal", "loc": 1.2, "scale": 0.3},
+                "symptomatic": {"dist": "LogNormal", "loc": 1.3, "scale": 0.5},
+                "critical": {"dist": "LogNormal", "loc": 1.4, "scale": 0.8},
             },
         }
         return input
