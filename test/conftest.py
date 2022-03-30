@@ -2,12 +2,24 @@ from pathlib import Path
 import torch
 import torch_geometric.transforms as T
 import numpy as np
+import random
 from torch.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from torch_june.infections import InfectionSampler
 from torch_june.timer import Timer
+
+@fixture(autouse=True)
+def set_random_seed(seed=999):
+    """
+    Sets global seeds for testing in numpy, random, and numbaized numpy.
+    """
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    return
 
 
 @fixture(scope="session", name="june_world_path")

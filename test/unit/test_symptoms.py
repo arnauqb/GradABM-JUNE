@@ -133,5 +133,5 @@ class TestSymptomsSampler:
         assert np.isclose(transition_times[2], expected, rtol=1e-1)
         assert np.isclose(transition_times[3], 1.8, rtol=1e-2)
         expected = 0.1 * np.exp(1.7 + 0.5**2/2) + 0.9 * np.exp(1.4 + 0.8**2/2)
-        assert np.isclose(transition_times[4], expected, rtol=1e-1)
+        assert np.isclose(transition_times[4], expected, rtol=2e-1)
         assert transition_times[5] == 0.5
