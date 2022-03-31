@@ -2,6 +2,7 @@ from cProfile import Profile
 from pathlib import Path
 from time import time
 import torch
+
 torch.autograd.set_detect_anomaly(True)
 
 torch.manual_seed(0)
@@ -23,70 +24,93 @@ from script_utils import (
     backup_inf_data,
     restore_data,
     make_timer,
-    group_by_symptoms,
 )
 
 from torch_june import TorchJune
 
 
-device = "cpu"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
+# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
+
 
 def get_deaths_from_symptoms(symptoms):
-    return torch.tensor(symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0], device=device)
+    return torch.tensor(
+        symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
+        device=device,
+    )
+
+
+def get_cases_by_age(data):
+    with torch.no_grad():
+        ret = torch.zeros(100, device=device)
+        ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
+        for i in range(1, len(ages)):
+            mask1 = data["agent"].age < ages[i]
+            mask2 = data["agent"].age > ages[i-1]
+            mask = mask1 * mask2
+            ret[i] = ret[i] + data["agent"].is_infected[mask].sum()
+    return ret
+
 
 def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
-    time_curve = model(data, timer)["agent"].is_infected.sum()
+    data = model(data, timer)
+    time_curve = data["agent"].is_infected.sum()
+    cases_by_age = get_cases_by_age(data)
     deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms)
     dates = [timer.date]
     while timer.date < timer.final_date:
         next(timer)
-        cases = model(data, timer)["agent"].is_infected.sum()
+        data = model(data, timer)
+
+        cases = data["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
         deaths = get_deaths_from_symptoms(data["agent"].symptoms)
         deaths_curve = torch.hstack((deaths_curve, deaths))
+        cases_age = get_cases_by_age(data)
+        cases_by_age = torch.vstack((cases_by_age, cases_age))
+
         dates.append(timer.date)
-    return dates, time_curve, deaths_curve 
+    return dates, time_curve, deaths_curve, cases_by_age
 
 
 def get_model_prediction(**kwargs):
     print(kwargs)
-    #t1 = time()
+    # t1 = time()
     model = TorchJune(**kwargs, device=device)
     ret = run_model(model)
-    #t2 = time()
-    #print(f"Took {t2-t1:.2f} seconds.")
+    # t2 = time()
+    # print(f"Took {t2-t1:.2f} seconds.")
     return ret
 
 
 def pyro_model(true_data):
-    #beta_company = true_beta_company
-    #beta_school = true_beta_school
-    #beta_household = true_beta_household
-    #beta_university = true_beta_university
-    #beta_care_home = true_beta_care_home
+    # beta_company = true_beta_company
+    # beta_school = true_beta_school
+    # beta_household = true_beta_household
+    # beta_university = true_beta_university
+    # beta_care_home = true_beta_care_home
     beta_household = 10 ** pyro.sample(
-        "beta_household", pyro.distributions.Uniform(-1, 1)
+        "beta_household", pyro.distributions.Uniform(0, 1)
     ).to(device)
-    beta_care_home= 10 ** pyro.sample(
-        "beta_care_home", pyro.distributions.Uniform(-1, 1.0)
-    ).to(device)
+    beta_care_home = beta_household
     beta_company = 10 ** pyro.sample(
-        "beta_company", pyro.distributions.Uniform(-1, 1)
+        "beta_company", pyro.distributions.Uniform(0, 1)
     ).to(device)
-    beta_school = 10 ** pyro.sample(
-        "beta_school", pyro.distributions.Uniform(-1, 1)
-    ).to(device)
-    beta_university = 10 ** pyro.sample(
-        "beta_university", pyro.distributions.Uniform(-1, 1)
-    ).to(device)
+    beta_university = beta_company
+    beta_school = beta_company
+    #beta_school = 10 ** pyro.sample(
+    #    "beta_school", pyro.distributions.Uniform(0, 1)
+    #).to(device)
+    #beta_university = 10 ** pyro.sample(
+    #    "beta_university", pyro.distributions.Uniform(0, 1)
+    #).to(device)
     beta_leisure = 10 ** pyro.sample(
-        "beta_leisure", pyro.distributions.Uniform(-1, 1)
+        "beta_leisure", pyro.distributions.Uniform(0, 1)
     ).to(device)
-    dates, time_curve, deaths = get_model_prediction(
+    dates, time_curve, deaths, cases_by_age = get_model_prediction(
         beta_company=beta_company,
         beta_household=beta_household,
         beta_school=beta_school,
@@ -94,10 +118,14 @@ def pyro_model(true_data):
         beta_care_home=beta_care_home,
         beta_university=beta_university,
     )
+    #with pyro.plate("data", 100) as ind:
+    #    print(ind)
     y = pyro.sample(
         "obs",
-        #pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
-        pyro.distributions.Normal(time_curve, 0.2 * time_curve),
+        # pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
+        #pyro.distributions.Normal(cases_by_age[:, ind], 0.2 * cases_by_age[:, ind]),
+        pyro.distributions.Normal(cases_by_age, 0.2 * cases_by_age),
+        #obs=true_data[:, ind],
         obs=true_data,
     )
     return y
@@ -108,16 +136,16 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_beta_company = torch.tensor(1.0, device=device)
-true_beta_school = torch.tensor(1.0, device=device)
-true_beta_leisure = torch.tensor(1.0, device=device)
-true_beta_household = torch.tensor(3.0, device=device)
-true_beta_university = torch.tensor(1.0, device=device)
-true_beta_care_home = torch.tensor(3.0, device=device)
+true_beta_company = torch.tensor(2.0, device=device)
+true_beta_school = torch.tensor(2.0, device=device)
+true_beta_leisure = torch.tensor(2.0, device=device)
+true_beta_household = torch.tensor(4.0, device=device)
+true_beta_university = torch.tensor(2.0, device=device)
+true_beta_care_home = torch.tensor(4.0, device=device)
 
-#prof = Profile()
-#prof.enable()
-dates, true_data, true_deaths = get_model_prediction(
+# prof = Profile()
+# prof.enable()
+dates, true_data, true_deaths, cases_by_age = get_model_prediction(
     beta_company=true_beta_company,
     beta_household=true_beta_household,
     beta_school=true_beta_school,
@@ -125,15 +153,19 @@ dates, true_data, true_deaths = get_model_prediction(
     beta_care_home=true_beta_care_home,
     beta_university=true_beta_university,
 )
-#prof.disable()
-#prof.dump_stats("./profile.prof")
+# prof.disable()
+# prof.dump_stats("./profile.prof")
 
 #fig, ax = plt.subplots()
 #cases = true_data.cpu().numpy()
 #deaths = true_deaths.cpu().numpy()
+#cases_by_age = cases_by_age.cpu().numpy()
 #daily_deaths = np.diff(deaths, prepend=0)
 ##ax.plot(dates, deaths)
-#ax.plot(dates, cases)
+##ax.plot(dates, cases)
+#cmap = plt.get_cmap("viridis")(np.linspace(0,1,100))
+#for i in range(cases_by_age.shape[1]):
+#   ax.plot(dates, cases_by_age[:,i], color = cmap[i])
 #plt.show()
 
 temp_df = pd.DataFrame(
@@ -169,6 +201,6 @@ mcmc = pyro.infer.MCMC(
         kernel, samples, stage, i, temp_df
     ),
 )
-mcmc.run(true_data)
+mcmc.run(cases_by_age)
 print(mcmc.summary())
 print(mcmc.diagnostics())
