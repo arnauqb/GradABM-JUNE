@@ -28,34 +28,27 @@ from script_utils import (
 from torch_june import TorchJune
 
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_ne.pkl"
-# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_two_super_areas.pkl"
+device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_ne.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
 
+def get_deaths_from_symptoms(symptoms):
+    return torch.tensor(symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0], device=device)
 
 def run_model(model):
     timer.reset()
     data = restore_data(DATA, BACKUP)
-    # time_curve = torch.zeros(0, dtype=torch.float, device=device)
     time_curve = model(data, timer)["agent"].is_infected.sum()
-    symptoms = group_by_symptoms(
-        data["agent"].symptoms,
-        model.symptoms_updater.symptoms_sampler.stages,
-        device=device,
-    )
+    deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms)
     dates = [timer.date]
     while timer.date < timer.final_date:
         next(timer)
         cases = model(data, timer)["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
-        n_by_symptoms = group_by_symptoms(
-            data["agent"].symptoms,
-            model.symptoms_updater.symptoms_sampler.stages,
-            device=device,
-        )
-        symptoms = torch.vstack((symptoms, n_by_symptoms))
+        deaths = get_deaths_from_symptoms(data["agent"].symptoms)
+        deaths_curve = torch.hstack((deaths_curve, deaths))
         dates.append(timer.date)
-    return dates, time_curve, symptoms
+    return dates, time_curve, deaths 
 
 
 def get_model_prediction(**kwargs):
@@ -65,15 +58,30 @@ def get_model_prediction(**kwargs):
 
 
 def pyro_model(true_data):
-    beta_company = true_beta_company
-    beta_school = true_beta_school
-    beta_household = true_beta_household
-    beta_university = true_beta_university
-    beta_care_home = true_beta_care_home
+    #beta_company = true_beta_company
+    #beta_school = true_beta_school
+    #beta_household = true_beta_household
+    #beta_university = true_beta_university
+    #beta_care_home = true_beta_care_home
+    beta_household= pyro.sample(
+        "beta_household", pyro.distributions.Uniform(0.1, 10.0)
+    ).to(device)
+    beta_care_home= pyro.sample(
+        "beta_care_home", pyro.distributions.Uniform(0.1, 10.0)
+    ).to(device)
+    beta_company = pyro.sample(
+        "beta_company", pyro.distributions.Uniform(0.1, 10.0)
+    ).to(device)
+    beta_school = pyro.sample(
+        "beta_school", pyro.distributions.Uniform(0.1, 10.0)
+    ).to(device)
+    beta_university = pyro.sample(
+        "beta_university", pyro.distributions.Uniform(0.1, 10.0)
+    ).to(device)
     beta_leisure = pyro.sample(
         "beta_leisure", pyro.distributions.Uniform(0.1, 10.0)
     ).to(device)
-    dates, time_curve, symptoms = get_model_prediction(
+    dates, time_curve, deaths = get_model_prediction(
         beta_company=beta_company,
         beta_household=beta_household,
         beta_school=beta_school,
@@ -81,11 +89,11 @@ def pyro_model(true_data):
         beta_care_home=beta_care_home,
         beta_university=beta_university,
     )
-    deaths = symptoms[:,-1]
     y = pyro.sample(
         "obs",
+        #pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
         pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
-        obs=true_deaths,
+        obs=true_data,
     )
     return y
 
@@ -104,7 +112,7 @@ true_beta_care_home = torch.tensor(3.0, device=device)
 
 #prof = Profile()
 #prof.enable()
-dates, true_data, true_symptoms = get_model_prediction(
+dates, true_data, true_deaths = get_model_prediction(
     beta_company=true_beta_company,
     beta_household=true_beta_household,
     beta_school=true_beta_school,
@@ -112,7 +120,6 @@ dates, true_data, true_symptoms = get_model_prediction(
     beta_care_home=true_beta_care_home,
     beta_university=true_beta_university,
 )
-true_deaths = true_symptoms[:,-1]
 #prof.disable()
 #prof.dump_stats("./profile.prof")
 
