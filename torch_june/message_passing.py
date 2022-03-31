@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
 
@@ -80,7 +81,9 @@ class InfectionPassing(MessagePassing):
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-            is_free[edge_index[0, :]] = 0.0
+            mask = np.ones(n_agents, dtype=np.int)
+            mask[edge_index[0,:].cpu().numpy()] = 0
+            is_free = is_free * torch.tensor(mask, device=device)
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         return not_infected_probs
 
