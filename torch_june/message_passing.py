@@ -82,7 +82,7 @@ class InfectionPassing(MessagePassing):
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
             mask = torch.ones(n_agents, dtype=torch.int, device=device)
-            mask[edge_index[0,:]] = 0
+            mask[edge_index[0, :]] = 0
             is_free = is_free * mask
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         return not_infected_probs

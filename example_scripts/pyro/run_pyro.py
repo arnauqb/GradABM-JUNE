@@ -29,7 +29,7 @@ from script_utils import (
 from torch_june import TorchJune
 
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cpu"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
 #DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
 
@@ -53,12 +53,12 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    #print(kwargs)
-    t1 = time()
+    print(kwargs)
+    #t1 = time()
     model = TorchJune(**kwargs, device=device)
     ret = run_model(model)
-    t2 = time()
-    print(f"Took {t2-t1:.2f} seconds.")
+    #t2 = time()
+    #print(f"Took {t2-t1:.2f} seconds.")
     return ret
 
 
@@ -68,23 +68,23 @@ def pyro_model(true_data):
     #beta_household = true_beta_household
     #beta_university = true_beta_university
     #beta_care_home = true_beta_care_home
-    beta_household= pyro.sample(
-        "beta_household", pyro.distributions.Uniform(0.1, 10.0)
+    beta_household = 10 ** pyro.sample(
+        "beta_household", pyro.distributions.Uniform(-1, 1)
     ).to(device)
-    beta_care_home= pyro.sample(
-        "beta_care_home", pyro.distributions.Uniform(0.1, 10.0)
+    beta_care_home= 10 ** pyro.sample(
+        "beta_care_home", pyro.distributions.Uniform(-1, 1.0)
     ).to(device)
-    beta_company = pyro.sample(
-        "beta_company", pyro.distributions.Uniform(0.1, 10.0)
+    beta_company = 10 ** pyro.sample(
+        "beta_company", pyro.distributions.Uniform(-1, 1)
     ).to(device)
-    beta_school = pyro.sample(
-        "beta_school", pyro.distributions.Uniform(0.1, 10.0)
+    beta_school = 10 ** pyro.sample(
+        "beta_school", pyro.distributions.Uniform(-1, 1)
     ).to(device)
-    beta_university = pyro.sample(
-        "beta_university", pyro.distributions.Uniform(0.1, 10.0)
+    beta_university = 10 ** pyro.sample(
+        "beta_university", pyro.distributions.Uniform(-1, 1)
     ).to(device)
-    beta_leisure = pyro.sample(
-        "beta_leisure", pyro.distributions.Uniform(0.1, 10.0)
+    beta_leisure = 10 ** pyro.sample(
+        "beta_leisure", pyro.distributions.Uniform(-1, 1)
     ).to(device)
     dates, time_curve, deaths = get_model_prediction(
         beta_company=beta_company,
