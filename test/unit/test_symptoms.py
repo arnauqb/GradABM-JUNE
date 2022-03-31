@@ -2,7 +2,8 @@ from pytest import fixture
 import numpy as np
 import torch
 
-from torch_june.symptoms import SymptomsSampler
+from torch_june.symptoms import SymptomsSampler, SymptomsUpdater
+from torch_june.default_parameters import make_parameters
 
 
 class TestSymptomsSampler:
@@ -17,12 +18,12 @@ class TestSymptomsSampler:
                 "critical",
                 "dead",
             ],
-            "transition_probabilities": {
+            "stage_transition_probabilities": {
                 "asymptomatic": {"0-50": 1.0, "50-100": 0.5},
                 "symptomatic": {"0-100": 0.2},
                 "critical": {"0-100": 0.1},
             },
-            "symptom_transition_times": {
+            "stage_transition_times": {
                 "asymptomatic": {"dist": "LogNormal", "loc": 1.1, "scale": 0.2},
                 "symptomatic": {"dist": "Normal", "loc": 10.2, "scale": 3.0},
                 "critical": {"dist": "LogNormal", "loc": 1.7, "scale": 0.5},
@@ -48,28 +49,28 @@ class TestSymptomsSampler:
             "critical",
             "dead",
         ]
-        assert (sp.transition_probabilities[0] == torch.zeros(100)).all()
-        assert (sp.transition_probabilities[1] == torch.zeros(100)).all()
-        assert (sp.transition_probabilities[2][:50] == 1.0 * torch.ones(50)).all()
-        assert (sp.transition_probabilities[2][50:] == 0.5 * torch.ones(50)).all()
-        assert (sp.transition_probabilities[3] == 0.2 * torch.ones(100)).all()
-        assert (sp.transition_probabilities[4] == 0.1 * torch.ones(100)).all()
+        assert (sp.stage_transition_probabilities[0] == torch.zeros(100)).all()
+        assert (sp.stage_transition_probabilities[1] == torch.zeros(100)).all()
+        assert (sp.stage_transition_probabilities[2][:50] == 1.0 * torch.ones(50)).all()
+        assert (sp.stage_transition_probabilities[2][50:] == 0.5 * torch.ones(50)).all()
+        assert (sp.stage_transition_probabilities[3] == 0.2 * torch.ones(100)).all()
+        assert (sp.stage_transition_probabilities[4] == 0.1 * torch.ones(100)).all()
 
-        assert sp.symptom_transition_times[2].__class__.__name__ == "LogNormal"
-        assert np.isclose(sp.symptom_transition_times[2].loc.item(), 1.1)
-        assert np.isclose(sp.symptom_transition_times[2].scale.item(), 0.2)
+        assert sp.stage_transition_times[2].__class__.__name__ == "LogNormal"
+        assert np.isclose(sp.stage_transition_times[2].loc.item(), 1.1)
+        assert np.isclose(sp.stage_transition_times[2].scale.item(), 0.2)
         assert np.isclose(
-            sp.symptom_transition_times[2].mean.item(), np.exp(1.1 + 0.2**2 / 2)
+            sp.stage_transition_times[2].mean.item(), np.exp(1.1 + 0.2**2 / 2)
         )
-        assert sp.symptom_transition_times[3].__class__.__name__ == "Normal"
-        assert np.isclose(sp.symptom_transition_times[3].loc.item(), 10.2)
-        assert np.isclose(sp.symptom_transition_times[3].scale.item(), 3.0)
-        assert np.isclose(sp.symptom_transition_times[3].mean.item(), 10.2)
-        assert sp.symptom_transition_times[4].__class__.__name__ == "LogNormal"
-        assert np.isclose(sp.symptom_transition_times[4].loc.item(), 1.7)
-        assert np.isclose(sp.symptom_transition_times[4].scale.item(), 0.5)
+        assert sp.stage_transition_times[3].__class__.__name__ == "Normal"
+        assert np.isclose(sp.stage_transition_times[3].loc.item(), 10.2)
+        assert np.isclose(sp.stage_transition_times[3].scale.item(), 3.0)
+        assert np.isclose(sp.stage_transition_times[3].mean.item(), 10.2)
+        assert sp.stage_transition_times[4].__class__.__name__ == "LogNormal"
+        assert np.isclose(sp.stage_transition_times[4].loc.item(), 1.7)
+        assert np.isclose(sp.stage_transition_times[4].scale.item(), 0.5)
         assert np.isclose(
-            sp.symptom_transition_times[4].mean.item(), np.exp(1.7 + 0.5**2 / 2)
+            sp.stage_transition_times[4].mean.item(), np.exp(1.7 + 0.5**2 / 2)
         )
 
         assert sp.recovery_times[2].__class__.__name__ == "LogNormal"
@@ -87,51 +88,99 @@ class TestSymptomsSampler:
 
     def test__sample(self, sp):
         ages = torch.tensor([0, 20, 40, 60, 80, 99])
-        current_stages = torch.tensor([0, 1, 2, 3, 4, 5])
-        # next_stages = torch.tensor([0, 1, 3, 4, 5, 5])
-        time_to_next_stages = torch.tensor([1.1, 2.5, 0.7, 1.8, 0.1, 0.5])
+        current_stage = torch.tensor([0, 1, 2, 3, 4, 5])
+        next_stage = torch.tensor([0, 1, 3, 4, 5, 5])
+        time_to_next_stage = torch.tensor([1.1, 2.5, 0.7, 0.9, 0.1, 0.5])
 
         time = 1.0
         need_to_trans = sp._get_need_to_transition(
-            current_stages, time_to_next_stages, time
+            current_stage, time_to_next_stage, time
         )
-        assert (need_to_trans == torch.tensor([0, 0, 1, 0, 1, 0]).to(torch.bool)).all()
+        assert (need_to_trans == torch.tensor([0, 0, 1, 1, 1, 0]).to(torch.bool)).all()
 
         probability_next_symptomatic_stage = sp._get_prob_next_symptoms_stage(
-            ages, current_stages
+            ages, next_stage
         )
         assert (
             probability_next_symptomatic_stage
-            == torch.tensor([0.0, 0.0, 1.0, 0.2, 0.1, 0])
+            == torch.tensor([0.0, 0.0, 0.2, 0.1, 0.0, 0])
         ).all()
 
-        transitions = torch.zeros(6)
-        transition_times = torch.zeros(6)
-        n = 5000
+        currents = torch.zeros(6)
+        nexts = torch.zeros(6)
+        stage_times = torch.zeros(6)
+        n = 1000
         for i in range(n):
-            trans, trans_t = sp.sample_next_stages(
-                ages, current_stages, time_to_next_stages, time
+            current_stage = torch.tensor([0, 1, 2, 3, 4, 5])
+            next_stage = torch.tensor([0, 1, 3, 4, 5, 5])
+            time_to_next_stage = torch.tensor([1.1, 2.5, 0.7, 0.9, 0.1, 0.5])
+            current, next, stage_time = sp.sample_next_stage(
+                ages, current_stage, next_stage, time_to_next_stage, time
             )
-            transitions += trans
-            transition_times += trans_t
-        transitions = transitions / n
-        transitions = transitions.numpy()
-        assert transitions[0] == 0
-        assert transitions[1] == 1
-        expected = 3
-        assert np.isclose(transitions[2], expected)
-        assert transitions[3] == 3
-        expected = 0.1 * 5 + 0.9 * 0
-        assert np.isclose(transitions[4], expected, rtol=1e-1)
-        assert transitions[5] == 5
+            currents += current
+            nexts += next
+            stage_times += stage_time
 
-        transition_times = transition_times / n
-        transition_times = transition_times.numpy()
-        assert np.isclose(transition_times[0], 1.1, rtol=1e-2)
-        assert np.isclose(transition_times[1], 2.5, rtol=1e-2)
-        expected = 10.2 + 0.7
-        assert np.isclose(transition_times[2], expected, rtol=1e-1)
-        assert np.isclose(transition_times[3], 1.8, rtol=1e-2)
-        expected = 0.1 * np.exp(1.7 + 0.5**2/2) + 0.9 * np.exp(1.4 + 0.8**2/2)
-        assert np.isclose(transition_times[4], expected, rtol=2e-1)
-        assert transition_times[5] == 0.5
+        # Check new current stages
+        currents = currents / n
+        currents = currents.numpy()
+        assert currents[0] == 0
+        assert currents[1] == 1
+        assert currents[2] == 3
+        assert currents[3] == 4
+        assert currents[4] == 5
+        assert currents[5] == 5
+
+        # Check new next stages
+        nexts = nexts / n
+        nexts = nexts.numpy()
+        assert nexts[0] == 0
+        assert nexts[1] == 1
+        assert np.isclose(nexts[2], 4 * 0.2, rtol=0.1)
+        assert np.isclose(nexts[3], 5 * 0.1, rtol=0.1)
+        assert nexts[4] == 5
+        assert nexts[5] == 5
+
+        stage_times = stage_times / n
+        stage_times = stage_times.numpy()
+        assert np.isclose(stage_times[0], 1.1, rtol=1e-2)
+        assert np.isclose(stage_times[1], 2.5, rtol=1e-2)
+        expected = 0.7 + 0.2 * 10.2 + 0.8 * np.exp(1.3 + 0.5**2 / 2)
+        assert np.isclose(stage_times[2], expected, rtol=1e-1)
+        expected = (
+            0.9 + 0.1 * np.exp(1.7 + 0.5**2 / 2) + 0.9 * np.exp(1.4 + 0.8**2 / 2)
+        )
+        assert np.isclose(stage_times[3], expected, rtol=1e-2)
+        assert np.isclose(stage_times[4], 0.1, rtol=2e-1)
+        assert stage_times[5] == 0.5
+
+
+class TestSymptomsUpdater:
+    @fixture(name="sp")
+    def make_sp(self):
+        return SymptomsSampler.from_default_parameters()
+
+    @fixture(name="su")
+    def make_su(self, sp):
+        return SymptomsUpdater(sp)
+
+    def test__update_symptoms(self, su, data, timer):
+        n_agents = len(data["agent"].id)
+        data["agent"]["symptoms"]["current_stage"] = 2 * torch.ones(
+            n_agents, dtype=torch.long
+        )
+        data["agent"]["symptoms"]["next_stage"] = 3 * torch.ones(
+            n_agents, dtype=torch.long
+        )  # all infectious
+        data["agent"]["symptoms"]["time_to_next_stage"] = torch.zeros(n_agents)
+        symptoms = su(
+            data=data, timer=timer, new_infected=torch.zeros(n_agents, dtype=torch.bool)
+        )
+        assert (
+            symptoms["current_stage"] == 3 * torch.ones(n_agents, dtype=torch.long)
+        ).all()
+        will_recover = len(symptoms["next_stage"][symptoms["next_stage"] == 0])
+        assert will_recover < n_agents / 2
+        will_symptom = len(symptoms["next_stage"][symptoms["next_stage"] == 4])
+        assert will_symptom > n_agents / 2
+        assert will_recover + will_symptom == n_agents

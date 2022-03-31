@@ -55,8 +55,9 @@ def make_agent_data(sampler):
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
     symptoms = {}
-    symptoms["current_stage"] = torch.zeros(n_agents)
-    symptoms["time_to_next_stages"] = torch.zeros(n_agents)
+    symptoms["current_stage"] = torch.ones(n_agents, dtype=torch.long)
+    symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long)
+    symptoms["time_to_next_stage"] = torch.zeros(n_agents)
     data["agent"].symptoms = symptoms
     return data
 

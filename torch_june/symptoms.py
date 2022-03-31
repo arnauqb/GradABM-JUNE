@@ -3,82 +3,132 @@ import numpy as np
 from torch import distributions as dist
 
 from torch_june.utils import parse_age_probabilities
+from torch_june.default_parameters import make_parameters
 
 
 class SymptomsSampler:
     def __init__(
-        self, stages, transition_probabilities, symptom_transition_times, recovery_times
+        self,
+        stages,
+        stage_transition_probabilities,
+        stage_transition_times,
+        recovery_times,
     ):
         self.stages = stages
-        self.transition_probabilities = self._parse_transition_probabilities(
-            transition_probabilities
+        self.stage_transition_probabilities = (
+            self._parse_stage_transition_probabilities(stage_transition_probabilities)
         )
-        self.symptom_transition_times = self._parse_transition_times(
-            symptom_transition_times
-        )
-        self.recovery_times = self._parse_transition_times(recovery_times)
+        self.stage_transition_times = self._parse_stage_times(stage_transition_times)
+        self.recovery_times = self._parse_stage_times(recovery_times)
 
     @classmethod
     def from_dict(cls, input_dict):
         return cls(**input_dict)
 
-    def _parse_transition_probabilities(self, transition_probabilities):
+    @classmethod
+    def from_default_parameters(cls):
+        return cls(**make_parameters()["symptoms"])
+
+    def _parse_stage_transition_probabilities(self, stage_transition_probabilities):
         ret = torch.zeros((len(self.stages), 100))
         for i, stage in enumerate(self.stages):
-            if stage not in transition_probabilities:
+            if stage not in stage_transition_probabilities:
                 continue
             ret[i] = torch.tensor(
-                parse_age_probabilities(transition_probabilities[stage]),
+                parse_age_probabilities(stage_transition_probabilities[stage]),
                 dtype=torch.float32,
             )
         return ret
 
-    def _parse_transition_times(self, transition_times):
+    def _parse_stage_times(self, stage_times):
         ret = {}
         for i, stage in enumerate(self.stages):
-            if stage not in transition_times:
+            if stage not in stage_times:
                 ret[i] = None
             else:
-                dist_name = transition_times[stage].pop("dist")
+                dist_name = stage_times[stage].pop("dist")
                 dist_class = getattr(dist, dist_name)
-                ret[i] = dist_class(**transition_times[stage])
+                ret[i] = dist_class(**stage_times[stage])
         return ret
 
-    def _get_need_to_transition(self, current_stages, time_to_next_stages, time):
-        mask1 = time >= time_to_next_stages
-        mask2 = current_stages < len(self.stages) - 1
+    def _get_need_to_transition(self, current_stage, time_to_next_stage, time):
+        mask1 = time >= time_to_next_stage
+        mask2 = current_stage < len(self.stages) - 1
         return mask1 * mask2
 
-    def _get_prob_next_symptoms_stage(self, ages, current_stages):
-        probs = self.transition_probabilities[current_stages, ages]
+    def _get_prob_next_symptoms_stage(self, ages, stages):
+        probs = self.stage_transition_probabilities[stages, ages]
         return probs
 
-    def sample_next_stages(self, ages, current_stages, time_to_next_stages, time):
-        new_stages = current_stages.clone()
-        new_times = time_to_next_stages.clone()
-        probs = self._get_prob_next_symptoms_stage(ages, current_stages)
+    def sample_next_stage(
+        self, ages, current_stage, next_stage, time_to_next_stage, time
+    ):
+        # new_next_stage = next_stage.clone()
+        # new_times = time_to_next_stage.clone()
+
+        # Check who has reached stage completion time and move them forward
         mask_transition = self._get_need_to_transition(
-            current_stages, time_to_next_stages, time
+            current_stage, time_to_next_stage, time
         )
-        mask_symp_transition = torch.bernoulli(probs).to(torch.bool)
-        mask_recovered_transition = ~mask_symp_transition
-        for i, stage in enumerate(self.stages[:-1]):  # skip dead
-            mask_stage = current_stages == i
-            mask_updating = mask_transition * mask_stage
-            mask_symp = mask_updating * mask_symp_transition
+        print(current_stage)
+        print(next_stage)
+        current_stage[mask_transition] = next_stage[mask_transition]
+        # Sample possible next stages
+        probs = self._get_prob_next_symptoms_stage(ages, current_stage)
+        mask_symp_stage = torch.bernoulli(probs).to(torch.bool)
+        # These ones would recover
+        mask_recovered_stage = ~mask_symp_stage
+        for i in range(
+            2, len(self.stages) - 1
+        ):  # skip recovered, susceptible, and dead
+            stage = self.stages[i]
+            # Check people at this stage that need updating
+            mask_stage = current_stage == i
+            mask_updating = mask_stage * mask_transition
+
+            # These people progress to another disease stage
+            mask_symp = mask_updating * mask_symp_stage
             n_symp = mask_symp.sum()
             if n_symp > 0:
-                if i < len(self.stages) - 2:
-                    new_times[mask_symp] = new_times[
-                        mask_symp
-                    ] + self.symptom_transition_times[i + 1].sample((n_symp.item(),))
-                new_stages[mask_symp] = new_stages[mask_symp] + 1
+                next_stage[mask_symp] = next_stage[mask_symp] + 1
+                time_to_next_stage[mask_symp] = time_to_next_stage[
+                    mask_symp
+                ] + self.stage_transition_times[i].sample((n_symp.item(),))
 
-            mask_rec = mask_updating * mask_recovered_transition
+            # These people will recover
+            mask_rec = mask_updating * mask_recovered_stage
             n_rec = mask_rec.sum()
             if n_rec > 0:
-                new_times[mask_rec] = new_times[mask_rec] + self.recovery_times[
-                    i
-                ].sample((n_rec.item(),))
-                new_stages[mask_rec] = torch.zeros(n_rec)
-        return new_stages, new_times
+                next_stage[mask_rec] = torch.zeros(n_rec, dtype=torch.long)
+                time_to_next_stage[mask_rec] = time_to_next_stage[
+                    mask_rec
+                ] + self.recovery_times[i].sample((n_rec.item(),))
+        return current_stage, next_stage, time_to_next_stage
+
+
+class SymptomsUpdater(torch.nn.Module):
+    def __init__(self, symptoms_sampler):
+        super().__init__()
+        self.symptoms_sampler = symptoms_sampler
+
+    def forward(self, data, timer, new_infected):
+        time = timer.now
+        symptoms = data["agent"].symptoms
+        mask = new_infected.bool()
+        symptoms["next_stage"][mask] = 2
+        symptoms["time_to_next_stage"][mask] = time
+        (
+            current_stage,
+            next_stage,
+            time_to_next_stage,
+        ) = self.symptoms_sampler.sample_next_stage(
+            ages=data["agent"].age,
+            current_stage=symptoms["current_stage"],
+            next_stage=symptoms["next_stage"],
+            time_to_next_stage=symptoms["time_to_next_stage"],
+            time=time,
+        )
+        symptoms["current_stage"] = current_stage
+        symptoms["next_stage"] = next_stage
+        symptoms["time_to_next_stage"] = time_to_next_stage
+        return symptoms

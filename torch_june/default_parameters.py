@@ -28,6 +28,8 @@ def make_parameters():
 
     # Symptom transition probabilities
     tprobs = {}
+    tprobs["recovered"] = {"0-100": 0.0}
+    tprobs["susceptible"] = {"0-100": 0.0}
     tprobs["exposed"] = {"0-100": 1.0}
     tprobs["infectious"] = { 
         "0-10": 0.5,
@@ -82,10 +84,14 @@ def make_parameters():
     tprobs["critical"] = {key: tprobs["critical"][key] / tprobs["severe"][key] for key in tprobs["critical"]}
     tprobs["severe"] = {key: tprobs["severe"][key] / tprobs["symptomatic"][key] for key in tprobs["severe"]}
     tprobs["symptomatic"] = {key: tprobs["symptomatic"][key] / tprobs["infectious"][key] for key in tprobs["symptomatic"]}
-    symptoms["transition_probabilities"] = tprobs
+    symptoms["stage_transition_probabilities"] = tprobs
 
     # Symptom transition times
     ttimes = {}
+    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    #ttimes["recovered"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    #ttimes["susceptible"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(4.5, 1.5)
     ttimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(1.1, 0.9)
@@ -96,10 +102,16 @@ def make_parameters():
     ttimes["severe"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(10.7, 4.8)
     ttimes["critical"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
-    symptoms["symptom_transition_times"] = ttimes
+    symptoms["stage_transition_times"] = ttimes
 
     # Recovery times
     rtimes = {}
+    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    #rtimes["recovered"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    #rtimes["susceptible"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    rtimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(8.0, 2.0)
     rtimes["infectious"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(8.0, 2.0)

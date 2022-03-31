@@ -17,11 +17,11 @@ def test__parameters():
     params = make_parameters()
     sp = params["symptoms"]
     assert len(sp["stages"]) == 8
-    for key in sp["transition_probabilities"]:
+    for key in sp["stage_transition_probabilities"]:
         assert key in sp["stages"]
-        if key == "exposed":
-            assert len(sp["transition_probabilities"][key]) == 1
+        if key in ["recovered", "susceptible", "exposed"]:
+            assert len(sp["stage_transition_probabilities"][key]) == 1
         else:
-            assert len(sp["transition_probabilities"][key]) == 10
-    for key in sp["symptom_transition_times"]:
+            assert len(sp["stage_transition_probabilities"][key]) == 10
+    for key in sp["stage_transition_times"]:
         assert key in sp["stages"]
