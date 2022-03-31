@@ -28,6 +28,7 @@ def make_timer():
                 "university",
                 "company",
                 "care_home",
+                "household",
                 # "leisure",
             ),
             (
@@ -209,9 +210,7 @@ for i in range(10):
     df = pd.DataFrame(index=dates)
     df.index.name = "time_stamp"
     cases = true_data.cpu().numpy()
-    daily_cases = np.diff(cases, prepend=cases[0])
     df["infected"] = cases
-    df["daily_infected"] = daily_cases
     true_symptoms = true_symptoms.cpu().numpy()
     df_symp = pd.DataFrame(index=dates, columns=symptoms_cols)
     for i, date in enumerate(dates):

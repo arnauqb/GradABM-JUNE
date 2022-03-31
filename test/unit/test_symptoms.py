@@ -184,3 +184,21 @@ class TestSymptomsUpdater:
         will_symptom = len(symptoms["next_stage"][symptoms["next_stage"] == 4])
         assert will_symptom > n_agents / 2
         assert will_recover + will_symptom == n_agents
+
+    def test__dead_stay_dead(self, su, data, timer):
+        n_agents = len(data["agent"].id)
+        data["agent"]["symptoms"]["current_stage"] = 6 * torch.ones(
+            n_agents, dtype=torch.long
+        )
+        data["agent"]["symptoms"]["next_stage"] = 7 * torch.ones(
+            n_agents, dtype=torch.long
+        )  # all infectious
+        data["agent"]["symptoms"]["time_to_next_stage"] = torch.zeros(n_agents)
+        for i in range(100):
+            symptoms = su(
+                data=data, timer=timer, new_infected=torch.zeros(n_agents, dtype=torch.bool)
+            )
+            assert (
+                symptoms["current_stage"] == 7 * torch.ones(n_agents, dtype=torch.long)
+            ).all()
+            next(timer)
