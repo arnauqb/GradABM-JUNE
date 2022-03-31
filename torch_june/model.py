@@ -19,9 +19,10 @@ class TorchJune(torch.nn.Module):
         beta_university=torch.tensor(1.0),
         beta_leisure=torch.tensor(1.0),
         beta_care_home=torch.tensor(1.0),
+        device = "cpu"
     ):
         if symptoms_sampler is None:
-            symptoms_sampler = SymptomsSampler.from_default_parameters()
+            symptoms_sampler = SymptomsSampler.from_default_parameters(device=device)
         super().__init__()
         self.infection_passing = InfectionPassing(
             beta_company=beta_company,
@@ -34,6 +35,7 @@ class TorchJune(torch.nn.Module):
         self.transmission_updater = TransmissionUpdater()
         self.is_infected_sampler = IsInfectedSampler()
         self.symptoms_updater = SymptomsUpdater(symptoms_sampler=symptoms_sampler)
+        self.device = device
 
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)

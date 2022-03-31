@@ -52,7 +52,9 @@ class TestModel:
         assert parameters[1].grad is not None
         assert parameters[1].grad != 0
 
-    def setup_inf_data(self, data):
+    @fixture(name="data2")
+    def setup_data(self, inf_data):
+        data = inf_data
         data["school"].id = torch.tensor([0])
         data["school"].people = torch.tensor([50])
         data["company"].id = torch.tensor([0])
@@ -64,19 +66,11 @@ class TestModel:
             (torch.arange(50, 100), torch.zeros(50, dtype=torch.long))
         )
         data = T.ToUndirected()(data)
-        # infect some people
-        susc = data["agent"]["susceptibility"].numpy()
-        susc[0:100:10] = 0.0
-        is_inf = data["agent"]["is_infected"].numpy()
-        is_inf[0:100:10] = 1.0
-        inf_t = data["agent"]["infection_time"].numpy()
-        inf_t[0:100:10] = 0.0
-        data["agent"].susceptibility = torch.tensor(susc)
-        data["agent"].is_infected = torch.tensor(is_inf)
-        data["agent"].infection_time = torch.tensor(inf_t)
+        is_inf = data["agent"].is_infected.numpy()
         return data, is_inf
 
-    def test__individual_gradients_companies(self, model, agent_data):
+    def test__individual_gradients_companies(self, model, data2):
+        data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
             total_days=10,
@@ -85,8 +79,6 @@ class TestModel:
         )
         # create decoupled companies and schools
         # 50 / 50
-        data, is_inf = self.setup_inf_data(agent_data)
-
         # run
         results = model(timer=timer, data=data)
         cases = results["agent"]["is_infected"]
@@ -112,7 +104,8 @@ class TestModel:
         assert grads[0] == 0.0
         assert grads[1] != 0.0
 
-    def test__individual_gradients_schools(self, model, agent_data):
+    def test__individual_gradients_schools(self, model, data2):
+        data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
             total_days=10,
@@ -121,8 +114,6 @@ class TestModel:
         )
         # create decoupled companies and schools
         # 50 / 50
-        data, is_inf = self.setup_inf_data(agent_data)
-
         # run
         results = model(timer=timer, data=data)
         cases = results["agent"]["is_infected"]
@@ -149,14 +140,14 @@ class TestModel:
         assert grads[0] != 0.0
         assert grads[1] == 0.0
 
-    def test__likelihood_gradient(self, model, agent_data):
+    def test__likelihood_gradient(self, model, data2):
+        data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
             total_days=10,
             weekday_step_duration=(24,),
             weekday_activities=(("company", "school"),),
         )
-        data, _ = self.setup_inf_data(agent_data)
         results = model(timer=timer, data=data)
         cases = results["agent"]["is_infected"]
         true_cases = 10 * torch.rand(1)
@@ -172,3 +163,21 @@ class TestModel:
         assert len(grads) == 2
         assert grads[0] != 0.0
         assert grads[1] != 0.0
+
+    def test__symptoms_update(self, model, data2):
+        timer = Timer(
+            initial_day="2022-02-01",
+            total_days=10,
+            weekday_step_duration=(24,),
+            weekday_activities=(("company", "school"),),
+        )
+        data, _ = data2
+        results = model(timer=timer, data=data)
+        is_infected = results["agent"].is_infected
+        cases = int(is_infected.sum().item())
+        assert cases > 10
+        symptoms = data["agent"].symptoms
+        assert (
+            symptoms["current_stage"][is_infected.bool()]
+            == 2 * torch.ones(cases, dtype=torch.long)
+        ).all()

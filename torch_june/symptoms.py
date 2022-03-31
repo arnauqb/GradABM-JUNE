@@ -12,34 +12,42 @@ class SymptomsSampler:
         stage_transition_probabilities,
         stage_transition_times,
         recovery_times,
+        device,
     ):
         self.stages = stages
         self.stage_transition_probabilities = (
-            self._parse_stage_transition_probabilities(stage_transition_probabilities)
+            self._parse_stage_transition_probabilities(
+                stage_transition_probabilities, device=device
+            )
         )
-        self.stage_transition_times = self._parse_stage_times(stage_transition_times)
-        self.recovery_times = self._parse_stage_times(recovery_times)
+        self.stage_transition_times = self._parse_stage_times(
+            stage_transition_times, device=device
+        )
+        self.recovery_times = self._parse_stage_times(recovery_times, device=device)
 
     @classmethod
-    def from_dict(cls, input_dict):
-        return cls(**input_dict)
+    def from_dict(cls, input_dict, device="cpu"):
+        return cls(**input_dict, device=device)
 
     @classmethod
-    def from_default_parameters(cls):
-        return cls(**make_parameters()["symptoms"])
+    def from_default_parameters(cls, device="cpu"):
+        return cls(**make_parameters()["symptoms"], device=device)
 
-    def _parse_stage_transition_probabilities(self, stage_transition_probabilities):
-        ret = torch.zeros((len(self.stages), 100))
+    def _parse_stage_transition_probabilities(
+        self, stage_transition_probabilities, device
+    ):
+        ret = torch.zeros((len(self.stages), 100), device=device)
         for i, stage in enumerate(self.stages):
             if stage not in stage_transition_probabilities:
                 continue
             ret[i] = torch.tensor(
                 parse_age_probabilities(stage_transition_probabilities[stage]),
                 dtype=torch.float32,
+                device=device,
             )
         return ret
 
-    def _parse_stage_times(self, stage_times):
+    def _parse_stage_times(self, stage_times, device):
         ret = {}
         for i, stage in enumerate(self.stages):
             if stage not in stage_times:
@@ -47,7 +55,11 @@ class SymptomsSampler:
             else:
                 dist_name = stage_times[stage].pop("dist")
                 dist_class = getattr(dist, dist_name)
-                ret[i] = dist_class(**stage_times[stage])
+                input = {
+                    key: torch.tensor(value, device=device, dtype=torch.float)
+                    for key, value in stage_times[stage].items()
+                }
+                ret[i] = dist_class(**input)
         return ret
 
     def _get_need_to_transition(self, current_stage, time_to_next_stage, time):
@@ -69,8 +81,6 @@ class SymptomsSampler:
         mask_transition = self._get_need_to_transition(
             current_stage, time_to_next_stage, time
         )
-        print(current_stage)
-        print(next_stage)
         current_stage[mask_transition] = next_stage[mask_transition]
         # Sample possible next stages
         probs = self._get_prob_next_symptoms_stage(ages, current_stage)
@@ -97,7 +107,9 @@ class SymptomsSampler:
             mask_rec = mask_updating * mask_recovered_stage
             n_rec = mask_rec.sum()
             if n_rec > 0:
-                next_stage[mask_rec] = torch.zeros(n_rec, dtype=torch.long)
+                next_stage[mask_rec] = torch.zeros(
+                    n_rec, dtype=torch.long, device=next_stage.device
+                )
                 time_to_next_stage[mask_rec] = time_to_next_stage[
                     mask_rec
                 ] + self.recovery_times[i].sample((n_rec.item(),))

@@ -7,8 +7,9 @@ from torch.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.transmission import TransmissionSampler 
+from torch_june.transmission import TransmissionSampler
 from torch_june.timer import Timer
+
 
 @fixture(autouse=True)
 def set_random_seed(seed=999):
@@ -88,19 +89,27 @@ def make_data(agent_data):
     data = T.ToUndirected()(data)
     return data
 
+@fixture(name="person_infector")
+def make_person_infector():
+    def infector(data, indices):
+        susc = data["agent"]["susceptibility"].numpy()
+        is_inf = data["agent"]["is_infected"].numpy()
+        inf_t = data["agent"]["infection_time"].numpy()
+        next_stage = data["agent"]["symptoms"]["next_stage"].numpy()
+        susc[indices] = 0.0
+        is_inf[indices] = 1.0
+        inf_t[indices] = 0.0
+        next_stage[indices] = 2
+        data["agent"]["susceptibility"] = torch.tensor(susc)
+        data["agent"]["is_infected"] = torch.tensor(is_inf)
+        data["agent"]["infection_time"] = torch.tensor(inf_t)
+        data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
+        return data
+    return infector
 
 @fixture(name="inf_data")
-def make_inf_data(data):
-    susc = data["agent"]["susceptibility"].numpy()
-    susc[0:100:10] = 0.0
-    is_inf = data["agent"]["is_infected"].numpy()
-    is_inf[0:100:10] = 1.0
-    inf_t = data["agent"]["infection_time"].numpy()
-    inf_t[0:100:10] = 0.0
-    data["agent"].susceptibility = torch.tensor(susc)
-    data["agent"].is_infected = torch.tensor(is_inf)
-    data["agent"].infection_time = torch.tensor(inf_t)
-    return data
+def make_inf_data(data, person_infector):
+    return person_infector(data, list(range(0, 100, 10)))
 
 
 @fixture(name="timer")
@@ -134,3 +143,5 @@ def make_school_timer():
         weekend_activities=(("school",),),
     )
     return timer
+
+
