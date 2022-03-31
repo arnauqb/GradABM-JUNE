@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import pickle
 from dynesty import NestedSampler
@@ -41,8 +42,11 @@ def run_model(model):
     deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms)
     dates = [timer.date]
     while timer.date < timer.final_date:
-        next(timer)
-        cases = model(data, timer)["agent"].is_infected.sum()
+        current_day = timer.day
+        while timer.day == current_day:
+            next(timer)
+            data = model(data, timer)
+        cases = data["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
         deaths = get_deaths_from_symptoms(data["agent"].symptoms)
         deaths_curve = torch.hstack((deaths_curve, deaths))
@@ -51,7 +55,7 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    #print(kwargs)
+    # print(kwargs)
     # t1 = time()
     model = TorchJune(**kwargs, device=device)
     ret = run_model(model)
@@ -61,18 +65,19 @@ def get_model_prediction(**kwargs):
 
 
 def prior(cube):
-    cube = cube * 4 - 2
+    cube = cube
     return cube
 
+
 def loglike(cube):
-    cube = 10 ** cube
+    cube = 10**cube
     _, time_curve, _ = get_model_prediction(
         beta_company=cube[0],
         beta_school=cube[1],
         beta_leisure=cube[2],
         beta_household=cube[3],
-        beta_university =cube[4],
-        beta_care_home =cube[5],
+        beta_university=cube[4],
+        beta_care_home=cube[5],
     )
     loglikelihood = (
         torch.distributions.Normal(
@@ -87,19 +92,19 @@ def loglike(cube):
 
 
 # DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
 
 DATA = get_data(DATA_PATH, device, n_seed=100)
 BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_beta_company = torch.tensor(1.0, device=device)
-true_beta_school = torch.tensor(1.0, device=device)
-true_beta_leisure = torch.tensor(1.0, device=device)
-true_beta_household = torch.tensor(3.0, device=device)
-true_beta_university = torch.tensor(1.0, device=device)
-true_beta_care_home = torch.tensor(3.0, device=device)
+true_beta_company = torch.tensor(2.0, device=device)
+true_beta_school = torch.tensor(2.0, device=device)
+true_beta_leisure = torch.tensor(2.0, device=device)
+true_beta_household = torch.tensor(4.0, device=device)
+true_beta_university = torch.tensor(2.0, device=device)
+true_beta_care_home = torch.tensor(4.0, device=device)
 
 dates, true_data, true_deaths = get_model_prediction(
     beta_company=true_beta_company,
@@ -110,24 +115,47 @@ dates, true_data, true_deaths = get_model_prediction(
     beta_university=true_beta_university,
 )
 
+def plot():
+    dates2, true_data2, true_deaths2 = get_model_prediction(
+        beta_company=2*true_beta_company,
+        beta_household=2*true_beta_household,
+        beta_school=2*true_beta_school,
+        beta_leisure=2*true_beta_leisure,
+        beta_care_home=2*true_beta_care_home,
+        beta_university=2*true_beta_university,
+    )
+    
+    fig, ax = plt.subplots()
+    cases = true_data.cpu().numpy()
+    cases2 = true_data2.cpu().numpy()
+    deaths = true_deaths.cpu().numpy()
+    daily_deaths = np.diff(deaths, prepend=0)
+    daily_cases = np.diff(cases, prepend=0)
+    
+    # ax.plot(dates, deaths)
+    ax.plot(dates, cases)
+    ax.plot(dates2, cases2)
+    #ax.plot(dates, daily_deaths)
+    plt.show()
+
+#plot()
+
 dlogz = 0.5
 logl_max = np.inf
-# output_file = "dyne"
 sampler = NestedSampler(loglike, prior, ndim=6)
-# sampler.run_nested()
 
 pbar, print_func = sampler._get_print_func(None, True)
 # The main nested sampling loop.
 ncall = sampler.ncall
 for it, res in enumerate(sampler.sample(dlogz=dlogz)):
-    if it % 100 == 0:
-        with open("./dyn_results.pkl", "wb") as f:
-            pickle.dump(sampler.results, f)
-    ncall += res[9]
-    print_func(res, sampler.it - 1, ncall, dlogz=dlogz, logl_max=logl_max)
+   if it % 100 == 0:
+       with open("./dyn_results.pkl", "wb") as f:
+           pickle.dump(sampler.results, f)
+   ncall += res[9]
+   print_func(res, sampler.it - 1, ncall, dlogz=dlogz, logl_max=logl_max)
 
 pbar.close()
 
 sampler.add_live_points()
 with open("./dyn_results.pkl", "wb") as f:
-    pickle.dump(sampler.results, f)
+   pickle.dump(sampler.results, f)
