@@ -1,6 +1,7 @@
 import subprocess
 import torch
 
+
 def get_gpu_memory_map():
     """Get the current gpu usage.
 

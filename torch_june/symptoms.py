@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 from torch import distributions as dist
 
 from torch_june.utils import parse_age_probabilities
@@ -81,7 +80,6 @@ class SymptomsSampler:
         for i in range(
             2, len(self.stages) - 1
         ):  # skip recovered, susceptible, and dead
-            stage = self.stages[i]
             # Check people at this stage that need updating
             mask_stage = current_stage == i
             mask_updating = mask_stage * mask_transition

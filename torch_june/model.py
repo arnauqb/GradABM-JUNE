@@ -1,6 +1,4 @@
 import torch
-from torch.nn.parameter import Parameter
-from time import time
 
 from torch_june import (
     InfectionPassing,
@@ -8,7 +6,6 @@ from torch_june import (
     IsInfectedSampler,
     SymptomsUpdater,
 )
-from torch_june.cuda_utils import get_fraction_gpu_used
 from torch_june.symptoms import SymptomsSampler
 
 

@@ -1,7 +1,5 @@
-import torch
 import numpy as np
 from itertools import chain
-from torch_geometric.utils import to_undirected
 
 
 def parse_age_probabilities(age_dict, fill_value=0):

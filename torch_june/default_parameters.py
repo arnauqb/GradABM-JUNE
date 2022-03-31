@@ -1,18 +1,22 @@
 import numpy as np
 
+
 def convert_lognormal_parameters(mean, std):
     """
     Converts mean and std to loc and scale parmaeters for the LogNormal.
     """
     loc = np.log(mean**2 / np.sqrt(mean**2 + std**2))
-    scale = np.sqrt(np.log(1+std**2 / mean**2))
+    scale = np.sqrt(np.log(1 + std**2 / mean**2))
     return loc, scale
-    
+
+
 def make_parameters():
     ret = {}
 
-    ##############  Symptoms parameters ############
-    # Taken from the Covasim paper (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009149).
+    """
+    Symptoms Parameters
+    Taken from the Covasim paper
+    """
     symptoms = {}
     stages = [
         "recovered",
@@ -31,7 +35,7 @@ def make_parameters():
     tprobs["recovered"] = {"0-100": 0.0}
     tprobs["susceptible"] = {"0-100": 0.0}
     tprobs["exposed"] = {"0-100": 1.0}
-    tprobs["infectious"] = { 
+    tprobs["infectious"] = {
         "0-10": 0.5,
         "10-20": 0.55,
         "20-30": 0.6,
@@ -43,7 +47,7 @@ def make_parameters():
         "80-90": 0.9,
         "90-100": 0.9,
     }
-    tprobs["symptomatic"] = { 
+    tprobs["symptomatic"] = {
         "0-10": 0.0005,
         "10-20": 0.00165,
         "20-30": 0.00720,
@@ -55,7 +59,7 @@ def make_parameters():
         "80-90": 0.24570,
         "90-100": 0.24570,
     }
-    tprobs["severe"] = { 
+    tprobs["severe"] = {
         "0-10": 0.00003,
         "10-20": 0.00008,
         "20-30": 0.00036,
@@ -67,7 +71,7 @@ def make_parameters():
         "80-90": 0.17420,
         "90-100": 0.17420,
     }
-    tprobs["critical"] = { 
+    tprobs["critical"] = {
         "0-10": 0.00002,
         "10-20": 0.00002,
         "20-30": 0.0001,
@@ -79,47 +83,51 @@ def make_parameters():
         "80-90": 0.08292,
         "90-100": 0.16190,
     }
-    # !! These specify the transition probability, so the probability of going to the next stage.
-    # We want conditional probabilities so we need to divide by the previous stage, starting from the last one
-    tprobs["critical"] = {key: tprobs["critical"][key] / tprobs["severe"][key] for key in tprobs["critical"]}
-    tprobs["severe"] = {key: tprobs["severe"][key] / tprobs["symptomatic"][key] for key in tprobs["severe"]}
-    tprobs["symptomatic"] = {key: tprobs["symptomatic"][key] / tprobs["infectious"][key] for key in tprobs["symptomatic"]}
+    # Convert to relative probs to the previous stage.
+    tprobs["critical"] = {
+        key: tprobs["critical"][key] / tprobs["severe"][key]
+        for key in tprobs["critical"]
+    }
+    tprobs["severe"] = {
+        key: tprobs["severe"][key] / tprobs["symptomatic"][key]
+        for key in tprobs["severe"]
+    }
+    tprobs["symptomatic"] = {
+        key: tprobs["symptomatic"][key] / tprobs["infectious"][key]
+        for key in tprobs["symptomatic"]
+    }
     symptoms["stage_transition_probabilities"] = tprobs
 
     # Symptom transition times
     ttimes = {}
-    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    #ttimes["recovered"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
-    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    #ttimes["susceptible"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    ttimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    ttimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(1.1, 0.9)
-    ttimes["infectious"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    ttimes["infectious"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(6.6, 4.9)
-    ttimes["symptomatic"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    ttimes["symptomatic"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(1.5, 2.0)
-    ttimes["severe"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    ttimes["severe"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(10.7, 4.8)
-    ttimes["critical"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    ttimes["critical"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     symptoms["stage_transition_times"] = ttimes
 
     # Recovery times
     rtimes = {}
-    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    #rtimes["recovered"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
-    #loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    #rtimes["susceptible"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    # loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    # rtimes["recovered"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    # loc, scale = convert_lognormal_parameters(4.5, 1.5)
+    # rtimes["susceptible"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
     loc, scale = convert_lognormal_parameters(4.5, 1.5)
-    rtimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    rtimes["exposed"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(8.0, 2.0)
-    rtimes["infectious"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    rtimes["infectious"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(8.0, 2.0)
-    rtimes["symptomatic"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    rtimes["symptomatic"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(18.1, 6.3)
-    rtimes["severe"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    rtimes["severe"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     loc, scale = convert_lognormal_parameters(18.1, 6.3)
-    rtimes["critical"] = {"dist": "LogNormal", "loc": loc, "scale" : scale}
+    rtimes["critical"] = {"dist": "LogNormal", "loc": loc, "scale": scale}
     symptoms["recovery_times"] = rtimes
     ret["symptoms"] = symptoms
 

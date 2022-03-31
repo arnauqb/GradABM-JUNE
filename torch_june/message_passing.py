@@ -1,7 +1,6 @@
 import torch
 from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
-from torch.nn.parameter import Parameter
 
 activity_hierarchy = [
     "attends_school",
@@ -39,8 +38,9 @@ class InfectionPassing(MessagePassing):
 
     def _apply_activity_hierarchy(self, activities):
         """
-        Returns a list of activities with the right order, obeying the permanent activity hierarcy
-        and shuflling the random one.
+        Returns a list of activities with the right order,
+        obeying the permanent activity hierarcy and shuflling
+        the random one.
 
         Parameters
         ----------

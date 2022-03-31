@@ -36,7 +36,7 @@ class NetworkLoader:
             for column in self.columns:
                 group_ids = f["population"]["group_ids"][:, column]
                 group_specs = f["population"]["group_specs"][:, column]
-                for (i, (group_id, group_spec)) in enumerate(zip(group_ids, group_specs)):
+                for i, (group_id, group_spec) in enumerate(zip(group_ids, group_specs)):
                     if group_spec.decode() != self.spec:
                         continue
                     ret[group_id].append(i)
@@ -51,7 +51,7 @@ class NetworkLoader:
         people_per_group = self._get_people_per_group()
         adjlist_i = []
         adjlist_j = []
-        for (group_id, people) in people_per_group.items():
+        for group_id, people in people_per_group.items():
             for person in people:
                 adjlist_i.append(person)
                 adjlist_j.append(group_id)
@@ -67,7 +67,7 @@ class NetworkLoader:
 class HouseholdNetworkLoader(NetworkLoader):
     spec = "household"
     plural = "households"
-    columns = (0, )
+    columns = (0,)
 
 
 class CareHomeNetworkLoader(NetworkLoader):
@@ -79,19 +79,19 @@ class CareHomeNetworkLoader(NetworkLoader):
 class CompanyNetworkLoader(NetworkLoader):
     spec = "company"
     plural = "companies"
-    columns = (1, )
+    columns = (1,)
 
 
 class SchoolNetworkLoader(NetworkLoader):
     spec = "school"
     plural = "schools"
-    columns = (1, )
+    columns = (1,)
 
 
 class UniversityNetworkLoader(NetworkLoader):
     spec = "university"
     plural = "universities"
-    columns = (1, )
+    columns = (1,)
 
 
 class LeisureNetworkLoader:
@@ -184,7 +184,7 @@ class GraphLoader:
             network_loader = network_loader_class(self.june_world_path)
             network_loader.load_network(data)
         if load_leisure:
-            print(f"Loading leisure ...")
+            print("Loading leisure ...")
             leisure_loader = LeisureNetworkLoader(
                 self.june_world_path, k=self.k_leisure
             )
