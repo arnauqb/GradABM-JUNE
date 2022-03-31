@@ -143,14 +143,14 @@ class TestSymptomsSampler:
 
         stage_times = stage_times / n
         stage_times = stage_times.numpy()
-        assert np.isclose(stage_times[0], 1.1, rtol=1e-2)
-        assert np.isclose(stage_times[1], 2.5, rtol=1e-2)
+        assert np.isclose(stage_times[0], 1.1, rtol=1e-1)
+        assert np.isclose(stage_times[1], 2.5, rtol=1e-1)
         expected = 0.7 + 0.2 * 10.2 + 0.8 * np.exp(1.3 + 0.5**2 / 2)
         assert np.isclose(stage_times[2], expected, rtol=1e-1)
         expected = (
             0.9 + 0.1 * np.exp(1.7 + 0.5**2 / 2) + 0.9 * np.exp(1.4 + 0.8**2 / 2)
         )
-        assert np.isclose(stage_times[3], expected, rtol=1e-2)
+        assert np.isclose(stage_times[3], expected, rtol=1e-1)
         assert np.isclose(stage_times[4], 0.1, rtol=2e-1)
         assert stage_times[5] == 0.5
 

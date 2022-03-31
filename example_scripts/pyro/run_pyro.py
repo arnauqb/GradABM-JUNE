@@ -1,5 +1,6 @@
 from cProfile import Profile
 from pathlib import Path
+from time import time
 import torch
 torch.autograd.set_detect_anomaly(True)
 
@@ -28,9 +29,9 @@ from script_utils import (
 from torch_june import TorchJune
 
 
-device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_ne.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
 
 def get_deaths_from_symptoms(symptoms):
     return torch.tensor(symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0], device=device)
@@ -48,13 +49,17 @@ def run_model(model):
         deaths = get_deaths_from_symptoms(data["agent"].symptoms)
         deaths_curve = torch.hstack((deaths_curve, deaths))
         dates.append(timer.date)
-    return dates, time_curve, deaths 
+    return dates, time_curve, deaths_curve 
 
 
 def get_model_prediction(**kwargs):
-    print(kwargs)
+    #print(kwargs)
+    t1 = time()
     model = TorchJune(**kwargs, device=device)
-    return run_model(model)
+    ret = run_model(model)
+    t2 = time()
+    print(f"Took {t2-t1:.2f} seconds.")
+    return ret
 
 
 def pyro_model(true_data):
@@ -92,7 +97,7 @@ def pyro_model(true_data):
     y = pyro.sample(
         "obs",
         #pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
-        pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
+        pyro.distributions.Normal(time_curve, 0.2 * time_curve),
         obs=true_data,
     )
     return y
@@ -124,11 +129,11 @@ dates, true_data, true_deaths = get_model_prediction(
 #prof.dump_stats("./profile.prof")
 
 #fig, ax = plt.subplots()
-#deaths = symptoms[:,-1].cpu().numpy()
 #cases = true_data.cpu().numpy()
+#deaths = true_deaths.cpu().numpy()
 #daily_deaths = np.diff(deaths, prepend=0)
-#ax.plot(dates, deaths)
-##ax.plot(dates, cases)
+##ax.plot(dates, deaths)
+#ax.plot(dates, cases)
 #plt.show()
 
 temp_df = pd.DataFrame(
@@ -164,6 +169,6 @@ mcmc = pyro.infer.MCMC(
         kernel, samples, stage, i, temp_df
     ),
 )
-mcmc.run(true_deaths)
+mcmc.run(true_data)
 print(mcmc.summary())
 print(mcmc.diagnostics())

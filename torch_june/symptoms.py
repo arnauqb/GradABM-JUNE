@@ -71,18 +71,17 @@ class SymptomsSampler:
         probs = self.stage_transition_probabilities[stages, ages]
         return probs
 
-    #@profile
+    # @profile
     def sample_next_stage(
         self, ages, current_stage, next_stage, time_to_next_stage, time
     ):
-        # new_next_stage = next_stage.clone()
-        # new_times = time_to_next_stage.clone()
-
         # Check who has reached stage completion time and move them forward
         mask_transition = self._get_need_to_transition(
             current_stage, time_to_next_stage, time
         )
-        current_stage[mask_transition] = next_stage[mask_transition]
+        n_agents = ages.shape[0]
+        # print(mask_transition)
+        current_stage = current_stage - (current_stage - next_stage) * mask_transition
         # Sample possible next stages
         probs = self._get_prob_next_symptoms_stage(ages, current_stage)
         mask_symp_stage = torch.bernoulli(probs).to(torch.bool)
@@ -97,23 +96,23 @@ class SymptomsSampler:
 
             # These people progress to another disease stage
             mask_symp = mask_updating * mask_symp_stage
-            n_symp = mask_symp.sum()
+            n_symp = mask_symp.max()  # faster than sum
             if n_symp > 0:
-                next_stage[mask_symp] = next_stage[mask_symp] + 1
-                time_to_next_stage[mask_symp] = time_to_next_stage[
-                    mask_symp
-                ] + self.stage_transition_times[i].sample((n_symp.item(),))
+                next_stage = next_stage + mask_symp
+                time_to_next_stage = (
+                    time_to_next_stage
+                    + self.stage_transition_times[i].sample((n_agents,)) * mask_symp
+                )
 
             # These people will recover
             mask_rec = mask_updating * mask_recovered_stage
-            n_rec = mask_rec.sum()
+            n_rec = mask_rec.max()
             if n_rec > 0:
-                next_stage[mask_rec] = torch.zeros(
-                    n_rec, dtype=torch.long, device=next_stage.device
+                next_stage = next_stage - next_stage * mask_rec  # Set to 0
+                time_to_next_stage = (
+                    time_to_next_stage
+                    + self.recovery_times[i].sample((n_agents,)) * mask_rec
                 )
-                time_to_next_stage[mask_rec] = time_to_next_stage[
-                    mask_rec
-                ] + self.recovery_times[i].sample((n_rec.item(),))
         return current_stage, next_stage, time_to_next_stage
 
 
