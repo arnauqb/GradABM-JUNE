@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
+from pyro.distributions import RelaxedBernoulliStraightThrough
 
 activity_hierarchy = [
     "attends_school",
@@ -85,6 +86,7 @@ class InfectionPassing(MessagePassing):
             mask[edge_index[0, :]] = 0
             is_free = is_free * mask
         not_infected_probs = torch.exp(-trans_susc * delta_time)
+        #print(not_infected_probs)
         return not_infected_probs
 
     def message(self, x_j, y_i):
@@ -94,7 +96,11 @@ class InfectionPassing(MessagePassing):
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):
         infected_probs = 1.0 - not_infected_probs
-        probs = torch.vstack((infected_probs, not_infected_probs))
-        logits = torch.log(probs + 1e-15)
-        is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
-        return is_infected[0, :]
+        dist = RelaxedBernoulliStraightThrough(temperature=0.1, probs=infected_probs)
+        return dist.rsample()
+
+
+        #probs = torch.vstack((infected_probs, not_infected_probs))
+        #logits = torch.log(probs + 1e-15)
+        #is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
+        #return is_infected[0, :]

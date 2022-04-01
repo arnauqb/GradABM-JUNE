@@ -16,12 +16,13 @@ from script_utils import (
 )
 
 from torch_june import TorchJune
-#from mpi4py import MPI
 
-#mpi_comm = MPI.COMM_WORLD
-#mpi_rank = mpi_comm.Get_rank()
+# from mpi4py import MPI
 
-#device = f"cuda:{mpi_rank+1}"
+# mpi_comm = MPI.COMM_WORLD
+# mpi_rank = mpi_comm.Get_rank()
+
+# device = f"cuda:{mpi_rank+1}"
 device = f"cuda:0"
 
 
@@ -31,15 +32,16 @@ def get_deaths_from_symptoms(symptoms):
         device=device,
     )
 
+
 def get_cases_by_age(data):
     with torch.no_grad():
         ret = torch.zeros(5, device=device)
         ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
         for i in range(1, len(ages)):
             mask1 = data["agent"].age < ages[i]
-            mask2 = data["agent"].age > ages[i-1]
+            mask2 = data["agent"].age > ages[i - 1]
             mask = mask1 * mask2
-            ret[i-1] = data["agent"].is_infected[mask].sum()
+            ret[i - 1] = data["agent"].is_infected[mask].sum()
     return ret
 
 
@@ -67,7 +69,7 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    print(kwargs)
+    #print(kwargs)
     # t1 = time()
     with torch.no_grad():
         model = TorchJune(**kwargs, device=device)
@@ -84,18 +86,18 @@ def prior(cube, ndim, nparams):
 
 def loglike(cube, ndim, nparams):
     dates, time_curve, deaths_curve, cases_by_age = get_model_prediction(
-        beta_company=10**cube[0],
-        beta_school=10**cube[1],
-        beta_leisure=10**cube[2],
-        beta_household=10**cube[3],
-        beta_care_home=10**cube[3],
-        beta_university=10**cube[1]
+        beta_company=10 ** cube[0],
+        beta_school=10 ** cube[1],
+        beta_leisure=10 ** cube[2],
+        beta_household=10 ** cube[3],
+        beta_care_home=10 ** cube[3],
+        beta_university=10 ** cube[1],
     )
     loglikelihood = (
         torch.distributions.Normal(
-            time_curve, torch.sqrt(time_curve)#, device=device)
+            cases_by_age, torch.sqrt(cases_by_age)  # , device=device)
         )
-        .log_prob(true_data)
+        .log_prob(true_cases_by_age)
         .sum()
         .cpu()
         .item()
@@ -103,7 +105,7 @@ def loglike(cube, ndim, nparams):
     return loglikelihood
 
 
-#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
+# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
 DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
 
 DATA = get_data(DATA_PATH, device, n_seed=100)
@@ -113,14 +115,18 @@ timer = make_timer()
 
 true_beta_company = torch.tensor(2.0, device=device)
 true_beta_school = torch.tensor(3.0, device=device)
+true_beta_university = torch.tensor(3.0, device=device)
 true_beta_leisure = torch.tensor(1.0, device=device)
 true_beta_household = torch.tensor(4.0, device=device)
+true_beta_care_home = torch.tensor(4.0, device=device)
 
-dates, true_data, deaths_curve, cases_by_age = get_model_prediction(
+dates, true_data, true_deaths_curve, true_cases_by_age = get_model_prediction(
     beta_company=true_beta_company,
     beta_household=true_beta_household,
     beta_school=true_beta_school,
     beta_leisure=true_beta_leisure,
+    beta_university=true_beta_university,
+    beta_care_home=true_beta_care_home,
 )
 
 cube = np.random.rand(4)

@@ -95,14 +95,12 @@ class TestModel:
         assert cases[k] == 1.0
 
         cases[k].backward(retain_graph=True)
-        parameters = [
-            getattr(model.infection_passing, "beta_" + at)
-            for at in ["company", "school", "household", "leisure"]
-        ]
-        grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
-        assert len(grads) == 2
-        assert grads[0] == 0.0
-        assert grads[1] != 0.0
+        p_company = model.infection_passing.beta_company
+        p_school = model.infection_passing.beta_school
+        company_grad = p_company.grad.cpu()
+        school_grad = p_school.grad.cpu()
+        assert school_grad != 0.0
+        assert company_grad == 0.0
 
     def test__individual_gradients_schools(self, model, data2):
         data, is_inf = data2
@@ -110,14 +108,19 @@ class TestModel:
             initial_day="2022-02-01",
             total_days=10,
             weekday_step_duration=(24,),
+            weekend_step_duration=(24,),
             weekday_activities=(("company", "school"),),
+            weekend_activities=(("company", "school"),),
         )
         # create decoupled companies and schools
         # 50 / 50
         # run
-        results = model(timer=timer, data=data)
+        for i in range(3):
+            results = model(timer=timer, data=data)
+            next(timer)
         cases = results["agent"]["is_infected"]
-        assert cases.sum() > 0
+        print(cases[data["agent"].age > 50].sum())
+        assert cases.sum() > 10
 
         # Find person who got infected at woork
         k = 50
@@ -128,17 +131,15 @@ class TestModel:
                     continue
                 k = i
                 reached = True
-                break
+                #break
         assert reached
         cases[k].backward(retain_graph=True)
-        parameters = [
-            getattr(model.infection_passing, "beta_" + at)
-            for at in ["company", "school", "household", "leisure"]
-        ]
-        grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
-        assert len(grads) == 2
-        assert grads[0] != 0.0
-        assert grads[1] == 0.0
+        p_company = model.infection_passing.beta_company
+        p_school = model.infection_passing.beta_school
+        company_grad = p_company.grad.cpu()
+        school_grad = p_school.grad.cpu()
+        assert school_grad == 0
+        assert company_grad != 0
 
     def test__likelihood_gradient(self, model, data2):
         data, is_inf = data2

@@ -1,5 +1,5 @@
 import torch
-from torch import distributions as dist
+from pyro import distributions as dist
 
 from torch_june.utils import parse_age_probabilities
 from torch_june.default_parameters import make_parameters
@@ -101,7 +101,7 @@ class SymptomsSampler:
                 next_stage = next_stage + mask_symp
                 time_to_next_stage = (
                     time_to_next_stage
-                    + self.stage_transition_times[i].sample((n_agents,)) * mask_symp
+                    + self.stage_transition_times[i].rsample((n_agents,)) * mask_symp
                 )
 
             # These people will recover
@@ -111,7 +111,7 @@ class SymptomsSampler:
                 next_stage = next_stage - next_stage * mask_rec  # Set to 0
                 time_to_next_stage = (
                     time_to_next_stage
-                    + self.recovery_times[i].sample((n_agents,)) * mask_rec
+                    + self.recovery_times[i].rsample((n_agents,)) * mask_rec
                 )
         return current_stage, next_stage, time_to_next_stage
 

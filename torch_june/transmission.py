@@ -9,10 +9,10 @@ class TransmissionSampler:
         self.shift = shift
 
     def __call__(self, n):
-        maxi = self.max_infectiousness.sample((n,))
-        shape = self.shape.sample((n,))
-        rate = self.rate.sample((n,))
-        shift = self.shift.sample((n,))
+        maxi = self.max_infectiousness.rsample((n,))
+        shape = self.shape.rsample((n,))
+        rate = self.rate.rsample((n,))
+        shift = self.shift.rsample((n,))
         return torch.vstack((maxi, shape, rate, shift))
 
 
