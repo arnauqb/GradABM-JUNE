@@ -3,7 +3,7 @@ from pathlib import Path
 from time import time
 import torch
 
-torch.autograd.set_detect_anomaly(True)
+#torch.autograd.set_detect_anomaly(True)
 
 torch.manual_seed(0)
 import numpy as np
@@ -26,7 +26,7 @@ from script_utils import (
     make_timer,
     fix_seed
 )
-fix_seed
+fix_seed()
 
 from torch_june import TorchJune
 
@@ -96,7 +96,7 @@ def pyro_model(true_data):
     # beta_care_home = true_beta_care_home
     #log_beta = pyro.sample("log_beta", pyro.distributions.Uniform(-1, 1)).to(device)
     #beta = pyro.deterministic("beta", 10**log_beta)
-    beta = pyro.sample("beta", pyro.distributions.Uniform(1, 3)).to(device)
+    beta = pyro.sample("beta", pyro.distributions.Uniform(1, 10)).to(device)
     sigma = pyro.sample("noise", pyro.distributions.Uniform(0, 1)).to(device)
     beta_school = pyro.deterministic("beta_school", beta)
     beta_leisure = pyro.deterministic("beta_leisure", beta)
@@ -137,12 +137,12 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_beta_company = torch.tensor(2.0, device=device)
-true_beta_school = torch.tensor(2.0, device=device)
-true_beta_leisure = torch.tensor(2.0, device=device)
-true_beta_household = torch.tensor(2.0, device=device)
-true_beta_university = torch.tensor(2.0, device=device)
-true_beta_care_home = torch.tensor(2.0, device=device)
+true_beta_company = torch.tensor(5.0, device=device)
+true_beta_school = torch.tensor(5.0, device=device)
+true_beta_leisure = torch.tensor(5.0, device=device)
+true_beta_household = torch.tensor(5.0, device=device)
+true_beta_university = torch.tensor(5.0, device=device)
+true_beta_care_home = torch.tensor(5.0, device=device)
 
 # prof = Profile()
 # prof.enable()
@@ -190,7 +190,7 @@ def logger(kernel, samples, stage, i, temp_df):
         temp_df.to_csv("./pyro_results.csv", index=False)
 
 
-mcmc_kernel = pyro.infer.NUTS(pyro_model, target_accept_prob=0.65)
+mcmc_kernel = pyro.infer.NUTS(pyro_model)
 # pyro_model, step_size=1e-2, adapt_mass_matrix=False, adapt_step_size=False
 # )
 # mcmc_kernel = pyro.infer.HMC(pyro_model, num_steps=10, step_size=0.05)
