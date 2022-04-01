@@ -69,8 +69,11 @@ class InfectionPassing(MessagePassing):
             beta = getattr(self, "beta_" + group_name)
             beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
-            p_contact = torch.minimum(
-                1.0 / (people_per_group - 1), torch.tensor(1.0)
+            p_contact = torch.maximum(
+                torch.minimum(
+                    1.0 / (people_per_group - 1), torch.tensor(1.0, device=device)
+                ),
+                torch.tensor(0.0, device=device),
             )  # assumes constant n of contacts, change this in the future
             beta = beta * p_contact
             # remove people who are not really in this group
@@ -79,14 +82,16 @@ class InfectionPassing(MessagePassing):
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
             susceptibilities = data["agent"].susceptibility * is_free
+            print("Executing")
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
+            if trans_susc.requires_grad:
+                h = trans_susc.register_hook(lambda x: print(torch.isnan(x).any()))
             mask = torch.ones(n_agents, dtype=torch.int, device=device)
             mask[edge_index[0, :]] = 0
             is_free = is_free * mask
         not_infected_probs = torch.exp(-trans_susc * delta_time)
-        #print(not_infected_probs)
         return not_infected_probs
 
     def message(self, x_j, y_i):
@@ -99,8 +104,7 @@ class IsInfectedSampler(torch.nn.Module):
         dist = RelaxedBernoulliStraightThrough(temperature=0.1, probs=infected_probs)
         return dist.rsample()
 
-
-        #probs = torch.vstack((infected_probs, not_infected_probs))
-        #logits = torch.log(probs + 1e-15)
-        #is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
-        #return is_infected[0, :]
+        # probs = torch.vstack((infected_probs, not_infected_probs))
+        # logits = torch.log(probs + 1e-15)
+        # is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
+        # return is_infected[0, :]

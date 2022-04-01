@@ -1,9 +1,10 @@
 from cProfile import Profile
+from torch import autograd
 from pathlib import Path
 from time import time
 import torch
 
-torch.autograd.set_detect_anomaly(True)
+#torch.autograd.set_detect_anomaly(True)
 
 torch.manual_seed(0)
 import numpy as np
@@ -26,14 +27,14 @@ from script_utils import (
     make_timer,
     fix_seed
 )
-fix_seed
+fix_seed(291)
 
 from torch_june import TorchJune
 
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data.pkl"
+device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 
 
 def get_deaths_from_symptoms(symptoms):
@@ -146,6 +147,7 @@ true_beta_care_home = torch.tensor(2.0, device=device)
 
 # prof = Profile()
 # prof.enable()
+print("computing truth...")
 dates, true_data, true_deaths, cases_by_age = get_model_prediction(
     beta_company=true_beta_company,
     beta_household=true_beta_household,
@@ -154,6 +156,7 @@ dates, true_data, true_deaths, cases_by_age = get_model_prediction(
     beta_care_home=true_beta_care_home,
     beta_university=true_beta_university,
 )
+print("done")
 # prof.disable()
 # prof.dump_stats("./profile.prof")
 
@@ -190,18 +193,21 @@ def logger(kernel, samples, stage, i, temp_df):
         temp_df.to_csv("./pyro_results.csv", index=False)
 
 
-mcmc_kernel = pyro.infer.NUTS(pyro_model, target_accept_prob=0.65)
-# pyro_model, step_size=1e-2, adapt_mass_matrix=False, adapt_step_size=False
-# )
-# mcmc_kernel = pyro.infer.HMC(pyro_model, num_steps=10, step_size=0.05)
-mcmc = pyro.infer.MCMC(
-    mcmc_kernel,
-    num_samples=1000,
-    warmup_steps=100,
-    hook_fn=lambda kernel, samples, stage, i: logger(
-        kernel, samples, stage, i, temp_df
-    ),
-)
-mcmc.run(true_data)
-print(mcmc.summary())
-print(mcmc.diagnostics())
+def run_mcmc():
+    mcmc_kernel = pyro.infer.NUTS(pyro_model, target_accept_prob=0.65)
+    # pyro_model, step_size=1e-2, adapt_mass_matrix=False, adapt_step_size=False
+    # )
+    # mcmc_kernel = pyro.infer.HMC(pyro_model, num_steps=10, step_size=0.05)
+    mcmc = pyro.infer.MCMC(
+        mcmc_kernel,
+        num_samples=1000,
+        warmup_steps=100,
+        hook_fn=lambda kernel, samples, stage, i: logger(
+            kernel, samples, stage, i, temp_df
+        ),
+    )
+    mcmc.run(true_data)
+    print(mcmc.summary())
+    print(mcmc.diagnostics())
+
+run_mcmc()
