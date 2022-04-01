@@ -13,6 +13,8 @@ activity_hierarchy = [
     "attends_household",
 ]
 
+import pickle
+
 
 class InfectionPassing(MessagePassing):
     def __init__(
@@ -62,6 +64,7 @@ class InfectionPassing(MessagePassing):
         n_agents = len(data["agent"]["id"])
         device = data["agent"].transmission.device
         trans_susc = torch.zeros(n_agents, device=device)
+
         is_free = torch.ones(n_agents, device=device)
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
@@ -82,15 +85,15 @@ class InfectionPassing(MessagePassing):
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
             susceptibilities = data["agent"].susceptibility * is_free
-            print("Executing")
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-            if trans_susc.requires_grad:
-                h = trans_susc.register_hook(lambda x: print(torch.isnan(x).any()))
             mask = torch.ones(n_agents, dtype=torch.int, device=device)
             mask[edge_index[0, :]] = 0
             is_free = is_free * mask
+        trans_susc = torch.clamp(
+            trans_susc, min=1e-6
+        )  # this is necessary to avoid gradient infs
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         return not_infected_probs
 

@@ -4,9 +4,7 @@ from pathlib import Path
 from time import time
 import torch
 
-#torch.autograd.set_detect_anomaly(True)
 
-torch.manual_seed(0)
 import numpy as np
 import pyro
 import os
@@ -27,14 +25,16 @@ from script_utils import (
     make_timer,
     fix_seed
 )
-fix_seed()
+fix_seed(316)
+
+#torch.autograd.set_detect_anomaly(True)
 
 from torch_june import TorchJune
 
 
-device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 
 
 def get_deaths_from_symptoms(symptoms):
@@ -106,9 +106,9 @@ def pyro_model(true_data):
     beta_company = pyro.deterministic("beta_company", beta)
     beta_university = pyro.deterministic("beta_university", beta)
 
-    print(f"beta : {beta}")
-    print(f"noise :{sigma}")
-    print("\n")
+    #print(f"beta : {beta}")
+    #print(f"noise :{sigma}")
+    #print("\n")
 
     dates, time_curve, deaths, cases_by_age = get_model_prediction(
         beta_company=beta_company,
