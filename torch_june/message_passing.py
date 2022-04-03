@@ -65,7 +65,7 @@ class InfectionPassing(MessagePassing):
         device = data["agent"].transmission.device
         trans_susc = torch.zeros(n_agents, device=device)
 
-        is_free = torch.ones(n_agents, device=device)
+        #is_free = torch.ones(n_agents, device=device)
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
@@ -80,17 +80,17 @@ class InfectionPassing(MessagePassing):
             )  # assumes constant n of contacts, change this in the future
             beta = beta * p_contact
             # remove people who are not really in this group
-            transmissions = data["agent"].transmission * is_free
+            transmissions = data["agent"].transmission# * is_free
             cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
-            susceptibilities = data["agent"].susceptibility * is_free
+            susceptibilities = data["agent"].susceptibility# * is_free
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
             mask = torch.ones(n_agents, dtype=torch.int, device=device)
             mask[edge_index[0, :]] = 0
-            is_free = is_free * mask
+            #is_free = is_free * mask
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
         )  # this is necessary to avoid gradient infs

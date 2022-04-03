@@ -23,36 +23,37 @@ from script_utils import (
     backup_inf_data,
     restore_data,
     make_timer,
-    fix_seed
+    fix_seed,
 )
-fix_seed(316)
 
-#torch.autograd.set_detect_anomaly(True)
+fix_seed()
+
+# torch.autograd.set_detect_anomaly(True)
 
 from torch_june import TorchJune
 
 
 device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 
 
 def get_deaths_from_symptoms(symptoms):
     return torch.tensor(
-        symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
+        symptoms["current_stage"][symptoms["current_stage"] == 6].shape[0],
         device=device,
     )
 
 
 def get_cases_by_age(data):
     with torch.no_grad():
-        ret = torch.zeros(100, device=device)
+        ret = torch.zeros(5, device=device)
         ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
         for i in range(1, len(ages)):
             mask1 = data["agent"].age < ages[i]
             mask2 = data["agent"].age > ages[i - 1]
             mask = mask1 * mask2
-            ret[i] = ret[i] + data["agent"].is_infected[mask].sum()
+            ret[i-1] = ret[i-1] + data["agent"].is_infected[mask].sum()
     return ret
 
 
@@ -80,8 +81,9 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    #print(kwargs)
+    # print(kwargs)
     # t1 = time()
+    #print(kwargs["beta_household"])
     model = TorchJune(**kwargs, device=device)
     ret = run_model(model)
     # t2 = time()
@@ -95,22 +97,36 @@ def pyro_model(true_data):
     # beta_household = true_beta_household
     # beta_university = true_beta_university
     # beta_care_home = true_beta_care_home
-    #log_beta = pyro.sample("log_beta", pyro.distributions.Uniform(-1, 1)).to(device)
-    #beta = pyro.deterministic("beta", 10**log_beta)
-    beta = pyro.sample("beta", pyro.distributions.Uniform(1, 10)).to(device)
-    sigma = pyro.sample("noise", pyro.distributions.Uniform(0, 1)).to(device)
-    beta_school = pyro.deterministic("beta_school", beta)
-    beta_leisure = pyro.deterministic("beta_leisure", beta)
-    beta_household = pyro.deterministic("beta_household", beta)
-    beta_care_home = pyro.deterministic("beta_care_home", beta)
-    beta_company = pyro.deterministic("beta_company", beta)
-    beta_university = pyro.deterministic("beta_university", beta)
+    # log_beta = pyro.sample("log_beta", pyro.distributions.Uniform(-1, 1)).to(device)
+    # beta = pyro.deterministic("beta", 10**log_beta)
+    beta_household = 10 ** pyro.sample(
+        "log_beta_household", pyro.distributions.Uniform(-1, 0)
+    ).to(device)
+    #beta_leisure = 10 ** pyro.sample(
+    #    "log_beta_leisure", pyro.distributions.Uniform(-1, 0)
+    #).to(device)
+    beta_school = 10 ** pyro.sample(
+        "log_beta_school", pyro.distributions.Uniform(-1, 0)
+    ).to(device)
+    #beta_company = 10 ** pyro.sample(
+    #    "log_beta_company", pyro.distributions.Uniform(-1, 0)
+    #).to(device)
+    beta_care_home = pyro.deterministic("beta_care_home", beta_household)
+    # beta_school =  pyro.sample("beta_school", pyro.distributions.Uniform(1, 5)).to(device)
+    #beta_school = pyro.deterministic("beta_school", beta_household)
+    beta_university = pyro.deterministic("beta_university", beta_school)
+    beta_leisure = pyro.deterministic("beta_leisure", beta_household)
+    # beta_leisure =  pyro.sample("beta_leisure", pyro.distributions.Uniform(1, 5)).to(device)
+    beta_company = pyro.deterministic("beta_company", beta_household)
+    # beta_company =  pyro.sample("beta_company", pyro.distributions.Uniform(1, 5)).to(device)
+    #sigma = pyro.sample("noise", pyro.distributions.Uniform(0, 2)).to(device)
 
-    #print(f"beta : {beta}")
-    #print(f"noise :{sigma}")
-    #print("\n")
+    # print(f"beta : {beta}")
+    # print(f"noise :{sigma}")
+    # print("\n")
 
-    dates, time_curve, deaths, cases_by_age = get_model_prediction(
+    # dates, cases, deaths, cases_by_age = get_model_prediction(
+    dates, cases, deaths, cases_by_age = get_model_prediction(
         beta_company=beta_company,
         beta_household=beta_household,
         beta_school=beta_school,
@@ -118,17 +134,23 @@ def pyro_model(true_data):
         beta_care_home=beta_care_home,
         beta_university=beta_university,
     )
+    #print(cases_by_age.sum(0))
     # with pyro.plate("data", 100) as ind:
     #    print(ind)
-    cases = time_curve.sum()
+    # cases = time_curve.sum()
+    # deaths = deaths[-1]
+    # true_data = true_data[-1]
     y = pyro.sample(
         "obs",
         # pyro.distributions.Normal(deaths, torch.sqrt(deaths)),
         # pyro.distributions.Normal(cases_by_age[:, ind], 0.2 * cases_by_age[:, ind]),
-        pyro.distributions.Normal(cases, sigma * cases),
-        #pyro.distributions.Poisson(cases),
+        #pyro.distributions.Normal(torch.log10(cases_by_age), sigma),
+        #pyro.distributions.Normal(torch.log10(cases), sigma),
+        #pyro.distributions.Normal(torch.log10(cases), 0.2),
+        #pyro.distributions.Poisson(deaths),
+        pyro.distributions.Poisson(torch.log10(cases_by_age.sum(0))),
         # obs=true_data[:, ind],
-        obs=true_data.sum(),
+        obs=torch.log10(true_data.sum(0)),
     )
     return y
 
@@ -138,17 +160,22 @@ BACKUP = backup_inf_data(DATA)
 
 timer = make_timer()
 
-true_beta_company = torch.tensor(5.0, device=device)
-true_beta_school = torch.tensor(5.0, device=device)
-true_beta_leisure = torch.tensor(5.0, device=device)
-true_beta_household = torch.tensor(5.0, device=device)
-true_beta_university = torch.tensor(5.0, device=device)
-true_beta_care_home = torch.tensor(5.0, device=device)
+beta_household = 0.4
+beta_school = 0.6
+beta_company = 0.5
+beta_leisure = 0.3
+true_beta_company = torch.tensor(beta_company, device=device)
+true_beta_school = torch.tensor(beta_school, device=device)
+true_beta_university = torch.tensor(beta_school, device=device)
+true_beta_leisure = torch.tensor(beta_leisure, device=device)
+true_beta_household = torch.tensor(beta_household, device=device)
+true_beta_care_home = torch.tensor(beta_household, device=device)
 
 # prof = Profile()
 # prof.enable()
 print("computing truth...")
-dates, true_data, true_deaths, cases_by_age = get_model_prediction(
+# dates, true_cases, true_deaths, cases_by_age = get_model_prediction(
+dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
     beta_company=true_beta_company,
     beta_household=true_beta_household,
     beta_school=true_beta_school,
@@ -160,28 +187,22 @@ print("done")
 # prof.disable()
 # prof.dump_stats("./profile.prof")
 
-#fig, ax = plt.subplots()
-#cases = true_data.cpu().numpy()
-#deaths = true_deaths.cpu().numpy()
-#cases_by_age = cases_by_age.cpu().numpy()
-#daily_deaths = np.diff(deaths, prepend=0)
-##ax.plot(dates, deaths)
-#ax.plot(dates, cases)
-##cmap = plt.get_cmap("viridis")(np.linspace(0,1,100))
-##for i in range(cases_by_age.shape[1]):
-##  ax.plot(dates, cases_by_age[:,i], color = cmap[i])
-#plt.show()
 
-temp_df = pd.DataFrame(
-    columns=[
-        "beta_company",
-        "beta_school",
-        "beta_household",
-        "beta_leisure",
-        "beta_care_home",
-        "beta_university",
-    ]
-)
+def plot(dates, true_cases, true_deaths, cases_by_age):
+    fig, ax = plt.subplots()
+    true_cases = true_cases.cpu().numpy()
+    deaths = true_deaths.cpu().numpy()
+    cases_by_age = cases_by_age.cpu().numpy()
+    daily_deaths = np.diff(deaths, prepend=0)
+    #ax.plot(cases_by_age)
+    #ax.plot(deaths)
+    # ax.plot(dates, true_cases)
+    cmap = plt.get_cmap("viridis")(np.linspace(0,1,5))
+    labels = [20,40,60,80,100]
+    for i in range(cases_by_age.shape[1]):
+        ax.semilogy(dates, cases_by_age[:,i], color = cmap[i], label = labels[i])
+    ax.legend()
+    plt.show()
 
 
 def logger(kernel, samples, stage, i, temp_df):
@@ -194,20 +215,23 @@ def logger(kernel, samples, stage, i, temp_df):
 
 
 def run_mcmc():
-    mcmc_kernel = pyro.infer.NUTS(pyro_model, target_accept_prob=0.65)
+    temp_df = pd.DataFrame()
+    mcmc_kernel = pyro.infer.NUTS(pyro_model)
     # pyro_model, step_size=1e-2, adapt_mass_matrix=False, adapt_step_size=False
     # )
     # mcmc_kernel = pyro.infer.HMC(pyro_model, num_steps=10, step_size=0.05)
     mcmc = pyro.infer.MCMC(
         mcmc_kernel,
-        num_samples=1000,
-        warmup_steps=100,
+        num_samples=5000,
+        warmup_steps=300,
         hook_fn=lambda kernel, samples, stage, i: logger(
             kernel, samples, stage, i, temp_df
         ),
     )
-    mcmc.run(true_data)
+    mcmc.run(true_cases_by_age)
     print(mcmc.summary())
     print(mcmc.diagnostics())
 
+
+#plot(dates, true_cases, true_deaths, true_cases_by_age)
 run_mcmc()

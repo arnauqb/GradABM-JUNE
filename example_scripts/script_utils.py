@@ -6,16 +6,16 @@ from pyro.distributions import Normal, LogNormal
 
 from torch_june import TransmissionSampler, Timer
 
-def fix_seed(seed = None):
+
+def fix_seed(seed=None):
     if seed is None:
-        seed = np.random.randint(0,1000)
+        seed = np.random.randint(0, 1000)
     print(f"Fixing seed to {seed}")
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
 
 
 def make_sampler():
@@ -116,26 +116,25 @@ def restore_data(data, backup):
 def make_timer():
     return Timer(
         initial_day="2022-02-01",
-        total_days=30,
-        weekday_step_duration=(8, 8, 8),
-        weekend_step_duration=(
-            12,
-            12,
-        ),
+        total_days=15,
+        # weekday_step_duration=(8, 8, 8),
+        weekday_step_duration=(24,),
+        weekend_step_duration=(24,),
         weekday_activities=(
-            ("company", "school", "university", "care_home", "household"),
-            ("care_home", "leisure", "household"),
-            (
-                "care_home",
-                "household",
-            ),
+            ("company", "school", "university", "leisure", "care_home", "household"),
+            # ("care_home", "leisure", "household"),
+            # (
+            #    "care_home",
+            #    "household",
+            # ),
         ),
         weekend_activities=(
-            ("care_home", "leisure", "household"),
-            (
-                "care_home",
-                "household",
-            ),
+            ("company", "school", "university", "leisure", "care_home", "household"),
+            # ("care_home", "leisure", "household"),
+            # (
+            #    "care_home",
+            #    "household",
+            # ),
         ),
     )
 
