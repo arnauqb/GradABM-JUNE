@@ -27,12 +27,12 @@ class InfectionPassing(MessagePassing):
         beta_care_home=torch.tensor(1.0),
     ):
         super().__init__(aggr="add", node_dim=-1)
-        self.beta_company = beta_company
-        self.beta_school = beta_school
-        self.beta_household = beta_household
-        self.beta_leisure = beta_leisure
-        self.beta_university = beta_university
-        self.beta_care_home = beta_care_home
+        self.beta_company = torch.nn.Parameter(beta_company)
+        self.beta_school = torch.nn.Parameter(beta_school)
+        self.beta_household = torch.nn.Parameter(beta_household)
+        self.beta_leisure = torch.nn.Parameter(beta_leisure)
+        self.beta_university = torch.nn.Parameter(beta_university)
+        self.beta_care_home = torch.nn.Parameter(beta_care_home)
 
     def _get_edge_types_from_timer(self, timer):
         ret = []

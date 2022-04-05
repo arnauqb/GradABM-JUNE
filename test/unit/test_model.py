@@ -46,9 +46,8 @@ class TestModel:
             getattr(model.infection_passing, "beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
-        # all to school, none to work.
         assert parameters[0].grad is not None
-        assert parameters[0].grad == 0
+        assert parameters[0].grad != 0
         assert parameters[1].grad is not None
         assert parameters[1].grad != 0
 
