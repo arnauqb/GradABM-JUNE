@@ -25,8 +25,9 @@ from torch_june import TorchJune
 
 fix_seed()
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 DATA = get_data(DATA_PATH, n_seed=100, device=device)
 BACKUP = backup_inf_data(DATA)
 TIMER = make_timer()
@@ -151,9 +152,9 @@ def train_model(
     )
     # model.infection_passing.log_beta_university = model.infection_passing.log_beta_school
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=100, verbose=True, gamma=0.9
-    )
+    #lr_scheduler = torch.optim.lr_scheduler.StepLR(
+    #    optimizer, step_size=100, verbose=True, gamma=0.9
+    #)
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     n_agents = DATA["agent"]["id"].shape[0]
     df = pd.DataFrame()
@@ -161,7 +162,6 @@ def train_model(
 
     for epoch in range(n_epochs):
         # get the inputs; data is a list of [inputs, labels]
-        print(epoch)
         data = restore_data(DATA, BACKUP)
 
         # zero the parameter gradients
@@ -179,11 +179,11 @@ def train_model(
         )
         loss.backward()
         optimizer.step()
-        lr_scheduler.step()
+        #lr_scheduler.step()
 
         # print statistics
         running_loss = loss.item()
-        print(f"[{epoch + 1}] loss: {running_loss:.3e}")
+        print(f"[{epoch + 1}] loss: {running_loss:e}")
         for param in model.named_parameters():
             df.loc[epoch, param[0].split(".")[-1]] = param[1].item()
         df.loc[epoch, "loss"] = running_loss

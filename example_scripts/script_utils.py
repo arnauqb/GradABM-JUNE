@@ -156,8 +156,8 @@ def get_deaths_from_symptoms(symptoms, device):
 
 
 def get_cases_by_age(data, device):
-    ret = torch.zeros(5, device=device)
-    ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
+    ages = torch.tensor([0, 18, 25, 40, 60, 80, 100], device=device)
+    ret = torch.zeros(len(ages)-1, device=device)
     for i in range(1, len(ages)):
         mask1 = data["agent"].age < ages[i]
         mask2 = data["agent"].age > ages[i - 1]
@@ -166,8 +166,8 @@ def get_cases_by_age(data, device):
     return ret
 
 def get_people_by_age(data, device):
-    ret = torch.zeros(5, device=device)
-    ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
+    ages = torch.tensor([0, 18, 25, 40, 60, 80, 100], device=device)
+    ret = torch.zeros(len(ages)-1, device=device)
     for i in range(1, len(ages)):
         mask1 = data["agent"].age < ages[i]
         mask2 = data["agent"].age > ages[i - 1]
