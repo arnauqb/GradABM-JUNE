@@ -13,24 +13,24 @@ class TorchJune(torch.nn.Module):
     def __init__(
         self,
         symptoms_sampler=None,
-        beta_company=torch.tensor(1.0),
-        beta_school=torch.tensor(1.0),
-        beta_household=torch.tensor(1.0),
-        beta_university=torch.tensor(1.0),
-        beta_leisure=torch.tensor(1.0),
-        beta_care_home=torch.tensor(1.0),
-        device = "cpu"
+        log_beta_company=torch.tensor(0.0),
+        log_beta_school=torch.tensor(0.0),
+        log_beta_household=torch.tensor(0.0),
+        log_beta_university=torch.tensor(0.0),
+        log_beta_leisure=torch.tensor(0.0),
+        log_beta_care_home=torch.tensor(0.0),
+        device="cpu",
     ):
         if symptoms_sampler is None:
             symptoms_sampler = SymptomsSampler.from_default_parameters(device=device)
         super().__init__()
         self.infection_passing = InfectionPassing(
-            beta_company=beta_company,
-            beta_school=beta_school,
-            beta_household=beta_household,
-            beta_university=beta_university,
-            beta_leisure=beta_leisure,
-            beta_care_home=beta_care_home,
+            log_beta_company=log_beta_company,
+            log_beta_school=log_beta_school,
+            log_beta_household=log_beta_household,
+            log_beta_university=log_beta_university,
+            log_beta_leisure=log_beta_leisure,
+            log_beta_care_home=log_beta_care_home,
         )
         self.transmission_updater = TransmissionUpdater()
         self.is_infected_sampler = IsInfectedSampler()
@@ -41,7 +41,10 @@ class TorchJune(torch.nn.Module):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
         not_infected_probs = self.infection_passing(data=data, timer=timer)
         new_infected = self.is_infected_sampler(not_infected_probs)
-        data["agent"].susceptibility = torch.maximum(torch.tensor(0., device=self.device), data["agent"].susceptibility - new_infected)
+        data["agent"].susceptibility = torch.maximum(
+            torch.tensor(0.0, device=self.device),
+            data["agent"].susceptibility - new_infected,
+        )
         data["agent"].is_infected = data["agent"].is_infected + new_infected
         data["agent"].infection_time[new_infected.bool()] = timer.now
         data["symptoms"] = self.symptoms_updater(

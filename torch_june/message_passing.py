@@ -19,20 +19,20 @@ import pickle
 class InfectionPassing(MessagePassing):
     def __init__(
         self,
-        beta_company=torch.tensor(1.0),
-        beta_school=torch.tensor(1.0),
-        beta_household=torch.tensor(1.0),
-        beta_university=torch.tensor(1.0),
-        beta_leisure=torch.tensor(1.0),
-        beta_care_home=torch.tensor(1.0),
+        log_beta_company=torch.tensor(0.0),
+        log_beta_school=torch.tensor(0.0),
+        log_beta_household=torch.tensor(0.0),
+        log_beta_university=torch.tensor(0.0),
+        log_beta_leisure=torch.tensor(0.0),
+        log_beta_care_home=torch.tensor(0.0),
     ):
         super().__init__(aggr="add", node_dim=-1)
-        self.beta_company = torch.nn.Parameter(beta_company)
-        self.beta_school = torch.nn.Parameter(beta_school)
-        self.beta_household = torch.nn.Parameter(beta_household)
-        self.beta_leisure = torch.nn.Parameter(beta_leisure)
-        self.beta_university = torch.nn.Parameter(beta_university)
-        self.beta_care_home = torch.nn.Parameter(beta_care_home)
+        self.log_beta_company = torch.nn.Parameter(log_beta_company)
+        self.log_beta_school = torch.nn.Parameter(log_beta_school)
+        self.log_beta_household = torch.nn.Parameter(log_beta_household)
+        self.log_beta_leisure = torch.nn.Parameter(log_beta_leisure)
+        self.log_beta_university = torch.nn.Parameter(log_beta_university)
+        self.log_beta_care_home = torch.nn.Parameter(log_beta_care_home)
 
     def _get_edge_types_from_timer(self, timer):
         ret = []
@@ -69,7 +69,7 @@ class InfectionPassing(MessagePassing):
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
-            beta = getattr(self, "beta_" + group_name)
+            beta = 10 ** getattr(self, "log_beta_" + group_name)
             beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
             p_contact = torch.maximum(

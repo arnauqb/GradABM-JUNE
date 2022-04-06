@@ -1,5 +1,6 @@
 import torch
 import os
+import gc
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -55,12 +56,15 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    model = TorchJune(**kwargs, device=device)
+    input = {f"log_{key}": torch.log10(value) for key, value in kwargs.items()}
+    model = TorchJune(**input, device=device)
     ret = run_model(model)
     return ret
 
 
-def get_true_data(beta_household, beta_school, beta_company, beta_leisure, n=100):
+def get_true_data(
+    beta_household, beta_school, beta_company, beta_leisure, beta_university, n=100
+):
 
     dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
         beta_company=beta_company,
@@ -68,7 +72,7 @@ def get_true_data(beta_household, beta_school, beta_company, beta_leisure, n=100
         beta_school=beta_school,
         beta_leisure=beta_leisure,
         beta_care_home=beta_household,
-        beta_university=beta_school,
+        beta_university=beta_university,
     )
     true_cases = true_cases.reshape((1, *true_cases.shape))
     true_deaths = true_deaths.reshape((1, *true_deaths.shape))
@@ -81,7 +85,7 @@ def get_true_data(beta_household, beta_school, beta_company, beta_leisure, n=100
             beta_school=beta_school,
             beta_leisure=beta_leisure,
             beta_care_home=beta_household,
-            beta_university=beta_school,
+            beta_university=beta_university,
         )
         true_cases2 = true_cases2.reshape((1, *true_cases2.shape))
         true_deaths2 = true_deaths2.reshape((1, *true_deaths2.shape))
@@ -111,23 +115,26 @@ def train_model(
     true_beta_company=0.5,
     true_beta_school=0.6,
     true_beta_leisure=0.2,
+    true_beta_university=0.4,
     n_epochs=100,
 ):
-    (
-        dates,
-        true_cases_mean,
-        true_cases_std,
-        true_deaths_mean,
-        true_deaths_std,
-        true_cases_by_age_mean,
-        true_cases_by_age_std,
-    ) = get_true_data(
-        beta_household=torch.tensor(true_beta_household),
-        beta_school=torch.tensor(true_beta_school),
-        beta_company=torch.tensor(true_beta_company),
-        beta_leisure=torch.tensor(true_beta_leisure),
-        n=1,
-    )
+    with torch.no_grad():
+        (
+            dates,
+            true_cases_mean,
+            true_cases_std,
+            true_deaths_mean,
+            true_deaths_std,
+            true_cases_by_age_mean,
+            true_cases_by_age_std,
+        ) = get_true_data(
+            beta_household=torch.tensor(true_beta_household),
+            beta_school=torch.tensor(true_beta_school),
+            beta_company=torch.tensor(true_beta_company),
+            beta_leisure=torch.tensor(true_beta_leisure),
+            beta_university=torch.tensor(true_beta_university),
+            n=1,
+        )
     # fig, ax = plt.subplots()
     # ax.plot(dates, true_cases_mean.detach().cpu().numpy())
     # plt.show()
@@ -136,11 +143,13 @@ def train_model(
     loss_fn = torch.nn.L1Loss(reduction="mean")
     model = TorchJune(device=device)
     # model.infection_passing.beta_household.requires_grad = False
-    #model.infection_passing.beta_leisure.requires_grad = False
+    # model.infection_passing.beta_leisure.requires_grad = False
     # model.infection_passing.beta_company = model.infection_passing.beta_household
     # model.infection_passing.beta_school = model.infection_passing.beta_company
-    model.infection_passing.beta_care_home = model.infection_passing.beta_household
-    model.infection_passing.beta_university = model.infection_passing.beta_school
+    model.infection_passing.log_beta_care_home = (
+        model.infection_passing.log_beta_household
+    )
+    # model.infection_passing.log_beta_university = model.infection_passing.log_beta_school
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=100, verbose=True, gamma=0.9
@@ -152,6 +161,7 @@ def train_model(
 
     for epoch in range(n_epochs):
         # get the inputs; data is a list of [inputs, labels]
+        print(epoch)
         data = restore_data(DATA, BACKUP)
 
         # zero the parameter gradients
@@ -167,7 +177,7 @@ def train_model(
             cases_by_age[[20, 40, 60, 80], :] / people_by_age,
             true_cases_by_age_mean[[20, 40, 60, 80], :] / people_by_age,
         )
-        loss.backward(retain_graph=True)
+        loss.backward()
         optimizer.step()
         lr_scheduler.step()
 
