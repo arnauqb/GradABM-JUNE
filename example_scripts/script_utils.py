@@ -116,7 +116,7 @@ def restore_data(data, backup):
 def make_timer():
     return Timer(
         initial_day="2022-02-01",
-        total_days=80,
+        total_days=25,
         # weekday_step_duration=(8, 8, 8),
         weekday_step_duration=(24,),
         weekend_step_duration=(24,),
@@ -156,19 +156,20 @@ def get_deaths_from_symptoms(symptoms, device):
 
 
 def get_cases_by_age(data, device):
-    ages = torch.tensor([0, 18, 25, 40, 60, 80, 100], device=device)
-    ret = torch.zeros(len(ages)-1, device=device)
-    for i in range(1, len(ages)):
+    ages = torch.tensor([0, 18, 25, 65, 80, 90], device=device)
+    ret = torch.zeros(ages.shape[0] - 1, device=device)
+    for i in range(1, ages.shape[0]):
         mask1 = data["agent"].age < ages[i]
         mask2 = data["agent"].age > ages[i - 1]
         mask = mask1 * mask2
         ret[i - 1] = ret[i - 1] + data["agent"].is_infected[mask].sum()
     return ret
 
+
 def get_people_by_age(data, device):
-    ages = torch.tensor([0, 18, 25, 40, 60, 80, 100], device=device)
-    ret = torch.zeros(len(ages)-1, device=device)
-    for i in range(1, len(ages)):
+    ages = torch.tensor([0, 18, 25, 40, 60, 80, 90, 100], device=device)
+    ret = torch.zeros(ages.shape[0] - 1, device=device)
+    for i in range(1, ages.shape[0]):
         mask1 = data["agent"].age < ages[i]
         mask2 = data["agent"].age > ages[i - 1]
         mask = mask1 * mask2

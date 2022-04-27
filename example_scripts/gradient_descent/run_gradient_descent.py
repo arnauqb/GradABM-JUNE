@@ -2,6 +2,7 @@ import torch
 import os
 import gc
 import pandas as pd
+from pyro import distributions
 from pathlib import Path
 import matplotlib.pyplot as plt
 
@@ -23,10 +24,11 @@ from script_utils import (
 
 from torch_june import TorchJune
 
+# torch.autograd.set_detect_anomaly(True)
 fix_seed()
 
-device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+device = "cuda:1"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
 DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 DATA = get_data(DATA_PATH, n_seed=100, device=device)
 BACKUP = backup_inf_data(DATA)
@@ -64,7 +66,13 @@ def get_model_prediction(**kwargs):
 
 
 def get_true_data(
-    beta_household, beta_school, beta_company, beta_leisure, beta_university, n=100
+    beta_household,
+    beta_school,
+    beta_company,
+    beta_leisure,
+    beta_university,
+    beta_care_home,
+    n=100,
 ):
 
     dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
@@ -72,7 +80,7 @@ def get_true_data(
         beta_household=beta_household,
         beta_school=beta_school,
         beta_leisure=beta_leisure,
-        beta_care_home=beta_household,
+        beta_care_home=beta_care_home,
         beta_university=beta_university,
     )
     true_cases = true_cases.reshape((1, *true_cases.shape))
@@ -85,7 +93,7 @@ def get_true_data(
             beta_household=beta_household,
             beta_school=beta_school,
             beta_leisure=beta_leisure,
-            beta_care_home=beta_household,
+            beta_care_home=beta_care_home,
             beta_university=beta_university,
         )
         true_cases2 = true_cases2.reshape((1, *true_cases2.shape))
@@ -111,12 +119,24 @@ def get_true_data(
     )
 
 
+def log_likelihood(cases_by_age, true_cases_by_age, people_by_age, time_stamps):
+    cases_by_age = cases_by_age[time_stamps, :] / people_by_age
+    true_cases_by_age = true_cases_by_age[time_stamps, :] / people_by_age
+    ll = (
+        distributions.Normal(cases_by_age, 0.25 * cases_by_age + 1e-4)
+        .log_prob(true_cases_by_age)
+        .sum()
+    )
+    return -ll
+
+
 def train_model(
     true_beta_household=0.3,
-    true_beta_company=0.5,
-    true_beta_school=0.6,
-    true_beta_leisure=0.2,
-    true_beta_university=0.4,
+    true_beta_care_home=0.3,
+    true_beta_company=0.3,
+    true_beta_school=0.3,
+    true_beta_leisure=0.3,
+    true_beta_university=0.3,
     n_epochs=100,
 ):
     with torch.no_grad():
@@ -133,6 +153,7 @@ def train_model(
             beta_school=torch.tensor(true_beta_school),
             beta_company=torch.tensor(true_beta_company),
             beta_leisure=torch.tensor(true_beta_leisure),
+            beta_care_home=torch.tensor(true_beta_care_home),
             beta_university=torch.tensor(true_beta_university),
             n=1,
         )
@@ -143,22 +164,28 @@ def train_model(
     # loss_fn = torch.nn.MSELoss(reduction="mean")
     loss_fn = torch.nn.L1Loss(reduction="mean")
     model = TorchJune(device=device)
-    # model.infection_passing.beta_household.requires_grad = False
-    # model.infection_passing.beta_leisure.requires_grad = False
-    # model.infection_passing.beta_company = model.infection_passing.beta_household
-    # model.infection_passing.beta_school = model.infection_passing.beta_company
     model.infection_passing.log_beta_care_home = (
         model.infection_passing.log_beta_household
     )
-    # model.infection_passing.log_beta_university = model.infection_passing.log_beta_school
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    #lr_scheduler = torch.optim.lr_scheduler.StepLR(
+    model.infection_passing.log_beta_leisure = (
+        model.infection_passing.log_beta_household
+    )
+    model.infection_passing.log_beta_school = model.infection_passing.log_beta_household
+    model.infection_passing.log_beta_university = (
+        model.infection_passing.log_beta_household
+    )
+    model.infection_passing.log_beta_company = (
+        model.infection_passing.log_beta_household
+    )
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-6, momentum=0.9)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(
     #    optimizer, step_size=100, verbose=True, gamma=0.9
-    #)
+    # )
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     n_agents = DATA["agent"]["id"].shape[0]
     df = pd.DataFrame()
     people_by_age = get_people_by_age(DATA, device)
+    time_stamps = [5, 10, 15, 20, 25]
 
     for epoch in range(n_epochs):
         # get the inputs; data is a list of [inputs, labels]
@@ -173,23 +200,29 @@ def train_model(
         # loss += 100 * loss_fn(
         #   deaths_curve[-1] / n_agents, true_deaths_mean[-1] / n_agents
         # )
-        loss = loss_fn(
-            cases_by_age[[20, 40, 60, 80], :] / people_by_age,
-            true_cases_by_age_mean[[20, 40, 60, 80], :] / people_by_age,
+        # loss = loss_fn(
+        #   cases_by_age[time_stamps, :] / people_by_age,
+        #   true_cases_by_age_mean[time_stamps, :] / people_by_age,
+        # )
+        loss = log_likelihood(
+            cases_by_age=cases_by_age,
+            true_cases_by_age=true_cases_by_age_mean,
+            people_by_age=people_by_age,
+            time_stamps=time_stamps,
         )
         loss.backward()
         optimizer.step()
-        #lr_scheduler.step()
+        # lr_scheduler.step()
 
         # print statistics
         running_loss = loss.item()
-        print(f"[{epoch + 1}] loss: {running_loss:e}")
+        print(f"[{epoch + 1}] loss: {running_loss:.10e}")
         for param in model.named_parameters():
             df.loc[epoch, param[0].split(".")[-1]] = param[1].item()
         df.loc[epoch, "loss"] = running_loss
-        df.to_csv("gd_results.csv", index=False)
+        df.to_csv("gd_results_likelihood.csv", index=False)
     PATH = "./model.pth"
     torch.save(model.state_dict(), PATH)
 
 
-train_model(n_epochs=10000)
+train_model(n_epochs=50000)
