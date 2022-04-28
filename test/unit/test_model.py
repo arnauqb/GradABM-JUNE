@@ -3,20 +3,19 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from torch_june import TorchJune, GraphLoader, AgentDataLoader, Timer
-from torch_geometric.data import HeteroData
+from torch_june import TorchJune, Timer
 
 
 class TestModel:
     @fixture(name="model")
     def make_model(self):
-        beta_priors = {
-            "beta_company": torch.tensor(1.0, requires_grad=True),
-            "beta_school": torch.tensor(20.0, requires_grad=True),
-            "beta_household": torch.tensor(30.0, requires_grad=True),
-            "beta_leisure": torch.tensor(1.0, requires_grad=True),
+        log_beta_priors = {
+            "log_beta_company": torch.tensor(1.0, requires_grad=True),
+            "log_beta_school": torch.tensor(0.0, requires_grad=True),
+            "log_beta_household": torch.tensor(3.0, requires_grad=True),
+            "log_beta_leisure": torch.tensor(0.0, requires_grad=True),
         }
-        model = TorchJune(**beta_priors)
+        model = TorchJune(**log_beta_priors)
         return model
 
     def test__run_model(self, model, inf_data, timer):
@@ -43,7 +42,7 @@ class TestModel:
         loss = loss_fn(cases, random_cases)
         loss.backward()
         parameters = [
-            getattr(model.infection_passing, "beta_" + at)
+            getattr(model.infection_passing, "log_beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         assert parameters[0].grad is not None
@@ -68,7 +67,7 @@ class TestModel:
         is_inf = data["agent"].is_infected.numpy()
         return data, is_inf
 
-    def test__individual_gradients_companies(self, model, data2):
+    def test__individual_gradients_schools(self, model, data2):
         data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
@@ -76,11 +75,9 @@ class TestModel:
             weekday_step_duration=(24,),
             weekday_activities=(("company", "school"),),
         )
-        # create decoupled companies and schools
-        # 50 / 50
-        # run
-        results = model(timer=timer, data=data)
-        cases = results["agent"]["is_infected"]
+        for i in range(4): # make sure someone gets infected.
+            data = model(timer=timer, data=data)
+        cases = data["agent"]["is_infected"]
         assert cases.sum() > 0
 
         # Find person who got infected in school
@@ -94,14 +91,14 @@ class TestModel:
         assert cases[k] == 1.0
 
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.beta_company
-        p_school = model.infection_passing.beta_school
+        p_company = model.infection_passing.log_beta_company
+        p_school = model.infection_passing.log_beta_school
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad != 0.0
         assert company_grad == 0.0
 
-    def test__individual_gradients_schools(self, model, data2):
+    def test__individual_gradients_companies(self, model, data2):
         data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
@@ -130,11 +127,11 @@ class TestModel:
                     continue
                 k = i
                 reached = True
-                #break
+                # break
         assert reached
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.beta_company
-        p_school = model.infection_passing.beta_school
+        p_company = model.infection_passing.log_beta_company
+        p_school = model.infection_passing.log_beta_school
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad == 0
@@ -156,7 +153,7 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            getattr(model.infection_passing, "beta_" + at)
+            getattr(model.infection_passing, "log_beta_" + at)
             for at in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
