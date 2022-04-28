@@ -79,17 +79,17 @@ def loglike(cube, ndim, nparams):
         log_beta_care_home=true_log_beta_care_home,
         log_beta_university=true_log_beta_university,
     )
-    time_stamps = [10, 15, 20, -1]
-    cases = cases[time_stamps]
-    true_cases = true_cases_mean[time_stamps]
+    time_stamps = [-1]
+    _cases = cases[time_stamps]
+    _true_cases = true_cases[time_stamps]
     cases_by_age = cases_by_age[time_stamps, :]  # / people_by_age
     _true_cases_by_age = true_cases_by_age[time_stamps, :]  # / people_by_age
     loglikelihood = (
         torch.distributions.Normal(
-            cases,
-            0.3 * cases,
+            _cases,
+            0.3 * _cases,
         )
-        .log_prob(true_cases)
+        .log_prob(_true_cases)
         .sum()
         .cpu()
         .item()
@@ -139,9 +139,9 @@ dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
 
 #for i in range(5):
 #   plt.plot(dates[[10, 15, 20, -1]], true_cases[[10, 15, 20, -1], i].cpu().detach().numpy(), "o-")
-plt.plot(dates[[10, 15, 20, -1]], true_cases[[10, 15, 20, -1]].cpu().detach().numpy(), "o-")
-plt.show()
-raise
+#plt.plot(dates[[10, 15, 20, -1]], true_cases[[10, 15, 20, -1]].cpu().detach().numpy(), "o-")
+#plt.show()
+#raise
 
 cube = np.random.rand(1)
 ndim = 1
