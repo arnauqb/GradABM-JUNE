@@ -71,7 +71,7 @@ class InfectionPassing(MessagePassing):
             edge_index = data[edge_type].edge_index
             beta = 10.0 ** getattr(self, "log_beta_" + group_name)
             if interaction_policies:
-                beta = interaction_policies.apply(beta=beta, name=group_name)
+                beta = interaction_policies.apply(beta=beta, name=group_name, timer=timer)
             beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
             p_contact = torch.maximum(

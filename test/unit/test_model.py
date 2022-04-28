@@ -115,7 +115,6 @@ class TestModel:
             results = model(timer=timer, data=data)
             next(timer)
         cases = results["agent"]["is_infected"]
-        print(cases[data["agent"].age > 50].sum())
         assert cases.sum() > 10
 
         # Find person who got infected at woork
