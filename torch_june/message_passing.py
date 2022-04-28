@@ -57,13 +57,15 @@ class InfectionPassing(MessagePassing):
         activities.sort(key=lambda x: activity_hierarchy.index(x))
         return activities
 
-    def forward(self, data, timer, interaction_policies=None):
+    def forward(self, data, timer, interaction_policies=None, close_venue_policies = None):
         edge_types = self._get_edge_types_from_timer(timer)
         edge_types = self._apply_activity_hierarchy(edge_types)
         delta_time = timer.duration
         n_agents = len(data["agent"]["id"])
         device = data["agent"].transmission.device
         trans_susc = torch.zeros(n_agents, device=device)
+        if close_venue_policies:
+            edge_types = close_venue_policies.apply(edge_types=edge_types, timer=timer)
 
         # is_free = torch.ones(n_agents, device=device)
         for edge_type in edge_types:
@@ -108,8 +110,3 @@ class IsInfectedSampler(torch.nn.Module):
         infected_probs = 1.0 - not_infected_probs
         dist = RelaxedBernoulliStraightThrough(temperature=0.1, probs=infected_probs)
         return dist.rsample()
-
-        # probs = torch.vstack((infected_probs, not_infected_probs))
-        # logits = torch.log(probs + 1e-15)
-        # is_infected = gumbel_softmax(logits, tau=0.1, hard=True, dim=-2)
-        # return is_infected[0, :]

@@ -131,4 +131,5 @@ def make_parameters():
     symptoms["recovery_times"] = rtimes
     ret["symptoms"] = symptoms
 
+    # policy parameters
     return ret

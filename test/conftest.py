@@ -89,6 +89,7 @@ def make_data(agent_data):
     data = T.ToUndirected()(data)
     return data
 
+
 @fixture(name="person_infector")
 def make_person_infector():
     def infector(data, indices):
@@ -105,7 +106,9 @@ def make_person_infector():
         data["agent"]["infection_time"] = torch.tensor(inf_t)
         data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
         return data
+
     return infector
+
 
 @fixture(name="inf_data")
 def make_inf_data(data, person_infector):
@@ -117,17 +120,14 @@ def make_timer():
     timer = Timer(
         initial_day="2022-02-01",
         total_days=10,
-        weekday_step_duration=(8, 8, 8),
-        weekend_step_duration=(
-            12,
-            12,
-        ),
+        weekday_step_duration=(8, 16),
+        weekend_step_duration=(24,),
         weekday_activities=(
             ("company", "school", "household"),
-            ("leisure", "household"),
+            # ("leisure", "household"),
             ("household",),
         ),
-        weekend_activities=(("leisure",), ("household",)),
+        weekend_activities=(("household",),),
     )
     return timer
 
@@ -143,5 +143,3 @@ def make_school_timer():
         weekend_activities=(("school",),),
     )
     return timer
-
-
