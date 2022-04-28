@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import pymultinest
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 this_path = Path(__file__).parent
 import sys
@@ -13,6 +14,8 @@ from script_utils import (
     backup_inf_data,
     restore_data,
     make_timer,
+    get_cases_by_age,
+    get_deaths_from_symptoms,
 )
 
 from torch_june import TorchJune
@@ -26,50 +29,34 @@ from torch_june import TorchJune
 device = f"cuda:0"
 
 
-def get_deaths_from_symptoms(symptoms):
-    return torch.tensor(
-        symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
-        device=device,
-    )
-
-
-def get_cases_by_age(data):
-    with torch.no_grad():
-        ret = torch.zeros(5, device=device)
-        ages = torch.tensor([0, 20, 40, 60, 80, 100], device=device)
-        for i in range(1, len(ages)):
-            mask1 = data["agent"].age < ages[i]
-            mask2 = data["agent"].age > ages[i - 1]
-            mask = mask1 * mask2
-            ret[i - 1] = data["agent"].is_infected[mask].sum()
-    return ret
-
-
 def run_model(model):
-    timer.reset()
+    # print("----")
+    TIMER.reset()
     data = restore_data(DATA, BACKUP)
-    data = model(data, timer)
+    data = model(data, TIMER)
     time_curve = data["agent"].is_infected.sum()
-    cases_by_age = get_cases_by_age(data)
-    deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms)
-    dates = [timer.date]
-    while timer.date < timer.final_date:
-        next(timer)
-        data = model(data, timer)
+    cases_by_age = get_cases_by_age(data, device=device)
+    deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms, device=device)
+    dates = [TIMER.date]
+    i = 0
+    while TIMER.date < TIMER.final_date:
+        i += 1
+        next(TIMER)
+        data = model(data, TIMER)
 
         cases = data["agent"].is_infected.sum()
         time_curve = torch.hstack((time_curve, cases))
-        deaths = get_deaths_from_symptoms(data["agent"].symptoms)
+        deaths = get_deaths_from_symptoms(data["agent"].symptoms, device=device)
         deaths_curve = torch.hstack((deaths_curve, deaths))
-        cases_age = get_cases_by_age(data)
+        cases_age = get_cases_by_age(data, device=device)
         cases_by_age = torch.vstack((cases_by_age, cases_age))
 
-        dates.append(timer.date)
-    return dates, time_curve, deaths_curve, cases_by_age
+        dates.append(TIMER.date)
+    return np.array(dates), time_curve, deaths_curve, cases_by_age
 
 
 def get_model_prediction(**kwargs):
-    #print(kwargs)
+    # print(kwargs)
     # t1 = time()
     with torch.no_grad():
         model = TorchJune(**kwargs, device=device)
@@ -80,24 +67,29 @@ def get_model_prediction(**kwargs):
 
 
 def prior(cube, ndim, nparams):
-    for i in range(4):
-        cube[i] = cube[i] * 4.0 - 2.0  # log-uniform between 1e-4, 1e2)
+    cube[0] = cube[0] * 1 - 0.5
 
 
 def loglike(cube, ndim, nparams):
-    dates, time_curve, deaths_curve, cases_by_age = get_model_prediction(
-        beta_company=10 ** cube[0],
-        beta_school=10 ** cube[1],
-        beta_leisure=10 ** cube[2],
-        beta_household=10 ** cube[3],
-        beta_care_home=10 ** cube[3],
-        beta_university=10 ** cube[1],
+    dates, cases, deaths, cases_by_age = get_model_prediction(
+        log_beta_household=torch.tensor(cube[0]),
+        log_beta_company=true_log_beta_company,
+        log_beta_school=true_log_beta_school,
+        log_beta_leisure=true_log_beta_leisure,
+        log_beta_care_home=true_log_beta_care_home,
+        log_beta_university=true_log_beta_university,
     )
+    time_stamps = [10, 15, 20, -1]
+    cases = cases[time_stamps]
+    true_cases = true_cases_mean[time_stamps]
+    cases_by_age = cases_by_age[time_stamps, :]  # / people_by_age
+    _true_cases_by_age = true_cases_by_age[time_stamps, :]  # / people_by_age
     loglikelihood = (
         torch.distributions.Normal(
-            cases_by_age, torch.sqrt(cases_by_age)  # , device=device)
+            cases,
+            0.3 * cases,
         )
-        .log_prob(true_cases_by_age)
+        .log_prob(true_cases)
         .sum()
         .cpu()
         .item()
@@ -106,40 +98,61 @@ def loglike(cube, ndim, nparams):
 
 
 # DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_two_super_areas.pkl"
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
 
 DATA = get_data(DATA_PATH, device, n_seed=100)
 BACKUP = backup_inf_data(DATA)
 
-timer = make_timer()
+TIMER = make_timer()
 
-true_beta_company = torch.tensor(2.0, device=device)
-true_beta_school = torch.tensor(3.0, device=device)
-true_beta_university = torch.tensor(3.0, device=device)
-true_beta_leisure = torch.tensor(1.0, device=device)
-true_beta_household = torch.tensor(4.0, device=device)
-true_beta_care_home = torch.tensor(4.0, device=device)
+true_log_beta_household = torch.tensor(-0.3, device=device)
+true_log_beta_company = torch.tensor(-0.4, device=device)
+true_log_beta_school = torch.tensor(-0.2, device=device)
+true_log_beta_leisure = torch.tensor(-0.5, device=device)
+true_log_beta_university = torch.tensor(-0.35, device=device)
+true_log_beta_care_home = torch.tensor(-0.3, device=device)
 
-dates, true_data, true_deaths_curve, true_cases_by_age = get_model_prediction(
-    beta_company=true_beta_company,
-    beta_household=true_beta_household,
-    beta_school=true_beta_school,
-    beta_leisure=true_beta_leisure,
-    beta_university=true_beta_university,
-    beta_care_home=true_beta_care_home,
+dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
+    log_beta_household=true_log_beta_household,
+    log_beta_company=true_log_beta_company,
+    log_beta_school=true_log_beta_school,
+    log_beta_leisure=true_log_beta_leisure,
+    log_beta_university=true_log_beta_university,
+    log_beta_care_home=true_log_beta_care_home,
 )
+#true_data = torch.distributions.Poisson(
+#    true_data
+#).sample() + torch.distributions.Normal(0, 1000).sample((true_data.shape[0],)).to(
+#    device
+#)
+# true_deaths_curve = true_deaths_curve + torch.distributions.Poisson(true_deaths_curve).sample()
+#true_cases_by_age = torch.distributions.Poisson(
+#    true_cases_by_age
+#).sample() + torch.distributions.Normal(0, 2000).sample(
+#    (
+#        true_cases_by_age.shape[0],
+#        true_cases_by_age.shape[1],
+#    )
+#).to(
+#    device
+#)
 
-cube = np.random.rand(4)
-ndim = 4
-nparams = 4
+#for i in range(5):
+#   plt.plot(dates[[10, 15, 20, -1]], true_cases[[10, 15, 20, -1], i].cpu().detach().numpy(), "o-")
+plt.plot(dates[[10, 15, 20, -1]], true_cases[[10, 15, 20, -1]].cpu().detach().numpy(), "o-")
+plt.show()
+raise
+
+cube = np.random.rand(1)
+ndim = 1
+nparams = 1
 ll = loglike(cube, ndim, nparams)
 
-n_params = 4
 output_file = "multinest"
 pymultinest.run(
     loglike,
     prior,
-    n_params,
+    nparams,
     verbose=True,
     outputfiles_basename=output_file,
     n_iter_before_update=1,

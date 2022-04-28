@@ -38,11 +38,11 @@ from torch_june import TorchJune
 from torch_june.cuda_utils import get_fraction_gpu_used
 
 
-device = "cuda:1"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
+device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
 TIMER = make_timer()
-DATA = get_data(DATA_PATH, n_seed=1000, device=device)
+DATA = get_data(DATA_PATH, n_seed=100, device=device)
 people_by_age = get_people_by_age(DATA, device)
 BACKUP = backup_inf_data(DATA)
 
@@ -74,29 +74,28 @@ def run_model(model):
 
 
 def get_model_prediction(**kwargs):
-    input = {f"log_{key}": torch.log10(value) for key, value in kwargs.items()}
-    model = TorchJune(**input, device=device)
+    model = TorchJune(**kwargs, device=device)
     ret = run_model(model)
     return ret
 
 
 def get_true_data(
-    beta_household,
-    beta_school,
-    beta_company,
-    beta_leisure,
-    beta_university,
-    beta_care_home,
+    log_beta_household,
+    log_beta_school,
+    log_beta_company,
+    log_beta_leisure,
+    log_beta_university,
+    log_beta_care_home,
     n=100,
 ):
 
     dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
-        beta_company=beta_company,
-        beta_household=beta_household,
-        beta_school=beta_school,
-        beta_leisure=beta_leisure,
-        beta_care_home=beta_care_home,
-        beta_university=beta_university,
+        log_beta_company=log_beta_company,
+        log_beta_household=log_beta_household,
+        log_beta_school=log_beta_school,
+        log_beta_leisure=log_beta_leisure,
+        log_beta_care_home=log_beta_care_home,
+        log_beta_university=log_beta_university,
     )
     true_cases = true_cases.reshape((1, *true_cases.shape))
     true_deaths = true_deaths.reshape((1, *true_deaths.shape))
@@ -104,12 +103,12 @@ def get_true_data(
     for i in range(n - 1):
 
         _, true_cases2, true_deaths2, true_cases_by_age2 = get_model_prediction(
-            beta_company=beta_company,
-            beta_household=beta_household,
-            beta_school=beta_school,
-            beta_leisure=beta_leisure,
-            beta_care_home=beta_care_home,
-            beta_university=beta_university,
+            log_beta_company=log_beta_company,
+            log_beta_household=log_beta_household,
+            log_beta_school=log_beta_school,
+            log_beta_leisure=log_beta_leisure,
+            log_beta_care_home=log_beta_care_home,
+            log_beta_university=log_beta_university,
         )
         true_cases2 = true_cases2.reshape((1, *true_cases2.shape))
         true_deaths2 = true_deaths2.reshape((1, *true_deaths2.shape))
@@ -135,29 +134,29 @@ def get_true_data(
 
 
 def pyro_model(true_data):
+    #log_beta_household = pyro.sample(
+    #    "log_beta_household", pyro.distributions.Normal(-0.5, 0.5)
+    #).to(device)
     log_beta_household = pyro.sample(
-        "log_beta_household", pyro.distributions.Normal(-0.5, 0.5)
+        "log_beta_household", pyro.distributions.Uniform(-0.5, 0.5)
     ).to(device)
-    log_beta_school = pyro.sample(
-        "log_beta_school", pyro.distributions.Normal(-0.5, 0.5)
-    ).to(device)
-    log_beta_company = pyro.sample(
-        "log_beta_company", pyro.distributions.Normal(-0.5, 0.5)
-    ).to(device)
-    log_beta_university = pyro.sample(
-        "log_beta_university", pyro.distributions.Normal(-0.5, 0.5)
-    ).to(device)
+    #log_beta_school = pyro.sample(
+    #    "log_beta_school", pyro.distributions.Normal(-0.5, 0.5)
+    #).to(device)
+    #log_beta_company = pyro.sample(
+    #    "log_beta_company", pyro.distributions.Normal(-0.5, 0.5)
+    #).to(device)
+    #log_beta_university = pyro.sample(
+    #    "log_beta_university", pyro.distributions.Normal(-0.5, 0.5)
+    #).to(device)
+    #log_beta_school = pyro.deterministic("log_beta_school", log_beta_household)
     #log_beta_company = pyro.deterministic("log_beta_company", log_beta_household)
     #log_beta_university = pyro.deterministic("log_beta_university", log_beta_household)
-    log_beta_leisure = pyro.deterministic("log_beta_leisure", log_beta_household)
-    log_beta_care_home = pyro.deterministic("log_beta_care_home", log_beta_household)
-    #sigma = pyro.sample("sigma", pyro.distributions.Uniform(0.0, 1.0)).to(device)
-    print("---")
-    print(log_beta_household)
-    print(log_beta_company)
-    print(log_beta_school)
-    print(log_beta_university)
-    print("---\n")
+    #log_beta_leisure = pyro.deterministic("log_beta_leisure", log_beta_household)
+    #log_beta_care_home = pyro.deterministic("log_beta_care_home", log_beta_household)
+    #print("---")
+    #print(log_beta_household)
+    #print("---\n")
     (
         true_cases_mean,
         true_cases_std,
@@ -168,31 +167,34 @@ def pyro_model(true_data):
     ) = true_data
     model = TorchJune(
         log_beta_household=log_beta_household,
-        log_beta_care_home=log_beta_care_home,
-        log_beta_leisure=log_beta_leisure,
-        log_beta_university=log_beta_university,
-        log_beta_school=log_beta_school,
-        log_beta_company=log_beta_company,
+        log_beta_care_home=true_log_beta_care_home,
+        log_beta_leisure=true_log_beta_leisure,
+        log_beta_university=true_log_beta_university,
+        log_beta_school=true_log_beta_school,
+        log_beta_company=true_log_beta_company,
         device=device,
     )
     dates, cases, deaths, cases_by_age = run_model(model)
-    time_stamps = [5, 10, 20, 25]
+    #time_stamps = [10, 15, 20, -1]
+    time_stamps = [-1]
+    cases = cases[time_stamps]
+    true_cases = true_cases_mean[time_stamps]
     cases_by_age = cases_by_age[time_stamps, :] #/ people_by_age
     true_cases_by_age = true_cases_by_age_mean[time_stamps, :] #/ people_by_age
     pyro.sample(
         "cases",
-        pyro.distributions.Poisson(torch.log10(cases_by_age)),#, 0.1),
-        obs=torch.log10(true_cases_by_age),
+        pyro.distributions.Normal(cases, 0.3 * cases+ 1000),
+        obs=true_cases,
     )
 
 
 with torch.no_grad():
-    true_beta_household = 0.3
-    true_beta_care_home = 0.3
-    true_beta_company = 0.35
-    true_beta_school = 0.4
-    true_beta_leisure = 0.3
-    true_beta_university = 0.4
+    true_log_beta_household = torch.tensor(-0.3, device=device)
+    true_log_beta_company = torch.tensor(-0.4, device=device)
+    true_log_beta_school = torch.tensor(-0.2, device=device)
+    true_log_beta_leisure = torch.tensor(-0.5, device=device)
+    true_log_beta_university = torch.tensor(-0.35, device=device)
+    true_log_beta_care_home = torch.tensor(-0.3, device=device)
     (
         dates,
         true_cases_mean,
@@ -202,12 +204,12 @@ with torch.no_grad():
         true_cases_by_age_mean,
         true_cases_by_age_std,
     ) = get_true_data(
-        beta_household=torch.tensor(true_beta_household),
-        beta_school=torch.tensor(true_beta_school),
-        beta_company=torch.tensor(true_beta_company),
-        beta_leisure=torch.tensor(true_beta_leisure),
-        beta_care_home=torch.tensor(true_beta_care_home),
-        beta_university=torch.tensor(true_beta_university),
+        log_beta_household=true_log_beta_household,
+        log_beta_school=true_log_beta_school,
+        log_beta_company=true_log_beta_company,
+        log_beta_leisure=true_log_beta_leisure,
+        log_beta_care_home=true_log_beta_care_home,
+        log_beta_university=true_log_beta_university,
         n=1,
     )
 
@@ -244,17 +246,17 @@ def plot(dates, **kwargs):
     plt.show()
 
 
-def logger(kernel, samples, stage, i, temp_df):
-    if stage != "Warmup":
-        for key in samples:
-            unconstrained_samples = samples[key].detach()
-            constrained_samples = kernel.transforms[key].inv(unconstrained_samples)
-            temp_df.loc[i, key] = constrained_samples.cpu().item()
-        temp_df.to_csv("./pyro_results_4params_adapt_england.csv", index=False)
+def logger(kernel, samples, stage, i, dfs):
+    df = dfs[stage]
+    for key in samples:
+        unconstrained_samples = samples[key].detach()
+        constrained_samples = kernel.transforms[key].inv(unconstrained_samples)
+        df.loc[i, key] = constrained_samples.cpu().item()
+    df.to_csv(f"./comparison_with_multinest_{stage}.csv", index=False)
 
 
 def run_mcmc():
-    temp_df = pd.DataFrame()
+    dfs = {"Sample" : pd.DataFrame(), "Warmup" : pd.DataFrame()}
     mcmc_kernel = pyro.infer.NUTS(pyro_model)
     # mcmc_kernel = pyro.infer.HMC(pyro_model)
     # pyro_model, step_size=1e-2, adapt_mass_matrix=False, adapt_step_size=False
@@ -264,7 +266,7 @@ def run_mcmc():
         num_samples=1000,
         warmup_steps=100,
         hook_fn=lambda kernel, samples, stage, i: logger(
-            kernel, samples, stage, i, temp_df
+            kernel, samples, stage, i, dfs
         ),
     )
     mcmc.run(
