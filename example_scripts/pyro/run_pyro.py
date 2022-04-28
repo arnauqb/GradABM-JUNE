@@ -143,9 +143,9 @@ def pyro_model(true_data):
     #log_beta_school = pyro.sample(
     #    "log_beta_school", pyro.distributions.Normal(-0.5, 0.5)
     #).to(device)
-    #log_beta_company = pyro.sample(
-    #    "log_beta_company", pyro.distributions.Normal(-0.5, 0.5)
-    #).to(device)
+    log_beta_company = pyro.sample(
+        "log_beta_company", pyro.distributions.Uniform(-0.5, 0.5)
+    ).to(device)
     #log_beta_university = pyro.sample(
     #    "log_beta_university", pyro.distributions.Normal(-0.5, 0.5)
     #).to(device)
@@ -167,11 +167,11 @@ def pyro_model(true_data):
     ) = true_data
     model = TorchJune(
         log_beta_household=log_beta_household,
+        log_beta_company=log_beta_company,
         log_beta_care_home=true_log_beta_care_home,
         log_beta_leisure=true_log_beta_leisure,
         log_beta_university=true_log_beta_university,
         log_beta_school=true_log_beta_school,
-        log_beta_company=true_log_beta_company,
         device=device,
     )
     dates, cases, deaths, cases_by_age = run_model(model)

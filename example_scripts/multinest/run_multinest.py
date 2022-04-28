@@ -67,13 +67,14 @@ def get_model_prediction(**kwargs):
 
 
 def prior(cube, ndim, nparams):
-    cube[0] = cube[0] * 1 - 0.5
+    for i in range(nparams):
+        cube[i] = cube[i] * 1 - 0.5
 
 
 def loglike(cube, ndim, nparams):
     dates, cases, deaths, cases_by_age = get_model_prediction(
         log_beta_household=torch.tensor(cube[0]),
-        log_beta_company=true_log_beta_company,
+        log_beta_company=torch.tensor(cube[1]),
         log_beta_school=true_log_beta_school,
         log_beta_leisure=true_log_beta_leisure,
         log_beta_care_home=true_log_beta_care_home,
@@ -143,9 +144,9 @@ dates, true_cases, true_deaths, true_cases_by_age = get_model_prediction(
 #plt.show()
 #raise
 
-cube = np.random.rand(1)
-ndim = 1
-nparams = 1
+ndim = 2
+cube = np.random.rand(ndim)
+nparams = ndim
 ll = loglike(cube, ndim, nparams)
 
 output_file = "multinest"

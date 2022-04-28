@@ -15,6 +15,7 @@ class TorchJune(torch.nn.Module):
     def __init__(
         self,
         symptoms_sampler=None,
+        policies = None,
         log_beta_company=torch.tensor(0.0),
         log_beta_school=torch.tensor(0.0),
         log_beta_household=torch.tensor(0.0),
@@ -23,9 +24,11 @@ class TorchJune(torch.nn.Module):
         log_beta_care_home=torch.tensor(0.0),
         device="cpu",
     ):
+        super().__init__()
         if symptoms_sampler is None:
             symptoms_sampler = SymptomsSampler.from_default_parameters(device=device)
-        super().__init__()
+        if policies is None:
+            policies = Policies()
         self.infection_passing = InfectionPassing(
             log_beta_company=log_beta_company.to(device),
             log_beta_school=log_beta_school.to(device),
@@ -37,6 +40,7 @@ class TorchJune(torch.nn.Module):
         self.transmission_updater = TransmissionUpdater()
         self.is_infected_sampler = IsInfectedSampler()
         self.symptoms_updater = SymptomsUpdater(symptoms_sampler=symptoms_sampler)
+        self.policies = policies
         self.device = device
 
     def forward(self, data, timer):

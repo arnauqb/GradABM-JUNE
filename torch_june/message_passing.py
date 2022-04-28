@@ -57,7 +57,7 @@ class InfectionPassing(MessagePassing):
         activities.sort(key=lambda x: activity_hierarchy.index(x))
         return activities
 
-    def forward(self, data, timer):
+    def forward(self, data, timer, interaction_policies=None):
         edge_types = self._get_edge_types_from_timer(timer)
         edge_types = self._apply_activity_hierarchy(edge_types)
         delta_time = timer.duration
@@ -70,6 +70,8 @@ class InfectionPassing(MessagePassing):
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
             beta = 10.0 ** getattr(self, "log_beta_" + group_name)
+            if interaction_policies:
+                beta = interaction_policies.apply(beta=beta, name=group_name)
             beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
             p_contact = torch.maximum(
