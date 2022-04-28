@@ -57,7 +57,14 @@ class InfectionPassing(MessagePassing):
         activities.sort(key=lambda x: activity_hierarchy.index(x))
         return activities
 
-    def forward(self, data, timer, interaction_policies=None, close_venue_policies = None):
+    def forward(
+        self,
+        data,
+        timer,
+        interaction_policies=None,
+        close_venue_policies=None,
+        quarantine_policies=None,
+    ):
         edge_types = self._get_edge_types_from_timer(timer)
         edge_types = self._apply_activity_hierarchy(edge_types)
         delta_time = timer.duration
@@ -66,6 +73,12 @@ class InfectionPassing(MessagePassing):
         trans_susc = torch.zeros(n_agents, device=device)
         if close_venue_policies:
             edge_types = close_venue_policies.apply(edge_types=edge_types, timer=timer)
+        if quarantine_policies:
+            quarantine_mask = quarantine_policies.apply(
+                timer=timer, symptom_stages=data["agent"]["symptoms"]["current_stage"]
+            )
+        else:
+            quarantine_mask = torch.ones(n_agents, device=device)
 
         # is_free = torch.ones(n_agents, device=device)
         for edge_type in edge_types:
@@ -73,7 +86,9 @@ class InfectionPassing(MessagePassing):
             edge_index = data[edge_type].edge_index
             beta = 10.0 ** getattr(self, "log_beta_" + group_name)
             if interaction_policies:
-                beta = interaction_policies.apply(beta=beta, name=group_name, timer=timer)
+                beta = interaction_policies.apply(
+                    beta=beta, name=group_name, timer=timer
+                )
             beta = beta * torch.ones(len(data[group_name]["id"]), device=device)
             people_per_group = data[group_name]["people"]
             p_contact = torch.maximum(
@@ -84,16 +99,22 @@ class InfectionPassing(MessagePassing):
             )  # assumes constant n of contacts, change this in the future
             beta = beta * p_contact
             # remove people who are not really in this group
-            transmissions = data["agent"].transmission  # * is_free
+            # transmissions = data["agent"].transmission  # * is_free
+            if edge_type not in ("attends_household", "attends_care_home"):
+                transmissions = data["agent"].transmission * quarantine_mask
+                susceptibilities = data["agent"].susceptibility * quarantine_mask
+            else:
+                transmissions = data["agent"].transmission
+                susceptibilities = data["agent"].susceptibility
             cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
-            susceptibilities = data["agent"].susceptibility  # * is_free
+            # susceptibilities = data["agent"].susceptibility  # * is_free
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-            #mask = torch.ones(n_agents, dtype=torch.int, device=device)
-            #mask[edge_index[0, :]] = 0
+            # mask = torch.ones(n_agents, dtype=torch.int, device=device)
+            # mask[edge_index[0, :]] = 0
             # is_free = is_free * mask
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
