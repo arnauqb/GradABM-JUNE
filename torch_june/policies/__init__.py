@@ -1,1 +1,1 @@
-from .policies import Policy, Policies
+from .policies import Policy, Policies, PolicyCollection

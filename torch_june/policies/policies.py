@@ -7,18 +7,11 @@ from torch_june.utils import read_date
 
 class Policy(ABC):
     def __init__(self, start_date, end_date):
-        self.spec = self.get_spec()
         self.start_date = read_date(start_date)
         self.end_date = read_date(end_date)
 
     def apply(self):
         raise NotImplementedError
-
-    def get_spec(self) -> str:
-        """
-        Returns the speciailization of the policy.
-        """
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", self.__class__.__name__).lower()
 
     def is_active(self, date: datetime.datetime) -> bool:
         """
@@ -49,14 +42,3 @@ class PolicyCollection:
         A collection of like policies active on the same date
         """
         self.policies = policies
-        self.policies_by_name = {
-            self._get_policy_name(policy): policy for policy in policies
-        }
-
-    def _get_policy_name(self, policy):
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", policy.__class__.__name__).lower()
-
-    @classmethod
-    def from_policies(cls, policies: Policies):
-        return cls(policies.get_policies_for_type(policy_type=cls.policy_type))
-

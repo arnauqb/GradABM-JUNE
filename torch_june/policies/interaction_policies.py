@@ -1,12 +1,9 @@
-from torch_june.policies import Policy
+from torch_june.policies import Policy, PolicyCollection
 
 class InteractionPolicy(Policy):
     spec = "interaction"
 
-class InteractionPolicies:
-    def __init__(self, policies):
-        self.policies = policies
-
+class InteractionPolicies(PolicyCollection):
     def apply(self, beta, name, timer):
         for policy in self.policies:
             beta = policy.apply(beta=beta, name=name, timer=timer)
