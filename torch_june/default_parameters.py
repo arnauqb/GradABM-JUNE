@@ -132,4 +132,62 @@ def make_parameters():
     ret["symptoms"] = symptoms
 
     # policy parameters
+    policies = {}
+    policies["interaction"] = {
+        "social_distancing": {
+            1: {
+                "start_date": "2020-03-16",
+                "end_date": "2020-03-24",
+                "beta_factors": {
+                    "leisure": 0.875,
+                    "care_home": 0.875,
+                    "school": 0.875,
+                    "university": 0.875,
+                    "company": 0.875,
+                },
+            },
+            2: {
+                "start_date": "2020-03-24",
+                "end_date": "2020-05-11",
+                "beta_factors": {
+                    "leisure": 0.75,
+                    "care_home": 0.75,
+                    "school": 0.75,
+                    "university": 0.75,
+                    "company": 0.75,
+                },
+            },
+            3: {
+                "start_date": "2020-05-11",
+                "end_date": "2020-07-04",
+                "beta_factors": {
+                    "leisure": 0.79,
+                    "care_home": 0.79,
+                    "school": 0.79,
+                    "university": 0.79,
+                    "company": 0.79,
+                },
+            },
+        }
+    }
+    policies["close_venue"] = {
+        "close_venue": {
+            1: {
+                "start_date": "2020-03-21",
+                "end_date": "2020-07-04",
+                "names": ["leisure"],
+            },
+        }
+    }
+    policies["quarantine"] = {
+        "quarantine": {
+            1: {
+                "start_date": "2020-03-16",
+                "end_date": "9999-03-24",
+                "stage_threshold": 4,
+            }
+        },
+    }
+    ret["policies"] = policies
+
     return ret

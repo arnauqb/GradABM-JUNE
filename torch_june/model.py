@@ -56,6 +56,8 @@ class TorchJune(torch.nn.Module):
             data=data,
             timer=timer,
             interaction_policies=self.policies.interaction_policies,
+            close_venue_policies=self.policies.close_venue_policies,
+            quarantine_policies=self.policies.quarantine_policies,
         )
         # print("3")
         # print(get_fraction_gpu_used(6))
