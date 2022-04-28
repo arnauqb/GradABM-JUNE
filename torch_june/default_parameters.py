@@ -181,11 +181,9 @@ def make_parameters():
     }
     policies["quarantine"] = {
         "quarantine": {
-            1: {
-                "start_date": "2020-03-16",
-                "end_date": "9999-03-24",
-                "stage_threshold": 4,
-            }
+            "start_date": "2020-03-16",
+            "end_date": "9999-03-24",
+            "stage_threshold": 4,
         },
     }
     ret["policies"] = policies

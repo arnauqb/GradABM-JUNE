@@ -65,7 +65,7 @@ class Policies:
         camel_case_key = "".join(x.capitalize() or "_" for x in name.split("_"))
         policies = []
         policy_class = getattr(torch_june.policies, camel_case_key)
-        if "start_time" not in config:
+        if "start_date" not in config:
             for policy_i, policy_data_i in config.items():
                 if (
                     "start_date" not in policy_data_i.keys()
