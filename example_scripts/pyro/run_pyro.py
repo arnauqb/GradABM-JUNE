@@ -138,17 +138,17 @@ def pyro_model(true_data):
     #    "log_beta_household", pyro.distributions.Normal(-0.5, 0.5)
     #).to(device)
     log_beta_household = pyro.sample(
-        "log_beta_household", pyro.distributions.Uniform(-0.5, 0.5)
+        "log_beta_household", pyro.distributions.Normal(-0.5, 0.20)
     ).to(device)
-    #log_beta_school = pyro.sample(
-    #    "log_beta_school", pyro.distributions.Normal(-0.5, 0.5)
-    #).to(device)
+    log_beta_school = pyro.sample(
+        "log_beta_school", pyro.distributions.Normal(-0.5, 0.20)
+    ).to(device)
     log_beta_company = pyro.sample(
-        "log_beta_company", pyro.distributions.Uniform(-0.5, 0.5)
+        "log_beta_company", pyro.distributions.Normal(-0.5, 0.20)
     ).to(device)
-    #log_beta_university = pyro.sample(
-    #    "log_beta_university", pyro.distributions.Normal(-0.5, 0.5)
-    #).to(device)
+    log_beta_university = pyro.sample(
+        "log_beta_university", pyro.distributions.Normal(-0.5, 0.20)
+    ).to(device)
     #log_beta_school = pyro.deterministic("log_beta_school", log_beta_household)
     #log_beta_company = pyro.deterministic("log_beta_company", log_beta_household)
     #log_beta_university = pyro.deterministic("log_beta_university", log_beta_household)
@@ -167,23 +167,23 @@ def pyro_model(true_data):
     ) = true_data
     model = TorchJune(
         log_beta_household=log_beta_household,
+        log_beta_school=log_beta_school,
         log_beta_company=log_beta_company,
+        log_beta_university=log_beta_university,
         log_beta_care_home=true_log_beta_care_home,
         log_beta_leisure=true_log_beta_leisure,
-        log_beta_university=true_log_beta_university,
-        log_beta_school=true_log_beta_school,
         device=device,
     )
     dates, cases, deaths, cases_by_age = run_model(model)
-    #time_stamps = [10, 15, 20, -1]
-    time_stamps = [-1]
-    cases = cases[time_stamps]
-    true_cases = true_cases_mean[time_stamps]
+    time_stamps = [2, 12, -1]
+    #time_stamps = [-1]
+    cases = torch.log10(cases[time_stamps])
+    true_cases = torch.log10(true_cases_mean[time_stamps])
     cases_by_age = cases_by_age[time_stamps, :] #/ people_by_age
     true_cases_by_age = true_cases_by_age_mean[time_stamps, :] #/ people_by_age
     pyro.sample(
         "cases",
-        pyro.distributions.Normal(cases, 0.3 * cases+ 1000),
+        pyro.distributions.Normal(cases, 0.5),
         obs=true_cases,
     )
 

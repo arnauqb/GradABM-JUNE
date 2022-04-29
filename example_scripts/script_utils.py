@@ -115,27 +115,14 @@ def restore_data(data, backup):
 
 def make_timer():
     return Timer(
-        initial_day="2022-02-01",
+        initial_day="2020-03-01",
         total_days=25,
-        # weekday_step_duration=(8, 8, 8),
         weekday_step_duration=(24,),
         weekend_step_duration=(24,),
         weekday_activities=(
             ("company", "school", "university", "leisure", "care_home", "household"),
-            # ("care_home", "leisure", "household"),
-            # (
-            #    "care_home",
-            #    "household",
-            # ),
         ),
-        weekend_activities=(
-            ("leisure", "care_home", "household"),
-            # ("care_home", "leisure", "household"),
-            # (
-            #    "care_home",
-            #    "household",
-            # ),
-        ),
+        weekend_activities=(("leisure", "care_home", "household"),),
     )
 
 
