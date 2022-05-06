@@ -4,7 +4,8 @@ import pickle
 import random
 from pyro.distributions import Normal, LogNormal
 
-from torch_june import TransmissionSampler, Timer
+from torch_june import TransmissionSampler, Timer, TorchJune
+from torch_june.policies import Policies
 
 
 def fix_seed(seed=None):
@@ -116,13 +117,15 @@ def restore_data(data, backup):
 def make_timer():
     return Timer(
         initial_day="2020-03-01",
-        total_days=25,
+        total_days=30,
         weekday_step_duration=(24,),
         weekend_step_duration=(24,),
         weekday_activities=(
             ("company", "school", "university", "leisure", "care_home", "household"),
+            #("company", "school", "university", "care_home", "household"),
         ),
         weekend_activities=(("leisure", "care_home", "household"),),
+        #weekend_activities=(("care_home", "household"),),
     )
 
 
@@ -154,7 +157,7 @@ def get_cases_by_age(data, device):
 
 
 def get_people_by_age(data, device):
-    ages = torch.tensor([0, 18, 25, 40, 60, 80, 90, 100], device=device)
+    ages = torch.tensor([0, 18, 25, 65, 80, 90], device=device)
     ret = torch.zeros(ages.shape[0] - 1, device=device)
     for i in range(1, ages.shape[0]):
         mask1 = data["agent"].age < ages[i]
@@ -162,3 +165,101 @@ def get_people_by_age(data, device):
         mask = mask1 * mask2
         ret[i - 1] = mask.sum()
     return ret
+
+
+def run_model(model, timer, data, backup):
+    # print("----")
+    device=model.device
+    timer.reset()
+    data = restore_data(data, backup)
+    data = model(data, timer)
+    time_curve = data["agent"].is_infected.sum()
+    cases_by_age = get_cases_by_age(data, device=device)
+    deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms, device=device)
+    dates = [timer.date]
+    i = 0
+    while timer.date < timer.final_date:
+        i += 1
+        next(timer)
+        data = model(data, timer)
+
+        cases = data["agent"].is_infected.sum()
+        time_curve = torch.hstack((time_curve, cases))
+        deaths = get_deaths_from_symptoms(data["agent"].symptoms, device=device)
+        deaths_curve = torch.hstack((deaths_curve, deaths))
+        cases_age = get_cases_by_age(data, device=device)
+        cases_by_age = torch.vstack((cases_by_age, cases_age))
+
+        dates.append(timer.date)
+    return np.array(dates), time_curve, deaths_curve, cases_by_age
+
+
+def get_model_prediction(timer, data, backup, **kwargs):
+    model = TorchJune(**kwargs, policies = Policies([]))
+    ret = run_model(model=model, timer=timer, data=data, backup=backup)
+    return ret
+
+
+def get_average_predictions(
+    log_beta_household,
+    log_beta_school,
+    log_beta_company,
+    log_beta_leisure,
+    log_beta_university,
+    log_beta_care_home,
+    timer,
+    data,
+    backup,
+    device,
+    n=1,
+):
+
+    dates, cases, deaths, cases_by_age = get_model_prediction(
+        log_beta_company=log_beta_company,
+        log_beta_household=log_beta_household,
+        log_beta_school=log_beta_school,
+        log_beta_leisure=log_beta_leisure,
+        log_beta_care_home=log_beta_care_home,
+        log_beta_university=log_beta_university,
+        timer=timer,
+        data=data,
+        backup=backup,
+        device=device
+    )
+    cases = cases.reshape((1, *cases.shape))
+    deaths = deaths.reshape((1, *deaths.shape))
+    cases_by_age = cases_by_age.reshape((1, *cases_by_age.shape))
+    for i in range(n - 1):
+        _, cases2, deaths2, cases_by_age2 = get_model_prediction(
+            log_beta_company=log_beta_company,
+            log_beta_household=log_beta_household,
+            log_beta_school=log_beta_school,
+            log_beta_leisure=log_beta_leisure,
+            log_beta_care_home=log_beta_care_home,
+            log_beta_university=log_beta_university,
+            timer=timer,
+            data=data,
+            device=device,
+            backup=backup,
+        )
+        cases2 = cases2.reshape((1, *cases2.shape))
+        deaths2 = deaths2.reshape((1, *deaths2.shape))
+        cases_by_age2 = cases_by_age2.reshape((1, *cases_by_age2.shape))
+        cases = torch.vstack((cases, cases2))
+        deaths = torch.vstack((deaths, deaths2))
+        cases_by_age = torch.vstack((cases_by_age, cases_by_age2))
+    cases_mean = cases.mean(0)
+    cases_std = cases.std(0)
+    deaths_mean = deaths.to(torch.float).mean(0)
+    deaths_std = deaths.to(torch.float).std(0)
+    cases_by_age_mean = cases_by_age.mean(0)
+    cases_by_age_std = cases_by_age.std(0)
+    return (
+        dates,
+        cases_mean,
+        cases_std,
+        deaths_mean,
+        deaths_std,
+        cases_by_age_mean,
+        cases_by_age_std,
+    )

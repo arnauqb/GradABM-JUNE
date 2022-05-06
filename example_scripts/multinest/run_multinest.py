@@ -82,7 +82,7 @@ def loglike(cube, ndim, nparams):
         log_beta_care_home=true_log_beta_care_home,
         log_beta_leisure=true_log_beta_leisure,
     )
-    time_stamps = [2, 6, 12, -1]
+    time_stamps = [2, 12, -1]
     #time_stamps = [-1]
     _cases = cases[time_stamps]
     _true_cases = true_cases[time_stamps]

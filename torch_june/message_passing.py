@@ -3,6 +3,7 @@ import numpy as np
 from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
 from pyro.distributions import RelaxedBernoulliStraightThrough
+from torch.utils.checkpoint import checkpoint
 
 activity_hierarchy = [
     "attends_school",
@@ -80,7 +81,7 @@ class InfectionPassing(MessagePassing):
         else:
             quarantine_mask = torch.ones(n_agents, device=device)
 
-        #is_free = torch.ones(n_agents, device=device)
+        # is_free = torch.ones(n_agents, device=device)
         for edge_type in edge_types:
             group_name = "_".join(edge_type.split("_")[1:])
             edge_index = data[edge_type].edge_index
@@ -105,17 +106,18 @@ class InfectionPassing(MessagePassing):
             else:
                 transmissions = data["agent"].transmission
                 susceptibilities = data["agent"].susceptibility
-            #transmissions = transmissions * is_free
-            #susceptibilities = susceptibilities * is_free
+            # transmissions = transmissions * is_free
+            # susceptibilities = susceptibilities * is_free
+            # cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
             trans_susc = trans_susc + self.propagate(
                 rev_edge_index, x=cumulative_trans, y=susceptibilities
             )
-            #mask = torch.ones(n_agents, dtype=torch.int, device=device)
-            #mask[edge_index[0, :]] = 0
-            #is_free = is_free * mask
+            # mask = torch.ones(n_agents, dtype=torch.int, device=device)
+            # mask[edge_index[0, :]] = 0
+            # is_free = is_free * mask
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
         )  # this is necessary to avoid gradient infs
