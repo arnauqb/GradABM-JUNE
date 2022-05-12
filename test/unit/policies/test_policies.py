@@ -37,11 +37,11 @@ class TestPolicies:
             2020, 3, 24
         )
         assert policies.interaction_policies[0].beta_factors == {
-            "leisure": 0.875,
-            "care_home": 0.875,
-            "school": 0.875,
-            "university": 0.875,
-            "company": 0.875,
+            "leisure": 0.65,
+            "care_home": 0.65,
+            "school": 0.65,
+            "university": 0.65,
+            "company": 0.65,
         }
         assert policies.interaction_policies[1].start_date == datetime.datetime(
             2020, 3, 24
@@ -50,11 +50,11 @@ class TestPolicies:
             2020, 5, 11
         )
         assert policies.interaction_policies[1].beta_factors == {
-            "leisure": 0.75,
-            "care_home": 0.75,
-            "school": 0.75,
-            "university": 0.75,
-            "company": 0.75,
+            "leisure": 0.45,
+            "care_home": 0.45,
+            "school": 0.45,
+            "university": 0.45,
+            "company": 0.45,
         }
         assert policies.close_venue_policies[0].start_date == datetime.datetime(
             2020, 3, 21
