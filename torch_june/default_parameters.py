@@ -175,7 +175,7 @@ def make_parameters():
             1: {
                 "start_date": "2020-03-21",
                 "end_date": "2020-07-04",
-                "names": ["leisure"],
+                "names": ["leisure", "school"],
             },
         }
     }
