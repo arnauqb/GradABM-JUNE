@@ -117,7 +117,7 @@ def restore_data(data, backup):
 def make_timer():
     return Timer(
         initial_day="2020-03-01",
-        total_days=30,
+        total_days=90,
         weekday_step_duration=(24,),
         weekend_step_duration=(24,),
         weekday_activities=(
@@ -146,7 +146,7 @@ def get_deaths_from_symptoms(symptoms, device):
 
 
 def get_cases_by_age(data, device):
-    ages = torch.tensor([0, 18, 25, 65, 80, 90], device=device)
+    ages = torch.tensor([0, 18, 25, 65, 80], device=device)
     ret = torch.zeros(ages.shape[0] - 1, device=device)
     for i in range(1, ages.shape[0]):
         mask1 = data["agent"].age < ages[i]
@@ -157,7 +157,7 @@ def get_cases_by_age(data, device):
 
 
 def get_people_by_age(data, device):
-    ages = torch.tensor([0, 18, 25, 65, 80, 90], device=device)
+    ages = torch.tensor([0, 18, 25, 65, 80], device=device)
     ret = torch.zeros(ages.shape[0] - 1, device=device)
     for i in range(1, ages.shape[0]):
         mask1 = data["agent"].age < ages[i]

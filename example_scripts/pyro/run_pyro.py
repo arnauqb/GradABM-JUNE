@@ -40,9 +40,9 @@ from torch_june import TorchJune
 from torch_june.cuda_utils import get_fraction_gpu_used
 
 
-device = "cuda:0"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_england.pkl"
+device = "cuda:4"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 TIMER = make_timer()
 DATA = get_data(DATA_PATH, n_seed=100, device=device)
 n_agents = DATA["agent"]["id"].shape[0]
@@ -54,12 +54,12 @@ def pyro_model(true_data):
     # log_beta_household = pyro.sample(
     #    "log_beta_household", pyro.distributions.Normal(-0.5, 0.5)
     # ).to(device)
-    log_beta_household = pyro.sample(
-        "log_beta_household", pyro.distributions.Uniform(-0.75, 0.0)
+    #log_beta_household = pyro.sample(
+    #    "log_beta_household", pyro.distributions.Uniform(-1.0, 0.0)
+    #).to(device)
+    log_beta_school = pyro.sample(
+        "log_beta_school", pyro.distributions.Normal(-0.4, 0.2)
     ).to(device)
-    # log_beta_school = pyro.sample(
-    #    "log_beta_school", pyro.distributions.Uniform(-1.0, 0.0)
-    # ).to(device)
     # log_beta_company = pyro.sample(
     #    "log_beta_company", pyro.distributions.Uniform(-1.0, 0.0)
     # ).to(device)
@@ -104,8 +104,8 @@ def pyro_model(true_data):
         cases_by_age_mean,
         cases_by_age_std,
     ) = get_average_predictions(
-        log_beta_household=log_beta_household,
-        log_beta_school=true_log_beta_school,
+        log_beta_household=true_log_beta_household,
+        log_beta_school=log_beta_school,
         log_beta_company=true_log_beta_company,
         log_beta_university=true_log_beta_university,
         log_beta_leisure=true_log_beta_leisure,
@@ -115,15 +115,15 @@ def pyro_model(true_data):
         backup=BACKUP,
         device=device,
     )
-    time_stamps = [-1]
-    cases = torch.log10(cases_mean[time_stamps])  # / n_agents
-    cases_std = cases_std[time_stamps] / n_agents
-    true_cases = torch.log10(true_cases_mean[time_stamps])  # / n_agents
-    true_cases_std = true_cases_std[time_stamps] / n_agents
-    cases_by_age = torch.log10(cases_by_age_mean[time_stamps, :])  # / people_by_age
-    true_cases_by_age = torch.log10(
-        true_cases_by_age_mean[time_stamps, :]
-    )  # / people_by_age
+    time_stamps = [16, 22, 29]
+    cases = cases_mean[time_stamps] / n_agents
+    #cases_std = cases_std[time_stamps] / n_agents
+    true_cases = true_cases_mean[time_stamps] / n_agents
+    #true_cases_std = true_cases_std[time_stamps] / n_agents
+    #cases_by_age = torch.log10(cases_by_age_mean[time_stamps, :])  # / people_by_age
+    #true_cases_by_age = torch.log10(
+    #    true_cases_by_age_mean[time_stamps, :]
+    #)  # / people_by_age
     # cases_mean = pyro.sample(
     #    "cases_mean", pyro.distributions.Normal(cases, 0.2 * cases)
     # )
@@ -143,12 +143,12 @@ def pyro_model(true_data):
 
 
 with torch.no_grad():
-    true_log_beta_household = torch.tensor(-0.2, device=device)
-    true_log_beta_company = torch.tensor(-0.4, device=device)
-    true_log_beta_school = torch.tensor(-0.2, device=device)
-    true_log_beta_leisure = torch.tensor(-0.5, device=device)
-    true_log_beta_university = torch.tensor(-0.35, device=device)
-    true_log_beta_care_home = torch.tensor(-0.3, device=device)
+    true_log_beta_household = torch.tensor(-0.35, device=device)
+    true_log_beta_company = torch.tensor(-0.6, device=device)
+    true_log_beta_school = torch.tensor(-0.5, device=device)
+    true_log_beta_leisure = torch.tensor(-0.8, device=device)
+    true_log_beta_university = torch.tensor(-0.6, device=device)
+    true_log_beta_care_home = torch.tensor(-0.4, device=device)
     (
         dates,
         true_cases_mean,
@@ -184,24 +184,25 @@ def plot(dates, **kwargs):
 
     # deaths = np.diff(deaths, prepend=0)
     # true_deaths = np.diff(true_deaths, prepend=0)
-    time_stamps = [5, 10, 20, 25]
-    true_cases_by_age = true_cases_by_age[time_stamps, :]  # / people_by_age
-    for i in range(5):
-        data = np.log10(true_cases_by_age[:, i])
-        ax.plot(range(len(time_stamps)), data, "o-", color=f"C{i}", label=i)
-        error = 0.1
-        ax.fill_between(
-            range(len(time_stamps)),
-            data - error,
-            data + error,
-            color=f"C{i}",
-            alpha=0.5,
-        )
+    time_stamps = [5, 10, 20, 25, 29]
+    #true_cases_by_age = true_cases_by_age[time_stamps, :]  # / people_by_age
+    for i in range(4):
+        data = true_cases_by_age[time_stamps, i] / people_by_age[i].cpu().numpy()
+        ax.plot(time_stamps, data, "o-", color=f"C{i}", label=i)
+    #    error = 0.1
+    #    ax.fill_between(
+    #        range(len(time_stamps)),
+    #        data - error,
+    #        data + error,
+    #        color=f"C{i}",
+    #        alpha=0.5,
+    #    )
     # cmap = plt.get_cmap("viridis")(np.linspace(0, 1, 5))
     # labels = [20, 40, 60, 80, 100]
     # for i in range(cases_by_age.shape[1]):
     #    ax.semilogy(dates, true_cases_by_age[:, i], color=cmap[i], label=labels[i])
     #    ax.semilogy(dates, cases_by_age[:, i], color=cmap[i], label=labels[i], linestyle="--")
+    #ax.plot(true_cases)
     ax.legend()
     fig.savefig("./plot.pdf")
     plt.show()
@@ -250,13 +251,13 @@ def run_mcmc():
     print(mcmc.diagnostics())
 
 
-# plot(
-#  dates,
-#  #cases_by_age=cases_by_age_mean,
-#  true_cases_by_age=true_cases_by_age_mean,
-#  #cases=cases_mean,
-#  true_cases=true_cases_mean,
-#  true_deaths=true_deaths_mean,
-#  #deaths=deaths_mean,
-# )
+#plot(
+#    dates,
+#    #cases_by_age=cases_by_age_mean,
+#    true_cases_by_age=true_cases_by_age_mean,
+#    #cases=cases_mean,
+#    true_cases=true_cases_mean,
+#    true_deaths=true_deaths_mean,
+#    #deaths=deaths_mean,
+#)
 run_mcmc()

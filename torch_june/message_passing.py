@@ -109,7 +109,12 @@ class InfectionPassing(MessagePassing):
             # transmissions = transmissions * is_free
             # susceptibilities = susceptibilities * is_free
             # cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
-            cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
+            # cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
+            cumulative_trans = checkpoint(
+                lambda x: self.propagate(x, x=transmissions, y=beta),
+                edge_index,
+                use_reentrant=False,
+            )
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
             trans_susc = trans_susc + self.propagate(
