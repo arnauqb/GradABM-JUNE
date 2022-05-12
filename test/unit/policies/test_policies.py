@@ -63,7 +63,7 @@ class TestPolicies:
             2020, 7, 4
         )
         assert policies.close_venue_policies[0].edge_type_to_close == set(
-            ["attends_leisure"]
+            ["attends_leisure", "attends_school"]
         )
         assert policies.quarantine_policies[0].start_date == datetime.datetime(
             2020, 3, 16
