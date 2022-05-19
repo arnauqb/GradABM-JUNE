@@ -4,3 +4,4 @@ from .transmission import TransmissionUpdater, TransmissionSampler
 from .symptoms import SymptomsUpdater
 from .model import TorchJune
 from .timer import Timer
+from .policies import Policies

@@ -47,21 +47,19 @@ def get_data(june_data_path, device, n_seed=10):
     with open(june_data_path, "rb") as f:
         data = pickle.load(f).to(device)
     n_agents = len(data["agent"]["id"])
-    # sampler = make_sampler()
     inf_params = {}
-    # inf_params_values = sampler(n_agents)
     inf_params["max_infectiousness"] = torch.ones(
         n_agents, device=device
-    )  # inf_params_values[0].to(device)
+    )  
     inf_params["shape"] = torch.ones(
         n_agents, device=device
-    )  # inf_params_values[1].to(device)
+    ) 
     inf_params["rate"] = torch.ones(
         n_agents, device=device
-    )  # inf_params_values[2].to(device)
+    )
     inf_params["shift"] = torch.ones(
         n_agents, device=device
-    )  # inf_params_values[3].to(device)
+    )
     data["agent"].infection_parameters = inf_params
     data["agent"].transmission = torch.zeros(n_agents, device=device)
     data["agent"].susceptibility = torch.ones(n_agents, device=device)
@@ -73,7 +71,7 @@ def get_data(june_data_path, device, n_seed=10):
     symptoms["time_to_next_stage"] = torch.zeros(n_agents, device=device)
     data["agent"].symptoms = symptoms
     indices = np.arange(0, n_agents)
-    np.random.shuffle(indices)
+    # np.random.shuffle(indices)
     indices = indices[:n_seed]
     data = infector(data=data, indices=indices, device=device)
     return data
@@ -116,16 +114,14 @@ def restore_data(data, backup):
 
 def make_timer():
     return Timer(
-        initial_day="2020-03-01",
+        initial_day="2022-02-01",
         total_days=90,
         weekday_step_duration=(24,),
         weekend_step_duration=(24,),
         weekday_activities=(
             ("company", "school", "university", "leisure", "care_home", "household"),
-            #("company", "school", "university", "care_home", "household"),
         ),
         weekend_activities=(("leisure", "care_home", "household"),),
-        #weekend_activities=(("care_home", "household"),),
     )
 
 

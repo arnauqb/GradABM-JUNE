@@ -15,6 +15,7 @@ from script_utils import (
     backup_inf_data,
     restore_data,
     make_timer,
+    run_model
 )
 
 from torch_june import TorchJune
@@ -25,137 +26,92 @@ from torch_june import TorchJune
 # mpi_rank = mpi_comm.Get_rank()
 
 # device = f"cuda:{mpi_rank+2}"
-device = f"cuda:0"
+device = f"cuda:5"
+
+DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+TIMER = make_timer()
+DATA = get_data(DATA_PATH, n_seed=2000, device=device)
+n_agents = DATA["agent"]["id"].shape[0]
+# people_by_age = get_people_by_age(DATA, device)
+BACKUP = backup_inf_data(DATA)
+
+true_log_beta_household = torch.tensor(-0.4, device=device)
+true_log_beta_company = torch.tensor(-0.3, device=device)
+true_log_beta_school = torch.tensor(-0.3, device=device)
+true_log_beta_leisure = torch.tensor(-1.2, device=device)
+true_log_beta_university = torch.tensor(-0.5, device=device)
+true_log_beta_care_home = torch.tensor(-0.4, device=device)
+time_stamps = [10, 16, 21, 29]
 
 
-def get_deaths_from_symptoms(symptoms):
-    return torch.tensor(
-        symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
-        device=device,
-    )
+def prior(u):
+    u[:3] = u[:3] - 1.0
+    u[3] = u[3] - 2.0
+    return u
 
 
-def run_model(model):
-    timer.reset()
-    data = restore_data(DATA, BACKUP)
-    time_curve = model(data, timer)["agent"].is_infected.sum()
-    deaths_curve = get_deaths_from_symptoms(data["agent"].symptoms)
-    dates = [timer.date]
-    while timer.date < timer.final_date:
-        current_day = timer.day
-        while timer.day == current_day:
-            next(timer)
-            data = model(data, timer)
-        cases = data["agent"].is_infected.sum()
-        time_curve = torch.hstack((time_curve, cases))
-        deaths = get_deaths_from_symptoms(data["agent"].symptoms)
-        deaths_curve = torch.hstack((deaths_curve, deaths))
-        dates.append(timer.date)
-    return dates, time_curve, deaths_curve
-
-
-def get_model_prediction(**kwargs):
-    # print(kwargs)
-    # t1 = time()
-    model = TorchJune(**kwargs, device=device)
-    ret = run_model(model)
-    # t2 = time()
-    # print(f"Took {t2-t1:.2f} seconds.")
-    return ret
-
-
-def prior(cube):
-    cube = cube
-    return cube
-
-
-def loglike(cube):
-    cube = 10**cube
-    _, time_curve, _ = get_model_prediction(
-        beta_company=cube[0],
-        beta_school=cube[1],
-        beta_leisure=cube[2],
-        beta_household=cube[3],
-        beta_university=cube[4],
-        beta_care_home=cube[5],
-    )
+def loglike(x):
+    with torch.no_grad():
+        model = TorchJune(
+            log_beta_household=torch.tensor(x[0]),
+            log_beta_school=torch.tensor(x[1]),
+            log_beta_company=torch.tensor(x[2]),
+            log_beta_leisure=torch.tensor(x[3]),
+            log_beta_university=true_log_beta_university,
+            log_beta_care_home=true_log_beta_care_home,
+            device=device,
+        )
+        dates, cases, deaths, cases_by_age = run_model(
+            model=model, timer=TIMER, data=DATA, backup=BACKUP
+        )
+    _cases = cases[time_stamps] / n_agents
+    _true_cases = true_cases[time_stamps] / n_agents
+    # _deaths = deaths[time_stamps]
+    # _true_deaths = true_deaths[time_stamps]
+    # cases_by_age = cases_by_age[time_stamps, :]  # / people_by_age
+    # _true_cases_by_age = true_cases_by_age[time_stamps, :]  # / people_by_age
     loglikelihood = (
         torch.distributions.Normal(
-            time_curve, torch.sqrt(time_curve)  # , device=device)
+            _cases,
+            0.05,
         )
-        .log_prob(true_data)
+        .log_prob(_true_cases)
         .sum()
         .cpu()
         .item()
     )
     return loglikelihood
 
-
-# DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
-DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-
-DATA = get_data(DATA_PATH, device, n_seed=100)
-BACKUP = backup_inf_data(DATA)
-
-timer = make_timer()
-
-true_beta_company = torch.tensor(2.0, device=device)
-true_beta_school = torch.tensor(2.0, device=device)
-true_beta_leisure = torch.tensor(2.0, device=device)
-true_beta_household = torch.tensor(4.0, device=device)
-true_beta_university = torch.tensor(2.0, device=device)
-true_beta_care_home = torch.tensor(4.0, device=device)
-
-dates, true_data, true_deaths = get_model_prediction(
-    beta_company=true_beta_company,
-    beta_household=true_beta_household,
-    beta_school=true_beta_school,
-    beta_leisure=true_beta_leisure,
-    beta_care_home=true_beta_care_home,
-    beta_university=true_beta_university,
-)
-
-def plot():
-    dates2, true_data2, true_deaths2 = get_model_prediction(
-        beta_company=2*true_beta_company,
-        beta_household=2*true_beta_household,
-        beta_school=2*true_beta_school,
-        beta_leisure=2*true_beta_leisure,
-        beta_care_home=2*true_beta_care_home,
-        beta_university=2*true_beta_university,
+with torch.no_grad():
+    model = TorchJune(
+        log_beta_household=true_log_beta_household,
+        log_beta_school=true_log_beta_school,
+        log_beta_company=true_log_beta_company,
+        log_beta_leisure=true_log_beta_leisure,
+        log_beta_university=true_log_beta_university,
+        log_beta_care_home=true_log_beta_care_home,
+        device=device,
     )
-    
-    fig, ax = plt.subplots()
-    cases = true_data.cpu().numpy()
-    cases2 = true_data2.cpu().numpy()
-    deaths = true_deaths.cpu().numpy()
-    daily_deaths = np.diff(deaths, prepend=0)
-    daily_cases = np.diff(cases, prepend=0)
-    
-    # ax.plot(dates, deaths)
-    ax.plot(dates, cases)
-    ax.plot(dates2, cases2)
-    #ax.plot(dates, daily_deaths)
-    plt.show()
-
-#plot()
+    dates, true_cases, true_deaths, true_cases_by_age = run_model(
+        model=model, timer=TIMER, data=DATA, backup=BACKUP
+    )
 
 dlogz = 0.5
 logl_max = np.inf
-sampler = NestedSampler(loglike, prior, ndim=6)
+sampler = NestedSampler(loglike, prior, ndim=4)
 
 pbar, print_func = sampler._get_print_func(None, True)
 # The main nested sampling loop.
 ncall = sampler.ncall
 for it, res in enumerate(sampler.sample(dlogz=dlogz)):
-   if it % 100 == 0:
-       with open("./dyn_results.pkl", "wb") as f:
-           pickle.dump(sampler.results, f)
-   ncall += res[9]
-   print_func(res, sampler.it - 1, ncall, dlogz=dlogz, logl_max=logl_max)
+    if it % 100 == 0:
+        with open("./dyn_results.pkl", "wb") as f:
+            pickle.dump(sampler.results, f)
+    ncall += res[9]
+    print_func(res, sampler.it - 1, ncall, dlogz=dlogz, logl_max=logl_max)
 
 pbar.close()
 
 sampler.add_live_points()
 with open("./dyn_results.pkl", "wb") as f:
-   pickle.dump(sampler.results, f)
+    pickle.dump(sampler.results, f)
