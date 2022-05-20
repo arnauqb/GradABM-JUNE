@@ -1,4 +1,5 @@
 import torch
+import yaml
 
 from torch_june.paths import default_config_path
 from torch_june.utils import parse_distribution
@@ -27,11 +28,11 @@ class TransmissionSampler:
     @classmethod
     def from_parameters(cls, params):
         ret = {}
-        params = params["transmission"]
-        for key in params:
-            ret[parameter] = parse_distribution[params[key]]
+        tparams = params["transmission"]
+        device = params["system"]["device"]
+        for key in tparams:
+            ret[key] = parse_distribution(tparams[key], device=device)
         return cls(**ret)
-
 
 
 class TransmissionUpdater(torch.nn.Module):

@@ -30,11 +30,7 @@ def get_june_world_path():
 
 @fixture(scope="session", name="sampler")
 def make_sampler():
-    max_infectiousness = LogNormal(0, 0.5)  # * 1.7
-    shape = Normal(1.56, 0.08)
-    rate = Normal(0.53, 0.03)
-    shift = Normal(-2.12, 0.1)
-    return TransmissionSampler(max_infectiousness, shape, rate, shift)
+    return TransmissionSampler.from_file()
 
 
 @fixture(name="agent_data")
