@@ -29,7 +29,7 @@ class Policy(ABC):
 
 
 class PolicyCollection:
-    def __init__(self, policies: list[Policy]):
+    def __init__(self, policies: Policy):
         """
         A collection of like policies active on the same date
         """
