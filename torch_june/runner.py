@@ -1,6 +1,7 @@
 import torch
 import pickle
 import numpy as np
+import yaml
 
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
@@ -130,6 +131,7 @@ class Runner:
         data = self.data
         timer.reset()
         self.restore_initial_data()
+        self.set_initial_cases()
         data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
