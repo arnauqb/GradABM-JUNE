@@ -1,0 +1,184 @@
+title: Torch June default configuration file.
+
+system:
+  device: cpu
+  random_seed: random
+
+data_path: "/Users/arnull/code/torch_june/worlds/data_london.pkl"
+
+
+timer:
+  total_days: 90
+  initial_day: "2022-02-01" 
+  step_duration: 
+      weekday:
+          0: 24
+      weekend:
+          0: 24 
+  step_activities:
+      weekday:
+          0: ["company", "school", "university", "leisure", "care_home", "household"] 
+      weekend:
+          0: ["leisure", "care_home", "household"] 
+
+infection_seed: 
+  n_seed: 2000
+
+interaction:
+  log_beta_household: -0.4
+  log_beta_company: -0.3
+  log_beta_school: -0.3
+  log_beta_leisure: -1.2
+  log_beta_university: -0.5
+  log_beta_care_home: -0.4
+
+transmission:
+  max_infectiousness:
+    dist: LogNormal
+    loc: 0.0
+    scale: 0.5
+  shape:
+    dist: Normal
+    loc: 1.56
+    scale: 0.08
+  rate:
+    dist: Normal
+    loc: 0.53
+    scale: 0.03
+  shift:
+    dist: Normal
+    loc: -2.12
+    scale: 0.1
+
+symptoms:
+    stages : 
+        - recovered
+        - susceptible
+        - exposed
+        - infectious
+        - symptomatic
+        - severe
+        - critical
+        - dead
+
+    stage_transistion_probabilities:
+      # These are not relative transitions. The conversion is done internally.
+      recovered:
+        0-100: 0.0
+      susceptible:
+        0-100: 0.0
+      exposed:
+        0-100: 0.0
+      infectious:
+        0-10: 0.5
+        10-20: 0.55
+        20-30: 0.6
+        30-40: 0.65
+        40-50: 0.7
+        50-60: 0.75
+        60-70: 0.8
+        70-80: 0.85
+        80-90: 0.9
+        90-100: 0.9
+      symptomatic:
+        0-10: 0.0005
+        10-20: 0.00165
+        20-30: 0.00720
+        30-40: 0.02080
+        40-50: 0.03430
+        50-60: 0.07650
+        60-70: 0.13280
+        70-80: 0.20655
+        80-90: 0.24570
+        90-100: 0.24570
+
+      severe:
+        0-10: 0.00003
+        10-20: 0.00008
+        20-30: 0.00036
+        30-40: 0.00104
+        40-50: 0.00216
+        50-60: 0.00933
+        60-70: 0.03639
+        70-80: 0.08923
+        80-90: 0.17420
+        90-100: 0.17420
+
+      critical:
+        0-10: 0.00002
+        10-20: 0.00002
+        20-30: 0.0001
+        30-40: 0.00032
+        40-50: 0.00098
+        50-60: 0.00265
+        60-70: 0.00766
+        70-80: 0.02439
+        80-90: 0.08292
+        90-100: 0.16190
+
+    stage_transistion_times:
+      exposed:
+        dist: LogNormal
+        loc: 1.4513971389473608
+        scale: 0.32459284597450133
+      infectious: 
+        dist: LogNormal
+        loc: -0.16092839609790693
+        scale: 0.7158750951139896
+      symptomatic: 
+        dist: LogNormal
+        loc: 1.667557249282718
+        scale: 0.6625894652794622
+      severe: 
+        dist: LogNormal
+        loc: -0.10536051565782628
+        scale: 1.0107676525947895
+      critical: 
+        dist: LogNormal
+        loc: 2.278566445372413
+        scale: 0.42819924356646805
+
+    recovery_times:
+      exposed: 
+        dist: LogNormal
+        loc: 1.4513971389473608
+        scale: 0.32459284597450133
+      infectious: 
+        dist: LogNormal
+        loc: 2.0491292307716185
+        scale: 0.24622067706923975
+      symptomatic:
+        dist: LogNormal
+        loc: 2.0491292307716185
+        scale: 0.24622067706923975
+      severe:
+        dist: LogNormal
+        loc: 2.8387344001307495
+        scale: 0.3381642741066263
+      critical: 
+        dist: LogNormal
+        loc: 2.8387344001307495
+        scale: 0.3381642741066263
+
+policies:
+  interaction:
+    social_distancing:
+      1:
+        start_date: 2022-02-15
+        end_date: 2022-03-15
+        beta_factors: 
+          school : 0.5
+          company: 0.5
+      2:
+        start_date: 2022-03-15
+        end_date: 2022-04-15
+        beta_factors:
+          leisure: 0.5
+      3:
+        start_date: 2023-04-15
+        end_date": 2022-05-15
+        beta_factors:
+          leisure: 0.5
+          school: 1.0
+          company: 1.0
+

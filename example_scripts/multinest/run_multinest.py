@@ -4,9 +4,9 @@ import torch
 import pymultinest
 from pathlib import Path
 import matplotlib.pyplot as plt
+import sys, os
 
-this_path = Path(__file__).parent
-import sys
+this_path = Path(os.path.abspath(__file__)).parent
 
 sys.path.append(this_path.parent.as_posix())
 from script_utils import (
@@ -28,11 +28,11 @@ from mpi4py import MPI
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 
-device = f"cuda:{mpi_rank+2}"
-#device = f"cuda:3"
+#device = f"cuda:{mpi_rank+2}"
+device = f"cpu"
 
-# DATA_PATH = "/home/arnau/code/torch_june/worlds/data_london.pkl"
-DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
+DATA_PATH = "/Users/arnull/code/torch_june/worlds/data_london.pkl"
+#DATA_PATH = "/cosma7/data/dp004/dc-quer1/data_ne.pkl"
 TIMER = make_timer()
 DATA = get_data(DATA_PATH, n_seed=2000, device=device)
 n_agents = DATA["agent"]["id"].shape[0]
