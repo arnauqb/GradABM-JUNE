@@ -61,7 +61,7 @@ symptoms:
         - critical
         - dead
 
-    stage_transistion_probabilities:
+    stage_transition_probabilities:
       # These are not relative transitions. The conversion is done internally.
       recovered:
         0-100: 0.0
@@ -116,7 +116,7 @@ symptoms:
         80-90: 0.08292
         90-100: 0.16190
 
-    stage_transistion_times:
+    stage_transition_times:
       exposed:
         dist: LogNormal
         loc: 1.4513971389473608
@@ -176,7 +176,7 @@ policies:
           leisure: 0.5
       3:
         start_date: 2023-04-15
-        end_date": 2022-05-15
+        end_date: 2022-05-15
         beta_factors:
           leisure: 0.5
           school: 1.0

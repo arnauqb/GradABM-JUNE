@@ -38,7 +38,8 @@ class TestSymptomsSampler:
 
     @fixture(name="sp")
     def make_sp(self, input):
-        return SymptomsSampler.from_dict(input)
+        params = {"system" : {"device" : "cpu"}, "symptoms" : input}
+        return SymptomsSampler.from_parameters(params)
 
     def test__read_input(self, sp):
         assert sp.stages == [
@@ -158,7 +159,7 @@ class TestSymptomsSampler:
 class TestSymptomsUpdater:
     @fixture(name="sp")
     def make_sp(self):
-        return SymptomsSampler.from_default_parameters()
+        return SymptomsSampler.from_file()
 
     @fixture(name="su")
     def make_su(self, sp):

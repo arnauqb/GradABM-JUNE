@@ -1,8 +1,10 @@
 import torch
+import yaml
 from pyro import distributions as dist
 
 from torch_june.utils import parse_age_probabilities, parse_distribution
 from torch_june.default_parameters import make_parameters
+from torch_june.paths import default_config_path
 
 
 class SymptomsSampler:
@@ -26,12 +28,14 @@ class SymptomsSampler:
         self.recovery_times = self._parse_stage_times(recovery_times, device=device)
 
     @classmethod
-    def from_dict(cls, input_dict, device="cpu"):
-        return cls(**input_dict, device=device)
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
 
     @classmethod
-    def from_default_parameters(cls, device="cpu"):
-        return cls(**make_parameters()["symptoms"], device=device)
+    def from_parameters(cls, params):
+        return cls(**params["symptoms"], device=params["system"]["device"])
 
     def _parse_stage_transition_probabilities(
         self, stage_transition_probabilities, device
@@ -53,7 +57,7 @@ class SymptomsSampler:
             if stage not in stage_times:
                 ret[i] = None
             else:
-                ret[i] = parse_distribution(stage_times[stage])
+                ret[i] = parse_distribution(stage_times[stage], device)
         return ret
 
     def _get_need_to_transition(self, current_stage, time_to_next_stage, time):
@@ -114,6 +118,17 @@ class SymptomsUpdater(torch.nn.Module):
     def __init__(self, symptoms_sampler):
         super().__init__()
         self.symptoms_sampler = symptoms_sampler
+
+    @classmethod
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
+
+    @classmethod
+    def from_parameters(cls, params):
+        ss = SymptomsSampler.from_parameters(params)
+        return cls(symptoms_sampler=ss)
 
     def forward(self, data, timer, new_infected):
         time = timer.now

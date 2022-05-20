@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from torch_june import TorchJune, Timer
+from torch_june import TorchJune, Timer, InfectionPassing
 
 
 class TestModel:
@@ -15,7 +15,8 @@ class TestModel:
             "log_beta_household": torch.tensor(3.0, requires_grad=True),
             "log_beta_leisure": torch.tensor(0.0, requires_grad=True),
         }
-        model = TorchJune(**log_beta_priors)
+        infection_passing = InfectionPassing(**log_beta_priors)
+        model = TorchJune(infection_passing=infection_passing)
         return model
 
     def test__run_model(self, model, inf_data, timer):

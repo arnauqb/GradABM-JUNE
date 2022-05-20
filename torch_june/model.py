@@ -7,10 +7,10 @@ from torch_june import (
     TransmissionUpdater,
     IsInfectedSampler,
     SymptomsUpdater,
-    default_config_path
 )
 from torch_june.policies import Policies
 from torch_june.cuda_utils import get_fraction_gpu_used
+from torch_june.paths import default_config_path
 
 
 class TorchJune(torch.nn.Module):

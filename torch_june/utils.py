@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from itertools import chain
 from pyro import distributions as dist
 import datetime
@@ -8,18 +9,18 @@ from copy import deepcopy
 
 def read_date(date: Union[str, datetime.datetime]) -> datetime.datetime:
     """
-        Read date in two possible formats, either string or datetime.date, both
-        are translated into datetime.datetime to be used by the simulator
+    Read date in two possible formats, either string or datetime.date, both
+    are translated into datetime.datetime to be used by the simulator
 
-        Parameters
-        ----------
-        date:
-            date to translate into datetime.datetime
+    Parameters
+    ----------
+    date:
+        date to translate into datetime.datetime
 
-        Returns
-        -------
-            date in datetime format
-        """
+    Returns
+    -------
+        date in datetime format
+    """
     if type(date) is str:
         return datetime.datetime.strptime(date, "%Y-%m-%d")
     elif isinstance(date, datetime.date):
@@ -54,6 +55,7 @@ def parse_age_probabilities(age_dict, fill_value=0):
         idx = np.searchsorted(bins, age + 1)  # we do +1 to include the lower boundary
         probabilities_per_age.append(probabilities_binned[idx])
     return probabilities_per_age
+
 
 def parse_distribution(dict, device):
     dd = deepcopy(dict)
