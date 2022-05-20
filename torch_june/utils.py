@@ -3,6 +3,7 @@ import torch
 from itertools import chain
 from pyro import distributions as dist
 import datetime
+import random
 from typing import Union
 from copy import deepcopy
 
