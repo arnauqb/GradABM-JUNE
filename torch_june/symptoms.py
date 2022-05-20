@@ -1,7 +1,7 @@
 import torch
 from pyro import distributions as dist
 
-from torch_june.utils import parse_age_probabilities
+from torch_june.utils import parse_age_probabilities, parse_distribution
 from torch_june.default_parameters import make_parameters
 
 
@@ -53,13 +53,7 @@ class SymptomsSampler:
             if stage not in stage_times:
                 ret[i] = None
             else:
-                dist_name = stage_times[stage].pop("dist")
-                dist_class = getattr(dist, dist_name)
-                input = {
-                    key: torch.tensor(value, device=device, dtype=torch.float)
-                    for key, value in stage_times[stage].items()
-                }
-                ret[i] = dist_class(**input)
+                ret[i] = parse_distribution(stage_times[stage])
         return ret
 
     def _get_need_to_transition(self, current_stage, time_to_next_stage, time):

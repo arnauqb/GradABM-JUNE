@@ -1,5 +1,8 @@
 import torch
 
+from torch_june.paths import default_config_path
+from torch_june.utils import parse_distribution
+
 
 class TransmissionSampler:
     def __init__(self, max_infectiousness, shape, rate, shift):
@@ -14,6 +17,21 @@ class TransmissionSampler:
         rate = self.rate.rsample((n,))
         shift = self.shift.rsample((n,))
         return torch.vstack((maxi, shape, rate, shift))
+
+    @classmethod
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
+
+    @classmethod
+    def from_parameters(cls, params):
+        ret = {}
+        params = params["transmission"]
+        for key in params:
+            ret[parameter] = parse_distribution[params[key]]
+        return cls(**ret)
+
 
 
 class TransmissionUpdater(torch.nn.Module):

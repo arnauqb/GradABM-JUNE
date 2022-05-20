@@ -1,7 +1,9 @@
 import numpy as np
 from itertools import chain
+from pyro import distributions as dist
 import datetime
 from typing import Union
+from copy import deepcopy
 
 
 def read_date(date: Union[str, datetime.datetime]) -> datetime.datetime:
@@ -52,3 +54,13 @@ def parse_age_probabilities(age_dict, fill_value=0):
         idx = np.searchsorted(bins, age + 1)  # we do +1 to include the lower boundary
         probabilities_per_age.append(probabilities_binned[idx])
     return probabilities_per_age
+
+def parse_distribution(dict, device):
+    dd = deepcopy(dict)
+    dist_name = dd.pop("dist")
+    dist_class = getattr(dist, dist_name)
+    input = {
+        key: torch.tensor(value, device=device, dtype=torch.float)
+        for key, value in dd.items()
+    }
+    return dist_class(**input)

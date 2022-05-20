@@ -1,9 +1,12 @@
 import torch
+import yaml
 import numpy as np
 from torch_geometric.nn.conv import MessagePassing
 from torch.nn.functional import gumbel_softmax
 from pyro.distributions import RelaxedBernoulliStraightThrough
 from torch.utils.checkpoint import checkpoint
+
+from torch_june.paths import default_config_path
 
 activity_hierarchy = [
     "attends_school",
@@ -34,6 +37,17 @@ class InfectionPassing(MessagePassing):
         self.log_beta_leisure = torch.nn.Parameter(log_beta_leisure)
         self.log_beta_university = torch.nn.Parameter(log_beta_university)
         self.log_beta_care_home = torch.nn.Parameter(log_beta_care_home)
+
+    @classmethod
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
+
+    @classmethod
+    def from_parameters(cls, params):
+        interaction_params = params["interaction"]
+        return cls(**interaction_params)
 
     def _get_edge_types_from_timer(self, timer):
         ret = []

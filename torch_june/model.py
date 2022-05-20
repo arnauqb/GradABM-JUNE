@@ -1,4 +1,5 @@
 import torch
+import yaml
 from torch.utils.checkpoint import checkpoint
 
 from torch_june import (
@@ -6,47 +7,57 @@ from torch_june import (
     TransmissionUpdater,
     IsInfectedSampler,
     SymptomsUpdater,
+    default_config_path
 )
 from torch_june.policies import Policies
-from torch_june.symptoms import SymptomsSampler
 from torch_june.cuda_utils import get_fraction_gpu_used
 
 
 class TorchJune(torch.nn.Module):
     def __init__(
         self,
-        symptoms_sampler=None,
+        symptoms_updater=None,
         policies=None,
-        log_beta_company=torch.tensor(0.0),
-        log_beta_school=torch.tensor(0.0),
-        log_beta_household=torch.tensor(0.0),
-        log_beta_university=torch.tensor(0.0),
-        log_beta_leisure=torch.tensor(0.0),
-        log_beta_care_home=torch.tensor(0.0),
+        infection_passing=None,
         device="cpu",
     ):
         super().__init__()
-        if symptoms_sampler is None:
-            symptoms_sampler = SymptomsSampler.from_default_parameters(device=device)
+        if symptoms_updater is None:
+            symptoms_updater = SymptomsUpdater.from_file()
+        self.symptoms_updater = symptoms_updater
         if policies is None:
-            policies = Policies.from_parameters()
-        self.infection_passing = InfectionPassing(
-            log_beta_company=log_beta_company.to(device),
-            log_beta_school=log_beta_school.to(device),
-            log_beta_household=log_beta_household.to(device),
-            log_beta_university=log_beta_university.to(device),
-            log_beta_leisure=log_beta_leisure.to(device),
-            log_beta_care_home=log_beta_care_home.to(device),
-        )
+            policies = Policies.from_file()
+        self.policies = policies
+        if infection_passing is None:
+            infection_passing = InfectionPassing.from_file()
+        self.infection_passing = infection_passing
         self.transmission_updater = TransmissionUpdater()
         self.is_infected_sampler = IsInfectedSampler()
-        self.symptoms_updater = SymptomsUpdater(symptoms_sampler=symptoms_sampler)
-        self.policies = policies
         self.device = device
+
+    @classmethod
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
+
+    @classmethod
+    def from_parameters(cls, params):
+        symptoms_updater = SymptomsUpdater.from_parameters(params)
+        policies = Policies.from_parameters(params)
+        infection_passing = InfectionPassing.from_parameters(params)
+        transmission_updater = TransmissionUpdater.from_parameters(params)
+        return cls(
+            symptoms_updater=symptoms_updater,
+            policies=policies,
+            infection_passing=infection_passing,
+            transmission_updater=transmission_updater,
+            device=params["device"],
+        )
 
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
-        #not_infected_probs = checkpoint(
+        # not_infected_probs = checkpoint(
         #    self.infection_passing,
         #    data,
         #    timer,
@@ -54,13 +65,13 @@ class TorchJune(torch.nn.Module):
         #    self.policies.close_venue_policies,
         #    self.policies.quarantine_policies,
         #    use_reentrant=False,
-        #)
+        # )
         not_infected_probs = self.infection_passing(
-           data=data,
-           timer=timer,
-           interaction_policies=self.policies.interaction_policies,
-           close_venue_policies=self.policies.close_venue_policies,
-           quarantine_policies=self.policies.quarantine_policies,
+            data=data,
+            timer=timer,
+            interaction_policies=self.policies.interaction_policies,
+            close_venue_policies=self.policies.close_venue_policies,
+            quarantine_policies=self.policies.quarantine_policies,
         )
         new_infected = self.is_infected_sampler(not_infected_probs)
         data["agent"].susceptibility = torch.maximum(
