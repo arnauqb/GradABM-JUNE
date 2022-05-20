@@ -47,7 +47,12 @@ class InfectionPassing(MessagePassing):
     @classmethod
     def from_parameters(cls, params):
         interaction_params = params["interaction"]
-        return cls(**interaction_params)
+        device = params["system"]["device"]
+        input = {
+            key: torch.tensor(value, device=device)
+            for key, value in interaction_params.items()
+        }
+        return cls(**input)
 
     def _get_edge_types_from_timer(self, timer):
         ret = []

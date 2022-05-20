@@ -46,13 +46,11 @@ class TorchJune(torch.nn.Module):
         symptoms_updater = SymptomsUpdater.from_parameters(params)
         policies = Policies.from_parameters(params)
         infection_passing = InfectionPassing.from_parameters(params)
-        transmission_updater = TransmissionUpdater.from_parameters(params)
         return cls(
             symptoms_updater=symptoms_updater,
             policies=policies,
             infection_passing=infection_passing,
-            transmission_updater=transmission_updater,
-            device=params["device"],
+            device=params["system"]["device"],
         )
 
     def forward(self, data, timer):

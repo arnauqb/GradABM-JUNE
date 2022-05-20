@@ -70,7 +70,6 @@ class Policies:
     @classmethod
     def from_parameters(cls, params):
         policy_params = params["policies"]
-        print(policy_params)
         policies = []
         for policy_collection in policy_params.values():
             for policy_name, policy_config in policy_collection.items():
@@ -79,15 +78,11 @@ class Policies:
 
     @staticmethod
     def _parse_policy_config(config, name):
-        print(config)
-        print(name)
         camel_case_key = "".join(x.capitalize() or "_" for x in name.split("_"))
         policies = []
         policy_class = getattr(torch_june.policies, camel_case_key)
         if "start_date" not in config:
             for policy_i, policy_data_i in config.items():
-                print("ASDASD")
-                print(policy_data_i)
                 if (
                     "start_date" not in policy_data_i.keys()
                     or "end_date" not in policy_data_i.keys()

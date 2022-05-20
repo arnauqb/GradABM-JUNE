@@ -70,18 +70,14 @@ class TestTimer:
         )
 
     def test__read_from_file(self):
-        path = Path(__file__).parent / "time_config_test.yaml"
-        timer = Timer.from_file(path)
-        assert timer.date_str == "2020-03-01"
-        assert timer.total_days == 30
-        assert timer.weekday_step_duration == {0: 12, 1: 12}
+        timer = Timer.from_file()
+        assert timer.date_str == "2022-02-01"
+        assert timer.total_days == 90
+        assert timer.weekday_step_duration == {0: 24}
         assert timer.weekend_step_duration == {0: 24}
         assert timer.weekday_activities == {
-            0: ["medical_facility", "residence", "commute"],
-            1: ["medical_facility", "primary_activity", "leisure", "residence"],
+            0: ["company", "school", "university", "leisure", "care_home", "household"]
         }
-        assert timer.weekend_activities == {
-            0: ["medical_facility", "leisure", "residence"]
-        }
-        assert timer.day_of_week == "Sunday"
-        assert timer.day_type == "weekend"
+        assert timer.weekend_activities == {0: ["leisure", "care_home", "household"]}
+        assert timer.day_of_week == "Tuesday"
+        assert timer.day_type == "weekday"

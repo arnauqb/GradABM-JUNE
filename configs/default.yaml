@@ -6,7 +6,6 @@ system:
 
 data_path: "/Users/arnull/code/torch_june/worlds/data_london.pkl"
 
-
 timer:
   total_days: 90
   initial_day: "2022-02-01" 
@@ -22,7 +21,7 @@ timer:
           0: ["leisure", "care_home", "household"] 
 
 infection_seed: 
-  n_seed: 2000
+  n_initial_cases: 200
 
 interaction:
   log_beta_household: -0.4
@@ -181,4 +180,8 @@ policies:
           leisure: 0.5
           school: 1.0
           company: 1.0
+
+
+results:
+  age_bins: [0, 18, 25, 65, 80]
 

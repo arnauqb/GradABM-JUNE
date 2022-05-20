@@ -7,6 +7,8 @@ import datetime
 import yaml
 from typing import List
 
+from torch_june.paths import default_config_path
+
 SECONDS_PER_DAY = 24 * 60 * 60
 
 
@@ -40,9 +42,14 @@ class Timer:
         self.delta_time = datetime.timedelta(hours=self.shift_duration)
 
     @classmethod
-    def from_file(cls, config_filename):
-        with open(config_filename) as f:
-            time_config = yaml.safe_load(f)
+    def from_file(cls, fpath=default_config_path):
+        with open(fpath, "r") as f:
+            params = yaml.safe_load(f)
+        return cls.from_parameters(params)
+
+    @classmethod
+    def from_parameters(cls, params):
+        time_config = params["timer"]
         return cls(
             initial_day=time_config["initial_day"],
             total_days=time_config["total_days"],
