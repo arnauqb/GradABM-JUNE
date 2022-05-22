@@ -19,7 +19,10 @@ class TestCloseVenue:
             weekend_activities=(("company",),),
         )
         policy = CloseVenue(
-            names=("company",), start_date="2022-02-01", end_date="2022-02-05"
+            names=("company",),
+            start_date="2022-02-01",
+            end_date="2022-02-05",
+            device="cpu",
         )
         while timer.date < timer.final_date:
             edges = policy.apply(
@@ -47,7 +50,10 @@ class TestCloseVenue:
             ret.sum().detach(), 10.0
         )  # Only the 10 in the seed don't get infected.
         policy = CloseVenue(
-            names=("company",), start_date="2022-02-01", end_date="2022-02-05"
+            names=("company",),
+            start_date="2022-02-01",
+            end_date="2022-02-05",
+            device="cpu",
         )
         policies = CloseVenuePolicies([policy])
         ret = mp(data=inf_data, timer=timer, close_venue_policies=policies)

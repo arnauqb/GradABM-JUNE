@@ -10,10 +10,11 @@ from torch_june.paths import default_config_path
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, start_date, end_date):
+    def __init__(self, start_date, end_date, device):
         super().__init__()
         self.start_date = read_date(start_date)
         self.end_date = read_date(end_date)
+        self.device = device
 
     def apply(self):
         raise NotImplementedError
@@ -73,14 +74,15 @@ class Policies(torch.nn.Module):
     @classmethod
     def from_parameters(cls, params):
         policy_params = params["policies"]
+        device = params["system"]["device"]
         policies = []
         for policy_collection in policy_params.values():
             for policy_name, policy_config in policy_collection.items():
-                policies += cls._parse_policy_config(policy_config, name=policy_name)
+                policies += cls._parse_policy_config(policy_config, name=policy_name, device=device)
         return cls(policies)
 
     @staticmethod
-    def _parse_policy_config(config, name):
+    def _parse_policy_config(config, name, device):
         camel_case_key = "".join(x.capitalize() or "_" for x in name.split("_"))
         policies = []
         policy_class = getattr(torch_june.policies, camel_case_key)
@@ -91,9 +93,9 @@ class Policies(torch.nn.Module):
                     or "end_date" not in policy_data_i.keys()
                 ):
                     raise ValueError("policy config file not valid.")
-                policies.append(policy_class(**policy_data_i))
+                policies.append(policy_class(**policy_data_i, device=device))
         else:
-            policies.append(policy_class(**config))
+            policies.append(policy_class(**config, device=device))
         return policies
 
     def _get_policies_by_type(self, policies, type):

@@ -18,7 +18,10 @@ class TestQuarantine:
             weekend_activities=(("company", "household"),),
         )
         quarantine = Quarantine(
-            stage_threshold=3, start_date="2022-02-01", end_date="2022-02-05"
+            stage_threshold=3,
+            start_date="2022-02-01",
+            end_date="2022-02-05",
+            device="cpu",
         )
         quarantine_array = quarantine.apply(timer=timer, symptom_stages=symptom_stages)
         assert (quarantine_array == torch.tensor([1, 1, 1, 0, 0])).all()
@@ -39,7 +42,10 @@ class TestQuarantine:
             log_beta_company=torch.tensor(3.0), log_beta_household=torch.tensor(3.0)
         )
         quarantine = Quarantine(
-            stage_threshold=3, start_date="2022-02-01", end_date="2022-03-15"
+            stage_threshold=3,
+            start_date="2022-02-01",
+            end_date="2022-03-15",
+            device="cpu",
         )
         ret = mp(
             data=inf_data,

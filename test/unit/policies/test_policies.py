@@ -1,5 +1,6 @@
 import datetime
 import pytest
+import torch
 
 from torch_june.policies import Policy, Policies
 from torch_june.policies.interaction_policies import (
@@ -10,9 +11,10 @@ from torch_june.policies.interaction_policies import (
 
 class TestPolicies:
     def test__policy(self):
-        policy = Policy(start_date="2022-02-01", end_date="2022-02-05")
+        policy = Policy(start_date="2022-02-01", end_date="2022-02-05", device="cpu")
         assert policy.start_date == datetime.datetime(2022, 2, 1)
         assert policy.end_date == datetime.datetime(2022, 2, 5)
+        assert policy.device == "cpu"
         with pytest.raises(NotImplementedError) as exc_info:
             policy.apply()
 
@@ -23,6 +25,7 @@ class TestPolicies:
                     start_date="2022-02-01",
                     end_date="2022-02-05",
                     beta_factors={"school": 0.5},
+                    device="cpu",
                 )
             ]
         )
@@ -36,16 +39,12 @@ class TestPolicies:
         assert policies.interaction_policies[0].end_date == datetime.datetime(
             2022, 3, 15
         )
-        assert policies.interaction_policies[0].beta_factors == {
-            "school": 0.5,
-            "company": 0.5,
-        }
+        assert policies.interaction_policies[0].beta_factors["school"].item() == 0.5
+        assert policies.interaction_policies[0].beta_factors["company"].item() == 0.5
         assert policies.interaction_policies[1].start_date == datetime.datetime(
             2022, 3, 15
         )
         assert policies.interaction_policies[1].end_date == datetime.datetime(
             2022, 4, 15
         )
-        assert policies.interaction_policies[1].beta_factors == {
-            "leisure": 0.5,
-        }
+        assert policies.interaction_policies[1].beta_factors["leisure"].item() == 0.5

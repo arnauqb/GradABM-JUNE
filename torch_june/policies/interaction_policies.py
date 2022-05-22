@@ -15,16 +15,18 @@ class InteractionPolicies(PolicyCollection):
 
 
 class SocialDistancing(InteractionPolicy):
-    def __init__(self, start_date, end_date, beta_factors):
-        super().__init__(start_date=start_date, end_date=end_date)
+    def __init__(self, start_date, end_date, beta_factors, device):
+        super().__init__(start_date=start_date, end_date=end_date, device=device)
         self.beta_factors = torch.nn.ParameterDict()
         for key in beta_factors:
-            self.beta_factors[key] = torch.nn.Parameter(torch.tensor(beta_factors[key]))
+            self.beta_factors[key] = torch.nn.Parameter(
+                torch.tensor(beta_factors[key], device=device)
+            )
         # self.beta_factors = beta_factors
 
     def apply(self, beta, name, timer):
         if self.is_active(timer.date):
-            factor = self.beta_factors.get(name, 1.0)
+            factor = self.beta_factors.get(name, torch.tensor(1.0, device=self.device))
             return beta * factor
         else:
             return beta

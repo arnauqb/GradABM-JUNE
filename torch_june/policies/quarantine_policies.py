@@ -5,8 +5,9 @@ from torch_june.policies.policies import PolicyCollection, Policy
 
 class Quarantine(Policy):
     spec = "quarantine"
-    def __init__(self, start_date, end_date, stage_threshold):
-        super().__init__(start_date=start_date, end_date=end_date)
+
+    def __init__(self, start_date, end_date, stage_threshold, device):
+        super().__init__(start_date=start_date, end_date=end_date, device=device)
         self.stage_threshold = stage_threshold
 
     def apply(self, symptom_stages, timer):
