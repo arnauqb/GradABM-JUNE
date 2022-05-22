@@ -2,15 +2,16 @@ from abc import ABC
 import yaml
 import re
 import datetime
+import torch
 
 import torch_june
-
 from torch_june.utils import read_date
 from torch_june.paths import default_config_path
 
 
-class Policy(ABC):
+class Policy(torch.nn.Module):
     def __init__(self, start_date, end_date):
+        super().__init__()
         self.start_date = read_date(start_date)
         self.end_date = read_date(end_date)
 
@@ -29,21 +30,23 @@ class Policy(ABC):
         return self.start_date <= date < self.end_date
 
 
-class PolicyCollection:
+class PolicyCollection(torch.nn.Module):
     def __init__(self, policies: Policy):
         """
         A collection of like policies active on the same date
         """
-        self.policies = policies
+        super().__init__()
+        self.policies = torch.nn.ModuleList(policies)
 
     def __getitem__(self, idx):
         return self.policies[idx]
 
 
-class Policies:
+class Policies(torch.nn.Module):
     def __init__(self, policies=None):
+        super().__init__()
         if policies is None:
-            policies = []
+            policies = torch.nn.ModuleList([])
         self.policies = policies
         from torch_june.policies import (
             InteractionPolicies,

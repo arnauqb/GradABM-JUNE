@@ -10,9 +10,10 @@ class CloseVenue(Policy):
 
     def apply(self, edge_types, timer):
         if self.is_active(timer.date):
-            return [edge for edge in edge_types if edge not in self.edge_type_to_close] 
+            return [edge for edge in edge_types if edge not in self.edge_type_to_close]
         else:
             return edge_types
+
 
 class CloseVenuePolicies(PolicyCollection):
     def apply(self, edge_types, timer):
