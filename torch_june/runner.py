@@ -11,17 +11,17 @@ from torch_june.utils import read_device
 
 
 class Runner:
-    def __init__(self, model, data, timer, n_initial_cases, save_path):
+    def __init__(self, model, data, timer, n_initial_cases, save_path, parameters):
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
         self.n_initial_cases = n_initial_cases
         self.device = model.device
-        self.results = {}
         self.age_bins = torch.tensor([0, 18, 25, 65, 80, 100], device=self.device)
         self.n_agents = data["agent"].id.shape[0]
         self.save_path = Path(save_path)
+        self.parameters = parameters
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -41,6 +41,7 @@ class Runner:
             timer=timer,
             n_initial_cases=params["infection_seed"]["n_initial_cases"],
             save_path=params["save_path"],
+            parameters=params,
         )
 
     @staticmethod
@@ -70,6 +71,9 @@ class Runner:
         symptoms["time_to_next_stage"] = torch.zeros(n_agents, device=device)
         data["agent"].symptoms = symptoms
         return data
+
+    def reset_model(self):
+        self.model = TorchJune.from_parameters(self.parameters)
 
     def backup_infection_data(self, data):
         ret = {}
@@ -141,8 +145,8 @@ class Runner:
         self.set_initial_cases()
         data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
-        cases_by_age = self.get_cases_by_age(data)
-        deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
+        #cases_by_age = self.get_cases_by_age(data)
+        #deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -152,28 +156,29 @@ class Runner:
 
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
-            deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
-            deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            cases_age = self.get_cases_by_age(data)
-            cases_by_age = torch.vstack((cases_by_age, cases_age))
+            #deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
+            #deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
+            #cases_age = self.get_cases_by_age(data)
+            #cases_by_age = torch.vstack((cases_by_age, cases_age))
 
             dates.append(timer.date)
-        self.results = {
+        results = {
             "dates": dates,
             "cases_per_timestep": cases_per_timestep,
-            "deaths_per_timestep": deaths_per_timestep,
+            #"deaths_per_timestep": deaths_per_timestep,
         }
-        for (i, key) in enumerate(self.age_bins[1:]):
-            self.results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        #for (i, key) in enumerate(self.age_bins[1:]):
+        #    results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        return results
 
-    def save_results(self):
+    def save_results(self, results):
         self.save_path.mkdir(exist_ok=True, parents=True)
-        df = pd.DataFrame(index=self.results["dates"])
+        df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
-        for key in self.results:
+        for key in results:
             if key == "dates":
                 continue
-            df[key] = self.results[key].detach().cpu().numpy()
+            df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
 
     def get_deaths_from_symptoms(self, symptoms):

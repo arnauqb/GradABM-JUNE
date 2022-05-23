@@ -128,7 +128,6 @@ class InfectionPassing(MessagePassing):
             # transmissions = transmissions * is_free
             # susceptibilities = susceptibilities * is_free
             # cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
-            # cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
             cumulative_trans = checkpoint(
                 lambda x: self.propagate(x, x=transmissions, y=beta),
                 edge_index,
@@ -136,8 +135,13 @@ class InfectionPassing(MessagePassing):
             )
             rev_edge_index = data["rev_" + edge_type].edge_index
             # people who are not here can't be infected.
-            trans_susc = trans_susc + self.propagate(
-                rev_edge_index, x=cumulative_trans, y=susceptibilities
+            # trans_susc = trans_susc + self.propagate(
+            #    rev_edge_index, x=cumulative_trans, y=susceptibilities
+            # )
+            trans_susc = trans_susc + checkpoint(
+                lambda rv: self.propagate(rv, x=cumulative_trans, y=susceptibilities),
+                rev_edge_index,
+                use_reentrant=False,
             )
             # mask = torch.ones(n_agents, dtype=torch.int, device=device)
             # mask[edge_index[0, :]] = 0
