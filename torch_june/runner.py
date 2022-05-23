@@ -1,14 +1,16 @@
 import torch
 import pickle
 import numpy as np
+import pandas as pd
 import yaml
+from pathlib import Path
 
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
 
 
 class Runner:
-    def __init__(self, model, data, timer, n_initial_cases):
+    def __init__(self, model, data, timer, n_initial_cases, save_path):
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
@@ -16,6 +18,8 @@ class Runner:
         self.n_initial_cases = n_initial_cases
         self.device = model.device
         self.results = {}
+        self.age_bins = torch.tensor([0, 18, 25, 65, 80, 100], device=self.device)
+        self.save_path = Path(save_path)
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -34,6 +38,7 @@ class Runner:
             data=data,
             timer=timer,
             n_initial_cases=params["infection_seed"]["n_initial_cases"],
+            save_path=params["save_path"],
         )
 
     @staticmethod
@@ -155,8 +160,19 @@ class Runner:
             "dates": dates,
             "cases_per_timestep": cases_per_timestep,
             "deaths_per_timestep": deaths_per_timestep,
-            "cases_by_age": cases_by_age,
         }
+        for (i, key) in enumerate(self.age_bins[1:]):
+            self.results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+
+    def save_results(self):
+        self.save_path.mkdir(exist_ok=True, parents=True)
+        df = pd.DataFrame(index=self.results["dates"])
+        df.index.name = "date"
+        for key in self.results:
+            if key == "dates":
+                continue
+            df[key] = self.results[key].detach().cpu().numpy()
+        df.to_csv(self.save_path / "results.csv")
 
     def get_deaths_from_symptoms(self, symptoms):
         return torch.tensor(
@@ -165,11 +181,10 @@ class Runner:
         )
 
     def get_cases_by_age(self, data):
-        ages = torch.tensor([0, 18, 25, 65, 80], device=self.device)
-        ret = torch.zeros(ages.shape[0] - 1, device=self.device)
-        for i in range(1, ages.shape[0]):
-            mask1 = data["agent"].age < ages[i]
-            mask2 = data["agent"].age > ages[i - 1]
+        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
+        for i in range(1, self.age_bins.shape[0]):
+            mask1 = data["agent"].age < self.age_bins[i]
+            mask2 = data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
             ret[i - 1] = ret[i - 1] + data["agent"].is_infected[mask].sum()
         return ret

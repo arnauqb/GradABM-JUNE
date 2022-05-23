@@ -5,6 +5,7 @@ system:
   random_seed: random
 
 data_path: "/Users/arnull/code/torch_june/worlds/data_london.pkl"
+save_path: "./example"
 
 timer:
   total_days: 90
@@ -182,6 +183,4 @@ policies:
           company: 1.0
 
 
-results:
-  age_bins: [0, 18, 25, 65, 80]
 
