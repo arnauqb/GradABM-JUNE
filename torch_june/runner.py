@@ -19,6 +19,7 @@ class Runner:
         self.device = model.device
         self.results = {}
         self.age_bins = torch.tensor([0, 18, 25, 65, 80, 100], device=self.device)
+        self.n_agents = data["agent"].id.shape[0]
         self.save_path = Path(save_path)
 
     @classmethod
