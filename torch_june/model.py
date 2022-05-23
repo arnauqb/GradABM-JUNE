@@ -11,6 +11,7 @@ from torch_june import (
 from torch_june.policies import Policies
 from torch_june.cuda_utils import get_fraction_gpu_used
 from torch_june.paths import default_config_path
+from torch_june.utils import read_device
 
 
 class TorchJune(torch.nn.Module):
@@ -43,6 +44,7 @@ class TorchJune(torch.nn.Module):
 
     @classmethod
     def from_parameters(cls, params):
+        params["system"]["device"] = read_device(params["system"]["device"])
         symptoms_updater = SymptomsUpdater.from_parameters(params)
         policies = Policies.from_parameters(params)
         infection_passing = InfectionPassing.from_parameters(params)

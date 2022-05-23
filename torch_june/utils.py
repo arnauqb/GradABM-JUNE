@@ -7,6 +7,8 @@ import random
 from typing import Union
 from copy import deepcopy
 
+from torch_june.mpi_setup import mpi_rank
+
 
 def read_date(date: Union[str, datetime.datetime]) -> datetime.datetime:
     """
@@ -77,3 +79,8 @@ def fix_seed(seed=None):
     random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+def read_device(device):
+    if device == "mpi_rank":
+        device = f"cuda:{mpi_rank}"
+    return device
