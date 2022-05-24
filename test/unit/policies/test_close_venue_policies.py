@@ -5,7 +5,7 @@ import datetime
 
 from torch_june.policies import CloseVenue, CloseVenuePolicies
 from torch_june.timer import Timer
-from torch_june.message_passing import InfectionPassing
+from torch_june.infection_passing import InfectionPassing
 
 
 class TestCloseVenue:

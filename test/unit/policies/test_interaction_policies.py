@@ -7,7 +7,7 @@ from torch_june.policies.interaction_policies import (
     SocialDistancing,
     InteractionPolicies,
 )
-from torch_june.message_passing import InfectionPassing
+from torch_june.infection_passing import InfectionPassing
 from torch_june.timer import Timer
 
 
@@ -23,7 +23,6 @@ class TestSocialDistancing:
 
     def test__beta_reduction(self, sd, timer):
         while timer.date < timer.final_date:
-            print("---")
             if timer.date < datetime.datetime(2022, 2, 5):
                 assert np.isclose(
                     sd.apply(beta=torch.tensor(3), name="school", timer=timer).item(),
@@ -56,7 +55,9 @@ class TestSocialDistancing:
             weekend_activities=(("company",),),
         )
         inf_data["agent"]["transmission"] = inf_data["agent"]["transmission"] + 1.0
-        mp = InfectionPassing(log_beta_school=torch.tensor(2.0))
+        mp = InfectionPassing(
+            log_beta_school=torch.tensor(2.0), log_beta_company=torch.tensor(0.0)
+        )
 
         sd1 = SocialDistancing(
             start_date="2022-02-01",

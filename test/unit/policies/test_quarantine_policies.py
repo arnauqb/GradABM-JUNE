@@ -3,7 +3,7 @@ import numpy as np
 
 from torch_june.policies import Quarantine, QuarantinePolicies, quarantine_policies
 from torch_june.timer import Timer
-from torch_june.message_passing import InfectionPassing
+from torch_june.infection_passing import InfectionPassing
 
 
 class TestQuarantine:

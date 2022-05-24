@@ -42,14 +42,12 @@ class TestModel:
         random_cases = torch.rand(1)[0]
         loss = loss_fn(cases, random_cases)
         loss.backward()
-        parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
-            for at in ["company", "school", "household", "leisure"]
-        ]
-        assert parameters[0].grad is not None
-        assert parameters[0].grad != 0
-        assert parameters[1].grad is not None
-        assert parameters[1].grad != 0
+        beta = model.infection_passing.log_betas_dict["log_beta_company"]
+        assert beta.grad is not None
+        assert beta.grad != 0
+        beta = model.infection_passing.log_betas_dict["log_beta_school"]
+        assert beta.grad is not None
+        assert beta.grad != 0
 
     @fixture(name="data2")
     def setup_data(self, inf_data):
@@ -76,7 +74,7 @@ class TestModel:
             weekday_step_duration=(24,),
             weekday_activities=(("company", "school"),),
         )
-        for i in range(4): # make sure someone gets infected.
+        for i in range(4):  # make sure someone gets infected.
             data = model(timer=timer, data=data)
         cases = data["agent"]["is_infected"]
         assert cases.sum() > 0
@@ -92,8 +90,8 @@ class TestModel:
         assert cases[k] == 1.0
 
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.log_beta_company
-        p_school = model.infection_passing.log_beta_school
+        p_company = model.infection_passing.log_betas_dict["log_beta_company"]
+        p_school = model.infection_passing.log_betas_dict["log_beta_school"]
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad != 0.0
@@ -130,8 +128,8 @@ class TestModel:
                 # break
         assert reached
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.log_beta_company
-        p_school = model.infection_passing.log_beta_school
+        p_company = model.infection_passing.log_betas_dict["log_beta_company"]
+        p_school = model.infection_passing.log_betas_dict["log_beta_school"]
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad == 0
@@ -153,7 +151,7 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            getattr(model.infection_passing, "log_beta_" + at)
+            model.infection_passing.log_betas_dict["log_beta_" + at]
             for at in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
