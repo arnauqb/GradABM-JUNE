@@ -136,3 +136,4 @@ worlds
 example_scripts/**/*
 !example_scripts/*
 !example_scripts/**/*.py
+configs/tests.yaml
