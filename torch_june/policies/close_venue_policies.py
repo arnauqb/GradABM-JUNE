@@ -6,7 +6,7 @@ class CloseVenue(Policy):
 
     def __init__(self, start_date, end_date, names, device):
         super().__init__(start_date=start_date, end_date=end_date, device=device)
-        self.edge_type_to_close = set([f"attends_{name}" for name in names])
+        self.edge_type_to_close = set([f"{name}" for name in names])
 
     def apply(self, edge_types, timer):
         if self.is_active(timer.date):

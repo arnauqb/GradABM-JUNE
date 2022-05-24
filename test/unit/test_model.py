@@ -3,20 +3,25 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from torch_june import TorchJune, Timer, InfectionPassing
+from torch_june import TorchJune, Timer
+from torch_june.infection_networks.base import (
+    CompanyNetwork,
+    SchoolNetwork,
+    LeisureNetwork,
+    HouseholdNetwork,
+    InfectionNetworks,
+)
 
 
 class TestModel:
     @fixture(name="model")
     def make_model(self):
-        log_beta_priors = {
-            "log_beta_company": torch.tensor(1.0, requires_grad=True),
-            "log_beta_school": torch.tensor(0.0, requires_grad=True),
-            "log_beta_household": torch.tensor(3.0, requires_grad=True),
-            "log_beta_leisure": torch.tensor(0.0, requires_grad=True),
-        }
-        infection_passing = InfectionPassing(**log_beta_priors)
-        model = TorchJune(infection_passing=infection_passing)
+        cn = CompanyNetwork(log_beta=1.0)
+        hn = HouseholdNetwork(log_beta=3.0)
+        sn = SchoolNetwork(log_beta=0.0)
+        ln = LeisureNetwork(log_beta=0.0)
+        networks = InfectionNetworks(household=hn, company=cn, leisure=ln, school=sn)
+        model = TorchJune(infection_networks=networks)
         return model
 
     def test__run_model(self, model, inf_data, timer):
@@ -42,10 +47,10 @@ class TestModel:
         random_cases = torch.rand(1)[0]
         loss = loss_fn(cases, random_cases)
         loss.backward()
-        beta = model.infection_passing.log_betas_dict["log_beta_company"]
+        beta = model.infection_networks["company"].log_beta
         assert beta.grad is not None
         assert beta.grad != 0
-        beta = model.infection_passing.log_betas_dict["log_beta_school"]
+        beta = model.infection_networks["school"].log_beta
         assert beta.grad is not None
         assert beta.grad != 0
 
@@ -90,8 +95,8 @@ class TestModel:
         assert cases[k] == 1.0
 
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.log_betas_dict["log_beta_company"]
-        p_school = model.infection_passing.log_betas_dict["log_beta_school"]
+        p_company = model.infection_networks["company"].log_beta
+        p_school = model.infection_networks["school"].log_beta
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad != 0.0
@@ -128,8 +133,8 @@ class TestModel:
                 # break
         assert reached
         cases[k].backward(retain_graph=True)
-        p_company = model.infection_passing.log_betas_dict["log_beta_company"]
-        p_school = model.infection_passing.log_betas_dict["log_beta_school"]
+        p_company = model.infection_networks["company"].log_beta
+        p_school = model.infection_networks["school"].log_beta
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
         assert school_grad == 0
@@ -151,8 +156,8 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            model.infection_passing.log_betas_dict["log_beta_" + at]
-            for at in ["company", "school", "household", "leisure"]
+            model.infection_networks[name].log_beta
+            for name in ["company", "school", "household", "leisure"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
         assert len(grads) == 2

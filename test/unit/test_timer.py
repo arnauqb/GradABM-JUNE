@@ -56,17 +56,17 @@ class TestTimer:
             next(timer)
         assert timer.is_weekend is True
         assert timer.day_type == "weekend"
-        assert timer.activities == ("residence",)
+        assert timer.activities == ("household",)
         next(timer)
         assert timer.day_type == "weekend"
         assert timer.is_weekend is True
-        assert timer.activities == ("residence",)
+        assert timer.activities == ("household",)
         next(timer)
         assert timer.is_weekend is False
         assert timer.day_type == "weekday"
         assert timer.activities == (
-            "primary_activity",
-            "residence",
+            "school",
+            "household",
         )
 
     def test__read_from_file(self):
@@ -81,3 +81,47 @@ class TestTimer:
         assert timer.weekend_activities == {0: ["leisure", "care_home", "household"]}
         assert timer.day_of_week == "Tuesday"
         assert timer.day_type == "weekday"
+
+    def test__activity_hierarchy(self, timer):
+        activities = [
+            "household",
+            "company",
+            "leisure",
+            "school",
+        ]
+        sorted = timer._apply_activity_hierarchy(activities)
+        assert sorted == [
+            "school",
+            "company",
+            "leisure",
+            "household",
+        ]
+
+    def test_get_activity_order(self, timer):
+        assert timer.day_of_week == "Tuesday"
+        assert set(timer.get_activity_order()) == set(
+            [
+                "school",
+                "household",
+            ]
+        )
+        next(timer)
+        assert timer.get_activity_order() == [
+            "leisure",
+            "household",
+        ]
+        next(timer)
+        assert timer.get_activity_order() == [
+            "school", "household",
+        ]
+        while not timer.is_weekend:
+            next(timer)
+        assert timer.is_weekend
+        assert timer.get_activity_order() == [
+            "household",
+        ]
+        next(timer)
+        assert timer.get_activity_order() == [
+            "household",
+        ]
+

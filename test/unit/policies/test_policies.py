@@ -19,7 +19,7 @@ class TestPolicies:
             policy.apply()
 
     def test__p_collection(self):
-        policies = Policies(
+        policies = Policies.from_policy_list(
             [
                 SocialDistancing(
                     start_date="2022-02-01",

@@ -44,25 +44,40 @@ class PolicyCollection(torch.nn.Module):
 
 
 class Policies(torch.nn.Module):
-    def __init__(self, policies=None):
+    def __init__(
+        self,
+        interaction_policies=None,
+        quarantine_policies=None,
+        close_venue_policies=None,
+    ):
         super().__init__()
+        self.interaction_policies = interaction_policies
+        self.quarantine_policies = quarantine_policies
+        self.close_venue_policies = close_venue_policies
+
+    @classmethod
+    def from_policy_list(cls, policies):
         if policies is None:
             policies = torch.nn.ModuleList([])
-        self.policies = policies
         from torch_june.policies import (
             InteractionPolicies,
             QuarantinePolicies,
             CloseVenuePolicies,
         )
 
-        self.interaction_policies = InteractionPolicies(
-            self._get_policies_by_type(policies, "interaction")
+        interaction_policies = InteractionPolicies(
+            cls._get_policies_by_type(policies, "interaction")
         )
-        self.quarantine_policies = QuarantinePolicies(
-            self._get_policies_by_type(policies, "quarantine")
+        quarantine_policies = QuarantinePolicies(
+            cls._get_policies_by_type(policies, "quarantine")
         )
-        self.close_venue_policies = CloseVenuePolicies(
-            self._get_policies_by_type(policies, "close_venue")
+        close_venue_policies = CloseVenuePolicies(
+            cls._get_policies_by_type(policies, "close_venue")
+        )
+        return cls(
+            interaction_policies=interaction_policies,
+            quarantine_policies=quarantine_policies,
+            close_venue_policies=close_venue_policies,
         )
 
     @classmethod
@@ -78,8 +93,10 @@ class Policies(torch.nn.Module):
         policies = []
         for policy_collection in policy_params.values():
             for policy_name, policy_config in policy_collection.items():
-                policies += cls._parse_policy_config(policy_config, name=policy_name, device=device)
-        return cls(policies)
+                policies += cls._parse_policy_config(
+                    policy_config, name=policy_name, device=device
+                )
+        return cls.from_policy_list(policies)
 
     @staticmethod
     def _parse_policy_config(config, name, device):
@@ -98,5 +115,12 @@ class Policies(torch.nn.Module):
             policies.append(policy_class(**config, device=device))
         return policies
 
-    def _get_policies_by_type(self, policies, type):
+    @classmethod
+    def _get_policies_by_type(cls, policies, type):
         return [policy for policy in policies if policy.spec == type]
+
+    def apply(self, data, timer):
+        if self.quarantine_policies:
+            self.quarantine_policies.apply(
+                timer=timer, symptom_stages=data["agent"]["symptoms"]["current_stage"]
+            )

@@ -34,13 +34,19 @@ timer:
 infection_seed:
   n_initial_cases: 200
 
-interaction:
-  log_beta_household: -0.4
-  log_beta_company: -0.3
-  log_beta_school: -0.3
-  log_beta_leisure: -1.2
-  log_beta_university: -0.5
-  log_beta_care_home: -0.4
+networks:
+  household:
+    log_beta: -0.4
+  company:
+    log_beta: -0.3
+  school:
+    log_beta: -0.3
+  leisure:
+    log_beta: -1.2
+  university:
+    log_beta: -0.5
+  care_home:
+    log_beta: -0.4
 
 policies:
   interaction:

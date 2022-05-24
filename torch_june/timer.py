@@ -11,6 +11,15 @@ from torch_june.paths import default_config_path
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
+activity_hierarchy = [
+    "school",
+    "university",
+    "company",
+    "care_home",
+    "leisure",
+    "household",
+]
+
 
 class Timer:
     def __init__(
@@ -20,10 +29,10 @@ class Timer:
         weekday_step_duration: List[int] = (12, 12),
         weekend_step_duration: List[int] = (24,),
         weekday_activities: List[List[str]] = (
-            ("primary_activity", "residence"),
-            ("residence",),
+            ("school", "household"),
+            ("leisure", "household",),
         ),
-        weekend_activities: List[List[str]] = (("residence",),),
+        weekend_activities: List[List[str]] = (("household",),),
     ):
 
         self.initial_date = datetime.datetime(
@@ -119,3 +128,23 @@ class Timer:
             self.shift = 0
         self.delta_time = datetime.timedelta(hours=self.shift_duration)
         return self.date
+
+    def _apply_activity_hierarchy(self, activities):
+        """
+        Returns a list of activities with the right order,
+        obeying the permanent activity hierarcy and shuflling
+        the random one.
+
+        Parameters
+        ----------
+        activities:
+            list of activities that take place at a given time step
+        Returns
+        -------
+        Ordered list of activities according to hierarchy
+        """
+        activities.sort(key=lambda x: activity_hierarchy.index(x))
+        return activities
+
+    def get_activity_order(self):
+        return self._apply_activity_hierarchy(list(self.activities))

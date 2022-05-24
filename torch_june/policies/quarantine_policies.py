@@ -19,8 +19,15 @@ class Quarantine(Policy):
 
 
 class QuarantinePolicies(PolicyCollection):
+    def __init__(self, policies):
+        super().__init__(policies)
+        self.quarantine_mask = 1.0
+
     def apply(self, symptom_stages, timer):
-        ret = torch.ones(symptom_stages.shape, device=symptom_stages.device)
+        self.quarantine_mask = torch.ones(
+            symptom_stages.shape, device=symptom_stages.device
+        )
         for policy in self.policies:
-            ret = ret * policy.apply(symptom_stages=symptom_stages, timer=timer)
-        return ret
+            self.quarantine_mask = self.quarantine_mask * policy.apply(
+                symptom_stages=symptom_stages, timer=timer
+            )

@@ -1,12 +1,23 @@
 import torch
+import pytest
 import numpy as np
 
-from torch_june.policies import Quarantine, QuarantinePolicies, quarantine_policies
+from torch_june.policies import Quarantine, QuarantinePolicies, Policies
 from torch_june.timer import Timer
-from torch_june.infection_passing import InfectionPassing
+from torch_june.infection_networks.base import (
+    CompanyNetwork,
+    HouseholdNetwork,
+    InfectionNetworks,
+)
 
 
 class TestQuarantine:
+    @pytest.fixture(name="networks")
+    def make_networks(self):
+        cn = CompanyNetwork(log_beta=3.0)
+        hn = HouseholdNetwork(log_beta=3.0)
+        return InfectionNetworks(household=hn, company=cn)
+
     def test__match_symptoms(self):
         symptom_stages = torch.tensor([0, 1, 2, 3, 4])
         timer = Timer(
@@ -26,7 +37,7 @@ class TestQuarantine:
         quarantine_array = quarantine.apply(timer=timer, symptom_stages=symptom_stages)
         assert (quarantine_array == torch.tensor([1, 1, 1, 0, 0])).all()
 
-    def test__integration(self, inf_data):
+    def test__integration(self, inf_data, networks):
         timer = Timer(
             initial_day="2022-02-01",
             total_days=10,
@@ -38,29 +49,23 @@ class TestQuarantine:
         inf_data["agent"]["transmission"] = inf_data["agent"]["transmission"] + 1.0
         n_agents = inf_data["agent"].id.shape[0]
         inf_data["agent"]["symptoms"]["current_stage"] = 5 * torch.ones(n_agents)
-        mp = InfectionPassing(
-            log_beta_company=torch.tensor(3.0), log_beta_household=torch.tensor(3.0)
-        )
         quarantine = Quarantine(
             stage_threshold=3,
             start_date="2022-02-01",
             end_date="2022-03-15",
             device="cpu",
         )
-        ret = mp(
-            data=inf_data,
-            timer=timer,
-            quarantine_policies=QuarantinePolicies([quarantine]),
-        )
+        policies = Policies.from_policy_list([quarantine])
+        ret = networks(data=inf_data, timer=timer, policies=policies)
         assert np.isclose(
             ret.sum().detach(), n_agents
         )  # No-one gets infected since they all quarantine
         while not timer.is_weekend:
             next(timer)
-        ret = mp(
+        ret = networks(
             data=inf_data,
             timer=timer,
-            quarantine_policies=QuarantinePolicies([quarantine]),
+            policies=policies,
         )
         assert np.isclose(
             ret.sum().detach().item(), 10.0
