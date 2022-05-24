@@ -16,7 +16,11 @@ activity_hierarchy = [
     "university",
     "company",
     "care_home",
-    "leisure",
+    "pub",
+    "gym",
+    "grocery",
+    "visit",
+    "cinema",
     "household",
 ]
 
@@ -30,7 +34,7 @@ class Timer:
         weekend_step_duration: List[int] = (24,),
         weekday_activities: List[List[str]] = (
             ("school", "household"),
-            ("leisure", "household",),
+            ("pub", "household",),
         ),
         weekend_activities: List[List[str]] = (("household",),),
     ):

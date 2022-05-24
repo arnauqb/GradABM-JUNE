@@ -22,12 +22,12 @@ timer:
       - company
       - school
       - university
-      - leisure
+      - pub 
       - care_home
       - household
     weekend:
       0:
-      - leisure
+      - pub
       - care_home
       - household
 
@@ -41,7 +41,7 @@ networks:
     log_beta: -0.3
   school:
     log_beta: -0.3
-  leisure:
+  pub:
     log_beta: -1.2
   university:
     log_beta: -0.5

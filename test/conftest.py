@@ -66,8 +66,8 @@ def make_data(agent_data):
     data["school"].people = 25 * torch.ones(4)
     data["company"].id = torch.arange(0, 4)
     data["company"].people = 25 * torch.ones(4)
-    data["leisure"].id = torch.arange(0, 4)
-    data["leisure"].people = 25 * torch.ones(4)
+    #data["leisure"].id = torch.arange(0, 4)
+    #data["leisure"].people = 25 * torch.ones(4)
     data["household"].id = torch.arange(0, 25)
     data["household"].people = 4 * torch.ones(25)
     data["agent", "attends_school", "school"].edge_index = torch.vstack(
@@ -76,9 +76,9 @@ def make_data(agent_data):
     data["agent", "attends_company", "company"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
     )
-    data["agent", "attends_leisure", "leisure"].edge_index = torch.vstack(
-        (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
-    )
+    #data["agent", "attends_leisure", "leisure"].edge_index = torch.vstack(
+    #    (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
+    #)
     data["agent", "attends_household", "household"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 25), 4)))
     )

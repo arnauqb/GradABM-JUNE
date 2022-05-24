@@ -76,9 +76,9 @@ class TestTimer:
         assert timer.weekday_step_duration == {0: 24}
         assert timer.weekend_step_duration == {0: 24}
         assert timer.weekday_activities == {
-            0: ["company", "school", "university", "leisure", "care_home", "household"]
+            0: ["company", "school", "university", "pub", "care_home", "household"]
         }
-        assert timer.weekend_activities == {0: ["leisure", "care_home", "household"]}
+        assert timer.weekend_activities == {0: ["pub", "care_home", "household"]}
         assert timer.day_of_week == "Tuesday"
         assert timer.day_type == "weekday"
 
@@ -86,14 +86,14 @@ class TestTimer:
         activities = [
             "household",
             "company",
-            "leisure",
+            "pub",
             "school",
         ]
         sorted = timer._apply_activity_hierarchy(activities)
         assert sorted == [
             "school",
             "company",
-            "leisure",
+            "pub",
             "household",
         ]
 
@@ -107,7 +107,7 @@ class TestTimer:
         )
         next(timer)
         assert timer.get_activity_order() == [
-            "leisure",
+            "pub",
             "household",
         ]
         next(timer)

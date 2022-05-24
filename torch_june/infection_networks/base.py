@@ -15,10 +15,14 @@ class InfectionNetwork(MessagePassing):
         self.log_beta = torch.nn.Parameter(torch.tensor(log_beta))
         self.name = self._get_name()
 
-    def _get_name(self):
-        return "_".join(
-            re.findall("[A-Z][^A-Z]*", self.__class__.__name__)[:-1]
-        ).lower()
+    @classmethod
+    def from_parameters(cls, params):
+        device = params["system"]["device"]
+        return cls(device=device, **params["networks"][cls._get_name()])
+
+    @classmethod
+    def _get_name(cls):
+        return "_".join(re.findall("[A-Z][^A-Z]*", cls.__name__)[:-1]).lower()
 
     def _get_edge_index(self, data):
         return data["attends_" + self.name].edge_index
@@ -26,21 +30,25 @@ class InfectionNetwork(MessagePassing):
     def _get_reverse_edge_index(self, data):
         return data["rev_attends_" + self.name].edge_index
 
-    def _get_beta(self, policies, timer):
+    def _get_beta(self, policies, timer, data):
         interaction_policies = policies.interaction_policies
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
+        beta = beta * torch.ones(len(data[self.name]["id"]), device=self.device)
         return beta
 
-    def _get_transmissions(self, data, policies):
+    def _get_people_per_group(self, data):
+        return data[self.name]["people"]
+
+    def _get_transmissions(self, data, policies, timer):
         if policies.quarantine_policies:
             mask = policies.quarantine_policies.quarantine_mask
         else:
             mask = 1.0
         return mask * data["agent"].transmission
 
-    def _get_susceptibilities(self, data, policies):
+    def _get_susceptibilities(self, data, policies, timer):
         if policies.quarantine_policies:
             mask = policies.quarantine_policies.quarantine_mask
         else:
@@ -49,10 +57,8 @@ class InfectionNetwork(MessagePassing):
 
     def forward(self, data, timer, policies):
         edge_index = self._get_edge_index(data)
-        beta = self._get_beta(policies=policies, timer=timer)
-        beta = beta * torch.ones(len(data[self.name]["id"]), device=self.device)
-        print(beta)
-        people_per_group = data[self.name]["people"]
+        beta = self._get_beta(policies=policies, timer=timer, data=data)
+        people_per_group = self._get_people_per_group(data)
         p_contact = torch.maximum(
             torch.minimum(
                 1.0 / (people_per_group - 1), torch.tensor(1.0, device=self.device)
@@ -60,10 +66,13 @@ class InfectionNetwork(MessagePassing):
             torch.tensor(0.0, device=self.device),
         )  # assumes constant n of contacts, change this in the future
         beta = beta * p_contact
-        print(beta)
         # remove people who are not really in this group
-        transmissions = self._get_transmissions(data=data, policies=policies)
-        susceptibilities = self._get_susceptibilities(data=data, policies=policies)
+        transmissions = self._get_transmissions(
+            data=data, policies=policies, timer=timer
+        )
+        susceptibilities = self._get_susceptibilities(
+            data=data, policies=policies, timer=timer
+        )
         cumulative_trans = checkpoint(
             lambda x: self.propagate(x, x=transmissions, y=beta),
             edge_index,
@@ -98,8 +107,8 @@ class InfectionNetworks(torch.nn.Module):
         for key in network_params:
             network_name = "".join(word.title() for word in key.split("_"))
             network_name = network_name + "Network"
-            network_class = getattr(torch_june.infection_networks.base, network_name)
-            network = network_class(**network_params[key])
+            network_class = getattr(torch_june.infection_networks, network_name)
+            network = network_class.from_parameters(params)
             network_dict[key] = network
         return cls(device=device, **network_dict)
 
@@ -135,10 +144,10 @@ class InfectionNetworks(torch.nn.Module):
 
 
 class HouseholdNetwork(InfectionNetwork):
-    def _get_transmissions(self, data, policies):
+    def _get_transmissions(self, data, policies, timer):
         return data["agent"].transmission
 
-    def _get_susceptibilities(self, data, policies):
+    def _get_susceptibilities(self, data, policies, timer):
         return data["agent"].susceptibility
 
     pass
@@ -157,8 +166,4 @@ class CompanyNetwork(InfectionNetwork):
 
 
 class UniversityNetwork(InfectionNetwork):
-    pass
-
-
-class LeisureNetwork(InfectionNetwork):
     pass

@@ -4,10 +4,9 @@ import torch
 import torch_geometric.transforms as T
 
 from torch_june import TorchJune, Timer
-from torch_june.infection_networks.base import (
+from torch_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
-    LeisureNetwork,
     HouseholdNetwork,
     InfectionNetworks,
 )
@@ -19,8 +18,7 @@ class TestModel:
         cn = CompanyNetwork(log_beta=1.0)
         hn = HouseholdNetwork(log_beta=3.0)
         sn = SchoolNetwork(log_beta=0.0)
-        ln = LeisureNetwork(log_beta=0.0)
-        networks = InfectionNetworks(household=hn, company=cn, leisure=ln, school=sn)
+        networks = InfectionNetworks(household=hn, company=cn, school=sn)
         model = TorchJune(infection_networks=networks)
         return model
 
@@ -38,7 +36,7 @@ class TestModel:
             initial_day="2022-02-01",
             total_days=10,
             weekday_step_duration=(24,),
-            weekday_activities=(("company", "school", "leisure", "household"),),
+            weekday_activities=(("company", "school", "household"),),
         )
         results = model(timer=timer, data=inf_data)
         cases = results["agent"]["is_infected"].sum()
@@ -157,7 +155,7 @@ class TestModel:
         log_likelihood.backward()
         parameters = [
             model.infection_networks[name].log_beta
-            for name in ["company", "school", "household", "leisure"]
+            for name in ["company", "school", "household"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
         assert len(grads) == 2
