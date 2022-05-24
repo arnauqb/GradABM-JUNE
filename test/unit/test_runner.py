@@ -46,9 +46,12 @@ class TestRunner:
         assert runner.data["agent"].symptoms["time_to_next_stage"].sum().item() == 0
 
     def test__run_model(self, runner):
-        runner.run()
-        results = runner.results
+        results = runner.run()
         assert len(results["dates"]) == 91
         assert len(results["cases_per_timestep"]) == 91
         assert len(results["deaths_per_timestep"]) == 91
-        assert results["cases_by_age"].shape == torch.Size([91, 4])
+        assert len(results["cases_by_age_18"]) == 91
+        assert len(results["cases_by_age_25"]) == 91
+        assert len(results["cases_by_age_65"]) == 91
+        assert len(results["cases_by_age_80"]) == 91
+        assert len(results["cases_by_age_100"]) == 91
