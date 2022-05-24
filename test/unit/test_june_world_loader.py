@@ -3,17 +3,14 @@ import pytest
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.june_world_loader import (
-    AgentDataLoader,
-    CareHomeNetworkLoader,
-    HouseholdNetworkLoader,
-    CareHomeNetworkLoader,
-    CompanyNetworkLoader,
-    SchoolNetworkLoader,
-    UniversityNetworkLoader,
-    LeisureNetworkLoader,
-    GraphLoader,
-)
+from torch_june.june_world_loader.agent_data_loader import AgentDataLoader
+from torch_june.june_world_loader.graph_loader import GraphLoader
+from torch_june.june_world_loader.household_loader import HouseholdNetworkLoader
+from torch_june.june_world_loader.care_home_loader import CareHomeNetworkLoader
+from torch_june.june_world_loader.company_loader import CompanyNetworkLoader
+from torch_june.june_world_loader.school_loader import SchoolNetworkLoader
+from torch_june.june_world_loader.university_loader import UniversityNetworkLoader
+from torch_june.june_world_loader.leisure_loader import LeisureNetworkLoader
 
 
 class TestLoadAgentData:
@@ -124,8 +121,8 @@ class TestLeisureNetwork:
         leisure_loader.load_network(data)
         assert len(data["attends_leisure"]["edge_index"][0]) > 1500
         assert len(data["leisure"]["id"]) == 3
-        assert data["leisure"]["people"][0] == 769 
-        assert data["leisure"]["people"][2] == 769 
+        assert data["leisure"]["people"][0] == 769
+        assert data["leisure"]["people"][2] == 769
 
 
 class TestLoadGraph:
