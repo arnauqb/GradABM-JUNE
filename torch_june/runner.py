@@ -7,7 +7,6 @@ from pathlib import Path
 
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
-from torch_june.utils import read_device
 
 
 class Runner:
@@ -40,7 +39,6 @@ class Runner:
 
     @classmethod
     def from_parameters(cls, params):
-        params["system"]["device"] = read_device(params["system"]["device"])
         model = TorchJune.from_parameters(params)
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
