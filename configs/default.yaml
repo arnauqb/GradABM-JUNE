@@ -4,24 +4,34 @@ system:
   device: cpu
   random_seed: random
 
-data_path: "@torch_june/test/data/data.pkl"
-save_path: "./example"
+data_path: '@torch_june/test/data/data.pkl'
+
+save_path: ./example
 
 timer:
   total_days: 90
-  initial_day: "2022-02-01" 
-  step_duration: 
-      weekday:
-          0: 24
-      weekend:
-          0: 24 
+  initial_day: '2022-02-01'
+  step_duration:
+    weekday:
+      0: 24
+    weekend:
+      0: 24
   step_activities:
-      weekday:
-          0: ["company", "school", "university", "leisure", "care_home", "household"] 
-      weekend:
-          0: ["leisure", "care_home", "household"] 
+    weekday:
+      0:
+      - company
+      - school
+      - university
+      - leisure
+      - care_home
+      - household
+    weekend:
+      0:
+      - leisure
+      - care_home
+      - household
 
-infection_seed: 
+infection_seed:
   n_initial_cases: 200
 
 interaction:
@@ -31,6 +41,28 @@ interaction:
   log_beta_leisure: -1.2
   log_beta_university: -0.5
   log_beta_care_home: -0.4
+
+policies:
+  interaction:
+    social_distancing:
+      1:
+        start_date: 2022-02-15
+        end_date: 2022-03-15
+        beta_factors:
+          school: 0.5
+          company: 0.5
+      2:
+        start_date: 2022-03-15
+        end_date: 2022-04-15
+        beta_factors:
+          leisure: 0.5
+      3:
+        start_date: 2023-04-15
+        end_date: 2022-05-15
+        beta_factors:
+          leisure: 0.5
+          school: 1.0
+          company: 1.0
 
 transmission:
   max_infectiousness:
@@ -51,136 +83,302 @@ transmission:
     scale: 0.1
 
 symptoms:
-    stages : 
-        - recovered
-        - susceptible
-        - exposed
-        - infectious
-        - symptomatic
-        - severe
-        - critical
-        - dead
+  stages:
+  - recovered
+  - susceptible
+  - exposed
+  - infectious
+  - symptomatic
+  - severe
+  - critical
+  - dead
+  stage_transition_probabilities:
+    recovered:
+      0-100: 0.0
+    susceptible:
+      0-100: 0.0
+    exposed:
+      0-100: 0.0
+    infectious:
+      0-10: 0.5
+      10-20: 0.55
+      20-30: 0.6
+      30-40: 0.65
+      40-50: 0.7
+      50-60: 0.75
+      60-70: 0.8
+      70-80: 0.85
+      80-90: 0.9
+      90-100: 0.9
+    symptomatic:
+      0-10: 0.0005
+      10-20: 0.00165
+      20-30: 0.0072
+      30-40: 0.0208
+      40-50: 0.0343
+      50-60: 0.0765
+      60-70: 0.1328
+      70-80: 0.20655
+      80-90: 0.2457
+      90-100: 0.2457
+    severe:
+      0-10: 3.0e-05
+      10-20: 8.0e-05
+      20-30: 0.00036
+      30-40: 0.00104
+      40-50: 0.00216
+      50-60: 0.00933
+      60-70: 0.03639
+      70-80: 0.08923
+      80-90: 0.1742
+      90-100: 0.1742
+    critical:
+      0-10: 2.0e-05
+      10-20: 2.0e-05
+      20-30: 0.0001
+      30-40: 0.00032
+      40-50: 0.00098
+      50-60: 0.00265
+      60-70: 0.00766
+      70-80: 0.02439
+      80-90: 0.08292
+      90-100: 0.1619
+  stage_transition_times:
+    exposed:
+      dist: LogNormal
+      loc: 1.4513971389473608
+      scale: 0.32459284597450133
+    infectious:
+      dist: LogNormal
+      loc: -0.16092839609790693
+      scale: 0.7158750951139896
+    symptomatic:
+      dist: LogNormal
+      loc: 1.667557249282718
+      scale: 0.6625894652794622
+    severe:
+      dist: LogNormal
+      loc: -0.10536051565782628
+      scale: 1.0107676525947895
+    critical:
+      dist: LogNormal
+      loc: 2.278566445372413
+      scale: 0.42819924356646805
+  recovery_times:
+    exposed:
+      dist: LogNormal
+      loc: 1.4513971389473608
+      scale: 0.32459284597450133
+    infectious:
+      dist: LogNormal
+      loc: 2.0491292307716185
+      scale: 0.24622067706923975
+    symptomatic:
+      dist: LogNormal
+      loc: 2.0491292307716185
+      scale: 0.24622067706923975
+    severe:
+      dist: LogNormal
+      loc: 2.8387344001307495
+      scale: 0.3381642741066263
+    critical:
+      dist: LogNormal
+      loc: 2.8387344001307495
+      scale: 0.3381642741066263
 
-    stage_transition_probabilities:
-      # These are not relative transitions. The conversion is done internally.
-      recovered:
-        0-100: 0.0
-      susceptible:
-        0-100: 0.0
-      exposed:
-        0-100: 0.0
-      infectious:
-        0-10: 0.5
-        10-20: 0.55
-        20-30: 0.6
-        30-40: 0.65
-        40-50: 0.7
-        50-60: 0.75
-        60-70: 0.8
-        70-80: 0.85
-        80-90: 0.9
-        90-100: 0.9
-      symptomatic:
-        0-10: 0.0005
-        10-20: 0.00165
-        20-30: 0.00720
-        30-40: 0.02080
-        40-50: 0.03430
-        50-60: 0.07650
-        60-70: 0.13280
-        70-80: 0.20655
-        80-90: 0.24570
-        90-100: 0.24570
-
-      severe:
-        0-10: 0.00003
-        10-20: 0.00008
-        20-30: 0.00036
-        30-40: 0.00104
-        40-50: 0.00216
-        50-60: 0.00933
-        60-70: 0.03639
-        70-80: 0.08923
-        80-90: 0.17420
-        90-100: 0.17420
-
-      critical:
-        0-10: 0.00002
-        10-20: 0.00002
-        20-30: 0.0001
-        30-40: 0.00032
-        40-50: 0.00098
-        50-60: 0.00265
-        60-70: 0.00766
-        70-80: 0.02439
-        80-90: 0.08292
-        90-100: 0.16190
-
-    stage_transition_times:
-      exposed:
-        dist: LogNormal
-        loc: 1.4513971389473608
-        scale: 0.32459284597450133
-      infectious: 
-        dist: LogNormal
-        loc: -0.16092839609790693
-        scale: 0.7158750951139896
-      symptomatic: 
-        dist: LogNormal
-        loc: 1.667557249282718
-        scale: 0.6625894652794622
-      severe: 
-        dist: LogNormal
-        loc: -0.10536051565782628
-        scale: 1.0107676525947895
-      critical: 
-        dist: LogNormal
-        loc: 2.278566445372413
-        scale: 0.42819924356646805
-
-    recovery_times:
-      exposed: 
-        dist: LogNormal
-        loc: 1.4513971389473608
-        scale: 0.32459284597450133
-      infectious: 
-        dist: LogNormal
-        loc: 2.0491292307716185
-        scale: 0.24622067706923975
-      symptomatic:
-        dist: LogNormal
-        loc: 2.0491292307716185
-        scale: 0.24622067706923975
-      severe:
-        dist: LogNormal
-        loc: 2.8387344001307495
-        scale: 0.3381642741066263
-      critical: 
-        dist: LogNormal
-        loc: 2.8387344001307495
-        scale: 0.3381642741066263
-
-policies:
-  interaction:
-    social_distancing:
-      1:
-        start_date: 2022-02-15
-        end_date: 2022-03-15
-        beta_factors: 
-          school : 0.5
-          company: 0.5
-      2:
-        start_date: 2022-03-15
-        end_date: 2022-04-15
-        beta_factors:
-          leisure: 0.5
-      3:
-        start_date: 2023-04-15
-        end_date: 2022-05-15
-        beta_factors:
-          leisure: 0.5
-          school: 1.0
-          company: 1.0
-
-
-
+leisure:
+  pub:
+    weekday:
+      male:
+        0-9: 0.0064
+        9-15: 0.0212
+        15-19: 0.0252
+        19-31: 0.1476
+        31-51: 0.0842
+        51-66: 0.1066
+        66-86: 0.03
+        86-100: 0.0066
+      female:
+        0-9: 0.027000000000000003
+        9-15: 0.0294
+        15-19: 0.0716
+        19-31: 0.10880000000000001
+        31-51: 0.08
+        51-66: 0.0818
+        66-86: 0.020200000000000003
+        86-100: 0.004
+    weekend:
+      male:
+        0-9: 0.019
+        9-15: 0.0505
+        15-19: 0.053
+        19-31: 0.1605
+        31-51: 0.131
+        51-66: 0.152
+        66-86: 0.088
+        86-100: 0.0315
+      female:
+        0-9: 0.0215
+        9-15: 0.0405
+        15-19: 0.0705
+        19-31: 0.1255
+        31-51: 0.1155
+        51-66: 0.09
+        66-86: 0.073
+        86-100: 0.03
+  cinema:
+    weekday:
+      male:
+        0-9: 0.0
+        9-15: 0.0054
+        15-19: 0.0012000000000000001
+        19-31: 0.0032
+        31-51: 0.0018
+        51-66: 0.0018
+        66-86: 0.003
+        86-100: 0.0
+      female:
+        0-9: 0.0224
+        9-15: 0.0066
+        15-19: 0.0198
+        19-31: 0.0066
+        31-51: 0.0028
+        51-66: 0.0062
+        66-86: 0.0016
+        86-100: 0.0
+    weekend:
+      male:
+        0-9: 0.0095
+        9-15: 0.0065
+        15-19: 0.0
+        19-31: 0.0
+        31-51: 0.0045
+        51-66: 0.002
+        66-86: 0.005
+        86-100: 0.0
+      female:
+        0-9: 0.0165
+        9-15: 0.007
+        15-19: 0.007
+        19-31: 0.006
+        31-51: 0.0055
+        51-66: 0.005
+        66-86: 0.004
+        86-100: 0.0
+  gym:
+    weekday:
+      male:
+        0-9: 0.0248
+        9-15: 0.046200000000000005
+        15-19: 0.11739999999999999
+        19-31: 0.0804
+        31-51: 0.0548
+        51-66: 0.0536
+        66-86: 0.0206
+        86-100: 0.0038
+      female:
+        0-9: 0.08080000000000001
+        9-15: 0.07339999999999999
+        15-19: 0.033600000000000005
+        19-31: 0.0426
+        31-51: 0.036
+        51-66: 0.0368
+        66-86: 0.0072
+        86-100: 0.0021999999999999997
+    weekend:
+      male:
+        0-9: 0.0925
+        9-15: 0.095
+        15-19: 0.1185
+        19-31: 0.0725
+        31-51: 0.065
+        51-66: 0.073
+        66-86: 0.0445
+        86-100: 0.0
+      female:
+        0-9: 0.037
+        9-15: 0.066
+        15-19: 0.022
+        19-31: 0.0335
+        31-51: 0.0385
+        51-66: 0.0205
+        66-86: 0.0155
+        86-100: 0.002
+  visit:
+    weekday:
+      male:
+        0-9: 0.4624
+        9-15: 0.343
+        15-19: 0.324
+        19-31: 0.2764
+        31-51: 0.1258
+        51-66: 0.1638
+        66-86: 0.1598
+        86-100: 0.09459999999999999
+      female:
+        0-9: 0.4662
+        9-15: 0.3196
+        15-19: 0.5236
+        19-31: 0.274
+        31-51: 0.146
+        51-66: 0.219
+        66-86: 0.2226
+        86-100: 0.0646
+    weekend:
+      male:
+        0-9: 0.562
+        9-15: 0.5535
+        15-19: 0.505
+        19-31: 0.4375
+        31-51: 0.222
+        51-66: 0.228
+        66-86: 0.183
+        86-100: 0.0745
+      female:
+        0-9: 0.7425
+        9-15: 0.657
+        15-19: 0.6075
+        19-31: 0.518
+        31-51: 0.259
+        51-66: 0.2585
+        66-86: 0.2235
+        86-100: 0.101
+  grocery:
+    weekday:
+      male:
+        0-9: 0.028599999999999997
+        9-15: 0.0392
+        15-19: 0.043
+        19-31: 0.0534
+        31-51: 0.0762
+        51-66: 0.079
+        66-86: 0.0392
+        86-100: 0.013000000000000001
+      female:
+        0-9: 0.0472
+        9-15: 0.0526
+        15-19: 0.0648
+        19-31: 0.0984
+        31-51: 0.124
+        51-66: 0.16299999999999998
+        66-86: 0.0492
+        86-100: 0.0182
+    weekend:
+      male:
+        0-9: 0.0535
+        9-15: 0.057
+        15-19: 0.0555
+        19-31: 0.087
+        31-51: 0.1005
+        51-66: 0.1225
+        66-86: 0.0875
+        86-100: 0.041
+      female:
+        0-9: 0.0555
+        9-15: 0.0995
+        15-19: 0.095
+        19-31: 0.1145
+        31-51: 0.133
+        51-66: 0.1405
+        66-86: 0.1145
+        86-100: 0.075
