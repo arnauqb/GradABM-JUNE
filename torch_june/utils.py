@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from pathlib import Path
 from itertools import chain
 from pyro import distributions as dist
 import datetime
@@ -7,6 +8,15 @@ import random
 from typing import Union
 from copy import deepcopy
 
+from torch_june.paths import torch_june_path
+
+
+def read_path(path_str):
+    path = Path(path_str)
+    if path.parts[0] == "@torch_june":
+        path = Path("/".join(path_str.split("/")[1:]))
+        path = torch_june_path / path
+    return path
 
 def read_date(date: Union[str, datetime.datetime]) -> datetime.datetime:
     """

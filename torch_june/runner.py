@@ -7,6 +7,7 @@ from pathlib import Path
 
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
+from torch_june.utils import read_path
 
 
 class Runner:
@@ -54,7 +55,7 @@ class Runner:
     @staticmethod
     def get_data(params):
         device = params["system"]["device"]
-        data_path = params["data_path"]
+        data_path = read_path(params["data_path"])
         with open(data_path, "rb") as f:
             data = pickle.load(f).to(device)
         n_agents = len(data["agent"]["id"])

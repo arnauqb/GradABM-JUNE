@@ -4,7 +4,7 @@ system:
   device: cpu
   random_seed: random
 
-data_path: "/Users/arnull/code/torch_june/worlds/data_london.pkl"
+data_path: "@torch_june/test/data/data.pkl"
 save_path: "./example"
 
 timer:

@@ -11,22 +11,14 @@ from torch_june.paths import default_config_path
 
 
 class TestRunner:
-    @pytest.fixture(name="data_path")
-    def get_data_path(self):
-        data_path = Path(os.path.abspath(__file__)).parent.parent / "data/data.pkl"
-        return data_path
-
     @pytest.fixture(name="runner")
-    def make_runner(self, data_path):
+    def make_runner(self):
         with open(default_config_path, "r") as f:
             parameters = yaml.safe_load(f)
-        parameters["data_path"] = data_path
         return Runner.from_parameters(parameters)
 
-    def test__read_from_file(self, runner, data_path):
+    def test__read_from_file(self, runner):
         file_runner = Runner.from_file()
-        # except data path all params should be equal
-        file_runner.parameters["data_path"] = data_path
         assert file_runner.parameters == runner.parameters
 
     def test__get_data(self, runner):
@@ -77,4 +69,3 @@ class TestRunner:
             if key == "dates":
                 continue
             assert (loaded_results[key] == results[key].numpy()).all()
-
