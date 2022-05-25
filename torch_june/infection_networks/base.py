@@ -56,7 +56,6 @@ class InfectionNetwork(MessagePassing):
         return mask * data["agent"].susceptibility
 
     def forward(self, data, timer, policies):
-        edge_index = self._get_edge_index(data)
         beta = self._get_beta(policies=policies, timer=timer, data=data)
         people_per_group = self._get_people_per_group(data)
         p_contact = torch.maximum(
@@ -73,11 +72,13 @@ class InfectionNetwork(MessagePassing):
         susceptibilities = self._get_susceptibilities(
             data=data, policies=policies, timer=timer
         )
-        cumulative_trans = checkpoint(
-            lambda x: self.propagate(x, x=transmissions, y=beta),
-            edge_index,
-            #use_reentrant=False,
-        )
+        edge_index = self._get_edge_index(data)
+        cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
+        #cumulative_trans = checkpoint(
+        #    lambda x: self.propagate(x, x=transmissions, y=beta),
+        #    edge_index,
+        #    #use_reentrant=False,
+        #)
         rev_edge_index = self._get_reverse_edge_index(data)
         trans_susc = self.propagate(rev_edge_index, x=cumulative_trans, y=susceptibilities)
         #trans_susc = checkpoint(

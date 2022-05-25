@@ -55,12 +55,12 @@ class TorchJune(torch.nn.Module):
 
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
-        not_infected_probs = self.infection_networks(
-            data=data,
-            timer=timer,
-            policies=self.policies,
-        )
-        #not_infected_probs = checkpoint(self.infection_networks, data, timer, self.policies, use_reentrant=False)
+        #not_infected_probs = self.infection_networks(
+        #    data=data,
+        #    timer=timer,
+        #    policies=self.policies,
+        #)
+        not_infected_probs = checkpoint(self.infection_networks, data, timer, self.policies, use_reentrant=False)
         new_infected = self.is_infected_sampler(not_infected_probs)
         data["agent"].susceptibility = torch.maximum(
             torch.tensor(0.0, device=self.device),
