@@ -47,4 +47,8 @@ class TestPolicies:
         assert policies.interaction_policies[1].end_date == datetime.datetime(
             2022, 4, 15
         )
-        assert policies.interaction_policies[1].beta_factors["leisure"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["pub"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["grocery"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["cinema"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["gym"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["visit"].item() == 0.5

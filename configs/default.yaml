@@ -23,11 +23,19 @@ timer:
       - school
       - university
       - pub 
+      - grocery
+      - gym
+      - cinema
+      - visit 
       - care_home
       - household
     weekend:
       0:
       - pub
+      - grocery
+      - gym
+      - cinema
+      - visit 
       - care_home
       - household
 
@@ -42,6 +50,14 @@ networks:
   school:
     log_beta: -0.3
   pub:
+    log_beta: -1.2
+  gym:
+    log_beta: -1.2
+  grocery:
+    log_beta: -1.2
+  visit:
+    log_beta: -1.2
+  cinema:
     log_beta: -1.2
   university:
     log_beta: -0.5
@@ -61,14 +77,20 @@ policies:
         start_date: 2022-03-15
         end_date: 2022-04-15
         beta_factors:
-          leisure: 0.5
+          pub: 0.5
+          cinema: 0.5
+          gym: 0.5
+          grocery: 0.5
+          visit: 0.5
       3:
         start_date: 2023-04-15
         end_date: 2022-05-15
         beta_factors:
-          leisure: 0.5
-          school: 1.0
-          company: 1.0
+          pub: 0.5
+          cinema: 0.5
+          gym: 0.5
+          grocery: 0.5
+          visit: 0.5
 
 transmission:
   max_infectiousness:

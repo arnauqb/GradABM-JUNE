@@ -76,9 +76,22 @@ class TestTimer:
         assert timer.weekday_step_duration == {0: 24}
         assert timer.weekend_step_duration == {0: 24}
         assert timer.weekday_activities == {
-            0: ["company", "school", "university", "pub", "care_home", "household"]
+            0: [
+                "company",
+                "school",
+                "university",
+                "pub",
+                "grocery",
+                "gym",
+                "cinema",
+                "visit",
+                "care_home",
+                "household",
+            ]
         }
-        assert timer.weekend_activities == {0: ["pub", "care_home", "household"]}
+        assert timer.weekend_activities == {
+            0: ["pub", "grocery", "gym", "cinema", "visit", "care_home", "household"]
+        }
         assert timer.day_of_week == "Tuesday"
         assert timer.day_type == "weekday"
 
@@ -112,7 +125,8 @@ class TestTimer:
         ]
         next(timer)
         assert timer.get_activity_order() == [
-            "school", "household",
+            "school",
+            "household",
         ]
         while not timer.is_weekend:
             next(timer)
@@ -124,4 +138,3 @@ class TestTimer:
         assert timer.get_activity_order() == [
             "household",
         ]
-
