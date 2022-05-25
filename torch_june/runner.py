@@ -203,3 +203,12 @@ class Runner:
             mask = mask1 * mask2
             ret[i - 1] = ret[i - 1] + data["agent"].is_infected[mask].sum()
         return ret
+
+    def get_people_by_age(self):
+        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
+        for i in range(1, self.age_bins.shape[0]):
+            mask1 = self.data["agent"].age < self.age_bins[i]
+            mask2 = self.data["agent"].age > self.age_bins[i - 1]
+            mask = mask1 * mask2
+            ret[i - 1] = mask.sum()
+        return ret
