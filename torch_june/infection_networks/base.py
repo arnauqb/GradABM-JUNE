@@ -74,18 +74,20 @@ class InfectionNetwork(MessagePassing):
         )
         edge_index = self._get_edge_index(data)
         cumulative_trans = self.propagate(edge_index, x=transmissions, y=beta)
-        #cumulative_trans = checkpoint(
+        # cumulative_trans = checkpoint(
         #    lambda x: self.propagate(x, x=transmissions, y=beta),
         #    edge_index,
         #    #use_reentrant=False,
-        #)
+        # )
         rev_edge_index = self._get_reverse_edge_index(data)
-        trans_susc = self.propagate(rev_edge_index, x=cumulative_trans, y=susceptibilities)
-        #trans_susc = checkpoint(
+        trans_susc = self.propagate(
+            rev_edge_index, x=cumulative_trans, y=susceptibilities
+        )
+        # trans_susc = checkpoint(
         #    lambda rv: self.propagate(rv, x=cumulative_trans, y=susceptibilities),
         #    rev_edge_index,
         #    #use_reentrant=False,
-        #)
+        # )
         return trans_susc
 
     def message(self, x_j, y_i):
@@ -138,6 +140,7 @@ class InfectionNetworks(torch.nn.Module):
         for activity in activity_order:
             network = self.networks[activity]
             trans_susc += network(data=data, timer=timer, policies=policies)
+            #trans_susc = trans_susc + checkpoint(network, data, timer, policies)
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
         )  # this is necessary to avoid gradient infs

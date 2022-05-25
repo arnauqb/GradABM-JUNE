@@ -68,4 +68,4 @@ class TestRunner:
         for key in results:
             if key == "dates":
                 continue
-            assert (loaded_results[key] == results[key].numpy()).all()
+            assert np.allclose(loaded_results[key], results[key].numpy())
