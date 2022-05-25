@@ -29,6 +29,7 @@ class Runner:
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.n_agents = data["agent"].id.shape[0]
+        self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
         self.parameters = parameters
 
@@ -172,11 +173,13 @@ class Runner:
             dates.append(timer.date)
         results = {
             "dates": dates,
-            "cases_per_timestep": cases_per_timestep,
-            "deaths_per_timestep": deaths_per_timestep,
+            "cases_per_timestep": cases_per_timestep / self.n_agents,
+            "deaths_per_timestep": deaths_per_timestep / self.n_agents,
         }
         for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+            results[f"cases_by_age_{key:02d}"] = (
+                cases_by_age[:, i] / self.population_by_age[i]
+            )
         return results
 
     def save_results(self, results):
