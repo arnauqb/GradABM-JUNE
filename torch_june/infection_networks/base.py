@@ -76,14 +76,15 @@ class InfectionNetwork(MessagePassing):
         cumulative_trans = checkpoint(
             lambda x: self.propagate(x, x=transmissions, y=beta),
             edge_index,
-            use_reentrant=False,
+            #use_reentrant=False,
         )
         rev_edge_index = self._get_reverse_edge_index(data)
-        trans_susc = checkpoint(
-            lambda rv: self.propagate(rv, x=cumulative_trans, y=susceptibilities),
-            rev_edge_index,
-            use_reentrant=False,
-        )
+        trans_susc = self.propagate(rev_edge_index, x=cumulative_trans, y=susceptibilities)
+        #trans_susc = checkpoint(
+        #    lambda rv: self.propagate(rv, x=cumulative_trans, y=susceptibilities),
+        #    rev_edge_index,
+        #    #use_reentrant=False,
+        #)
         return trans_susc
 
     def message(self, x_j, y_i):
