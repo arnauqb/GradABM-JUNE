@@ -97,6 +97,7 @@ class TestModel:
         p_school = model.infection_networks["school"].log_beta
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
+        print(school_grad)
         assert school_grad != 0.0
         assert company_grad == 0.0
 

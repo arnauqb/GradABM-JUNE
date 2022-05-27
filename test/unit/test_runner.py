@@ -51,14 +51,15 @@ class TestRunner:
 
     def test__run_model(self, runner):
         results = runner.run()
-        assert len(results["dates"]) == 91
-        assert len(results["cases_per_timestep"]) == 91
-        assert len(results["deaths_per_timestep"]) == 91
-        assert len(results["cases_by_age_18"]) == 91
-        assert len(results["cases_by_age_25"]) == 91
-        assert len(results["cases_by_age_65"]) == 91
-        assert len(results["cases_by_age_80"]) == 91
-        assert len(results["cases_by_age_100"]) == 91
+        n_timesteps = 16
+        assert len(results["dates"]) == n_timesteps
+        assert len(results["cases_per_timestep"]) == n_timesteps
+        assert len(results["deaths_per_timestep"]) == n_timesteps
+        assert len(results["cases_by_age_18"]) == n_timesteps
+        assert len(results["cases_by_age_25"]) == n_timesteps
+        assert len(results["cases_by_age_65"]) == n_timesteps
+        assert len(results["cases_by_age_80"]) == n_timesteps
+        assert len(results["cases_by_age_100"]) == n_timesteps
 
     def test__save_results(self, runner):
         with torch.no_grad():

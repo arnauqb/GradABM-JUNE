@@ -22,4 +22,9 @@ class IsInfectedSampler(torch.nn.Module):
             temperature=torch.tensor(0.1),
             probs=infected_probs,
         )
-        return dist.rsample()
+        ret = pyro.sample(f"inf_{self.i}", dist)
+        #ret = dist.rsample()
+        #print(ret)
+        self.i += 1
+        return ret
+
