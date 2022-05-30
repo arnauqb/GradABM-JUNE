@@ -88,7 +88,7 @@ class Policies(torch.nn.Module):
 
     @classmethod
     def from_parameters(cls, params):
-        policy_params = params["policies"]
+        policy_params = params.get("policies", {})
         device = params["system"]["device"]
         policies = []
         for policy_collection in policy_params.values():

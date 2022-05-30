@@ -61,9 +61,6 @@ class TorchJune(torch.nn.Module):
             timer=timer,
             policies=self.policies,
         )
-        # not_infected_probs = checkpoint(
-        #    self.infection_networks, data, timer, self.policies, use_reentrant=True
-        # )
         new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
         data["agent"].susceptibility = torch.maximum(
             torch.tensor(0.0, device=self.device),
