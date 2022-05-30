@@ -53,6 +53,7 @@ class Timer:
         self.date = datetime.datetime(*[int(value) for value in initial_day.split("-")])
         self.shift = 0
         self.delta_time = datetime.timedelta(hours=self.shift_duration)
+        self.n_timesteps = 0
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -131,6 +132,7 @@ class Timer:
         if self.previous_date.day != self.date.day:
             self.shift = 0
         self.delta_time = datetime.timedelta(hours=self.shift_duration)
+        self.n_timesteps += 1
         return self.date
 
     def _apply_activity_hierarchy(self, activities):

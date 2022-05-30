@@ -10,7 +10,7 @@ from torch_june import TorchJune, Timer, TransmissionSampler
 from torch_june.utils import read_path
 
 
-class Runner:
+class Runner(torch.nn.Module):
     def __init__(
         self,
         model,
@@ -21,6 +21,7 @@ class Runner:
         parameters,
         age_bins=(0, 18, 25, 65, 80, 100),
     ):
+        super().__init__()
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
@@ -145,7 +146,7 @@ class Runner:
             next_stage, device=self.device
         )
 
-    def run(self):
+    def forward(self):
         timer = self.timer
         model = self.model
         data = self.data

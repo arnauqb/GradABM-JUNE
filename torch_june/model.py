@@ -1,5 +1,6 @@
 import torch
 import yaml
+import pyro
 from torch.utils.checkpoint import checkpoint
 
 from torch_june import (
@@ -56,14 +57,14 @@ class TorchJune(torch.nn.Module):
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
         not_infected_probs = self.infection_networks(
-           data=data,
-           timer=timer,
-           policies=self.policies,
+            data=data,
+            timer=timer,
+            policies=self.policies,
         )
-        #not_infected_probs = checkpoint(
+        # not_infected_probs = checkpoint(
         #    self.infection_networks, data, timer, self.policies, use_reentrant=True
-        #)
-        new_infected = self.is_infected_sampler(not_infected_probs)
+        # )
+        new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
         data["agent"].susceptibility = torch.maximum(
             torch.tensor(0.0, device=self.device),
             data["agent"].susceptibility - new_infected,

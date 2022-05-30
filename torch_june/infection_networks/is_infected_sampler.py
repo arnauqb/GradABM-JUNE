@@ -16,13 +16,17 @@ class my_round_func(torch.autograd.function.InplaceFunction):
 class IsInfectedSampler(torch.nn.Module):
     i = 0
 
-    def forward(self, not_infected_probs):
+    def forward(self, not_infected_probs, time_step):
         infected_probs = 1.0 - not_infected_probs
         dist = distributions.RelaxedBernoulliStraightThrough(
             temperature=torch.tensor(0.1),
             probs=infected_probs,
-        )
-        ret = pyro.sample(f"inf_{self.i}", dist)
+        ).to_event(1)
+        #dist = distributions.Bernoulli(
+        #    probs=infected_probs,
+        #)
+        ret = pyro.sample(f"inf_{time_step}", dist)
+        #print(ret.shape)
         #ret = dist.rsample()
         #print(ret)
         self.i += 1

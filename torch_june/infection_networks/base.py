@@ -1,5 +1,6 @@
 import re
 import yaml
+import pyro
 import torch
 from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv import MessagePassing
@@ -58,6 +59,8 @@ class InfectionNetwork(MessagePassing):
 
     def forward(self, data, timer, policies):
         beta = self._get_beta(policies=policies, timer=timer, data=data)
+        #print(self.__class__.__name__)
+        #print(beta)
         people_per_group = self._get_people_per_group(data)
         p_contact = torch.maximum(
             torch.minimum(
