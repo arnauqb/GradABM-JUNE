@@ -19,7 +19,7 @@ class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs, time_step):
         infected_probs = 1.0 - not_infected_probs
         dist = distributions.RelaxedBernoulliStraightThrough(
-            temperature=torch.tensor(0.1),
+            temperature=torch.tensor(0.01),
             probs=infected_probs,
         ).to_event(1)
         #dist = distributions.Bernoulli(
