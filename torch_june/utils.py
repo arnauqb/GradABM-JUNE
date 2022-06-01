@@ -8,8 +8,10 @@ import random
 from typing import Union
 from copy import deepcopy
 from torch_geometric.data import HeteroData
+import torch_geometric.transforms as T
 
 from torch_june.paths import torch_june_path
+from torch_june.infection_seed import infect_people_at_indices
 
 
 def read_path(path_str):
@@ -92,7 +94,10 @@ def fix_seed(seed=None):
     torch.cuda.manual_seed_all(seed)
 
 
-def create_simple_connected_graph(n_agents):
+def create_simple_connected_graph(n_agents, n_inf):
+    # avoid circular import
+    from torch_june.transmission import TransmissionSampler
+
     data = HeteroData()
     sampler = TransmissionSampler.from_file()
     data["agent"].id = torch.arange(0, n_agents)
@@ -120,4 +125,5 @@ def create_simple_connected_graph(n_agents):
         (data["agent"].id, torch.zeros(n_agents))
     )
     data = T.ToUndirected()(data)
-    return data
+    indices = torch.arange(0, n_inf)
+    return infect_people_at_indices(data, indices)
