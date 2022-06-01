@@ -8,6 +8,7 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from torch_june.transmission import TransmissionSampler
+from torch_june.infection_seed import infect_people_at_indices
 from torch_june.timer import Timer
 
 
@@ -66,8 +67,8 @@ def make_data(agent_data):
     data["school"].people = 25 * torch.ones(4)
     data["company"].id = torch.arange(0, 4)
     data["company"].people = 25 * torch.ones(4)
-    #data["leisure"].id = torch.arange(0, 4)
-    #data["leisure"].people = 25 * torch.ones(4)
+    # data["leisure"].id = torch.arange(0, 4)
+    # data["leisure"].people = 25 * torch.ones(4)
     data["household"].id = torch.arange(0, 25)
     data["household"].people = 4 * torch.ones(25)
     data["agent", "attends_school", "school"].edge_index = torch.vstack(
@@ -83,29 +84,29 @@ def make_data(agent_data):
     return data
 
 
-@fixture(name="person_infector")
-def make_person_infector():
-    def infector(data, indices):
-        susc = data["agent"]["susceptibility"].numpy()
-        is_inf = data["agent"]["is_infected"].numpy()
-        inf_t = data["agent"]["infection_time"].numpy()
-        next_stage = data["agent"]["symptoms"]["next_stage"].numpy()
-        susc[indices] = 0.0
-        is_inf[indices] = 1.0
-        inf_t[indices] = 0.0
-        next_stage[indices] = 2
-        data["agent"]["susceptibility"] = torch.tensor(susc)
-        data["agent"]["is_infected"] = torch.tensor(is_inf)
-        data["agent"]["infection_time"] = torch.tensor(inf_t)
-        data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
-        return data
-
-    return infector
+#@fixture(name="person_infector")
+#def make_person_infector():
+#    def infector(data, indices):
+#        susc = data["agent"]["susceptibility"].numpy()
+#        is_inf = data["agent"]["is_infected"].numpy()
+#        inf_t = data["agent"]["infection_time"].numpy()
+#        next_stage = data["agent"]["symptoms"]["next_stage"].numpy()
+#        susc[indices] = 0.0
+#        is_inf[indices] = 1.0
+#        inf_t[indices] = 0.0
+#        next_stage[indices] = 2
+#        data["agent"]["susceptibility"] = torch.tensor(susc)
+#        data["agent"]["is_infected"] = torch.tensor(is_inf)
+#        data["agent"]["infection_time"] = torch.tensor(inf_t)
+#        data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
+#        return data
+#
+#    return infector
 
 
 @fixture(name="inf_data")
-def make_inf_data(data, person_infector):
-    return person_infector(data, list(range(0, 100, 10)))
+def make_inf_data(data):
+    return infect_people_at_indices(data, list(range(0, 100, 10)))
 
 
 @fixture(name="timer")

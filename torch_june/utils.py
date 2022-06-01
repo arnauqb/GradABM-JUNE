@@ -7,6 +7,7 @@ import datetime
 import random
 from typing import Union
 from copy import deepcopy
+from torch_geometric.data import HeteroData
 
 from torch_june.paths import torch_june_path
 
@@ -17,6 +18,7 @@ def read_path(path_str):
         path = Path("/".join(path_str.split("/")[1:]))
         path = torch_june_path / path
     return path
+
 
 def read_date(date: Union[str, datetime.datetime]) -> datetime.datetime:
     """
@@ -78,6 +80,7 @@ def parse_distribution(dict, device):
     }
     return dist_class(**input)
 
+
 def fix_seed(seed=None):
     if seed is None:
         seed = np.random.randint(0, 1000)
@@ -87,3 +90,34 @@ def fix_seed(seed=None):
     random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def create_simple_connected_graph(n_agents):
+    data = HeteroData()
+    sampler = TransmissionSampler.from_file()
+    data["agent"].id = torch.arange(0, n_agents)
+    data["agent"].age = torch.randint(0, 100, (n_agents,))
+    data["agent"].sex = torch.randint(0, 2, (n_agents,))
+    inf_params = {}
+    inf_params_values = sampler(n_agents)
+    inf_params["max_infectiousness"] = inf_params_values[0]
+    inf_params["shape"] = inf_params_values[1]
+    inf_params["rate"] = inf_params_values[2]
+    inf_params["shift"] = inf_params_values[3]
+    data["agent"].infection_parameters = inf_params
+    data["agent"].transmission = torch.zeros(n_agents)
+    data["agent"].susceptibility = torch.ones(n_agents)
+    data["agent"].is_infected = torch.zeros(n_agents)
+    data["agent"].infection_time = torch.zeros(n_agents)
+    symptoms = {}
+    symptoms["current_stage"] = torch.ones(n_agents, dtype=torch.long)
+    symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long)
+    symptoms["time_to_next_stage"] = torch.zeros(n_agents)
+    data["agent"].symptoms = symptoms
+    data["group"].id = torch.zeros(1)
+    data["group"].people = n_agents
+    data["agent", "attends_group", "group"].edge_index = torch.vstack(
+        (data["agent"].id, torch.zeros(n_agents))
+    )
+    data = T.ToUndirected()(data)
+    return data

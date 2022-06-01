@@ -8,6 +8,7 @@ from pathlib import Path
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
 from torch_june.utils import read_path
+from torch_june.infection_seed import infect_people_at_indices
 
 
 class Runner(torch.nn.Module):
@@ -131,20 +132,7 @@ class Runner(torch.nn.Module):
         indices = np.arange(0, self.data["agent"].id.shape[0])
         np.random.shuffle(indices)
         indices = indices[: self.n_initial_cases]
-        susc = self.data["agent"]["susceptibility"].cpu().numpy()
-        is_inf = self.data["agent"]["is_infected"].cpu().numpy()
-        inf_t = self.data["agent"]["infection_time"].cpu().numpy()
-        next_stage = self.data["agent"]["symptoms"]["next_stage"].cpu().numpy()
-        susc[indices] = 0.0
-        is_inf[indices] = 1.0
-        inf_t[indices] = 0.0
-        next_stage[indices] = 2
-        self.data["agent"]["susceptibility"] = torch.tensor(susc, device=self.device)
-        self.data["agent"]["is_infected"] = torch.tensor(is_inf, device=self.device)
-        self.data["agent"]["infection_time"] = torch.tensor(inf_t, device=self.device)
-        self.data["agent"]["symptoms"]["next_stage"] = torch.tensor(
-            next_stage, device=self.device
-        )
+        return infect_people_at_indices(self.data, indices)
 
     def forward(self):
         timer = self.timer
