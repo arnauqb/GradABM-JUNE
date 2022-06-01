@@ -15,9 +15,9 @@ from torch_june.infection_networks import (
 class TestModel:
     @fixture(name="model")
     def make_model(self):
-        cn = CompanyNetwork(log_beta=1.0)
-        hn = HouseholdNetwork(log_beta=3.0)
-        sn = SchoolNetwork(log_beta=0.0)
+        cn = CompanyNetwork(log_beta=0.5)
+        hn = HouseholdNetwork(log_beta=0.5)
+        sn = SchoolNetwork(log_beta=0.5)
         networks = InfectionNetworks(household=hn, company=cn, school=sn)
         model = TorchJune(infection_networks=networks)
         return model
@@ -65,6 +65,10 @@ class TestModel:
         data["agent", "attends_company", "company"].edge_index = torch.vstack(
             (torch.arange(50, 100), torch.zeros(50, dtype=torch.long))
         )
+        # delete reverse before rebuilding it.
+        del data["rev_attends_school"]
+        del data["rev_attends_company"]
+        del data["rev_attends_household"]
         data = T.ToUndirected()(data)
         is_inf = data["agent"].is_infected.numpy()
         return data, is_inf
@@ -97,7 +101,6 @@ class TestModel:
         p_school = model.infection_networks["school"].log_beta
         company_grad = p_company.grad.cpu()
         school_grad = p_school.grad.cpu()
-        print(school_grad)
         assert school_grad != 0.0
         assert company_grad == 0.0
 
@@ -156,9 +159,9 @@ class TestModel:
         log_likelihood.backward()
         parameters = [
             model.infection_networks[name].log_beta
-            for name in ["company", "school", "household"]
+            for name in ["company", "school"]
         ]
-        grads = np.array([p.grad.cpu() for p in parameters if p.grad is not None])
+        grads = np.array([p.grad.cpu() for p in parameters])
         assert len(grads) == 2
         assert grads[0] != 0.0
         assert grads[1] != 0.0

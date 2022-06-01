@@ -76,9 +76,6 @@ def make_data(agent_data):
     data["agent", "attends_company", "company"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
     )
-    #data["agent", "attends_leisure", "leisure"].edge_index = torch.vstack(
-    #    (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 4), 25)))
-    #)
     data["agent", "attends_household", "household"].edge_index = torch.vstack(
         (data["agent"].id, torch.tensor(np.repeat(np.arange(0, 25), 4)))
     )

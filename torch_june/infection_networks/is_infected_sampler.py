@@ -22,13 +22,7 @@ class IsInfectedSampler(torch.nn.Module):
             temperature=torch.tensor(0.01),
             probs=infected_probs,
         ).to_event(1)
-        #dist = distributions.Bernoulli(
-        #    probs=infected_probs,
-        #)
         ret = pyro.sample(f"inf_{time_step}", dist)
-        #print(ret.shape)
-        #ret = dist.rsample()
-        #print(ret)
         self.i += 1
         return ret
 

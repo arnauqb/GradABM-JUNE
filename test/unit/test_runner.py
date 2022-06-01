@@ -50,7 +50,7 @@ class TestRunner:
         assert runner.data["agent"].symptoms["time_to_next_stage"].sum().item() == 0
 
     def test__run_model(self, runner):
-        results = runner.run()
+        results = runner()
         n_timesteps = 16
         assert len(results["dates"]) == n_timesteps
         assert len(results["cases_per_timestep"]) == n_timesteps
@@ -63,7 +63,7 @@ class TestRunner:
 
     def test__save_results(self, runner):
         with torch.no_grad():
-            results = runner.run()
+            results = runner()
         runner.save_results(results)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:

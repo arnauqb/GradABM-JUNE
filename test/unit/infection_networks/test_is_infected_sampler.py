@@ -10,7 +10,7 @@ class TestIsInfectedSampler:
         n = 2000
         ret = 0
         for _ in range(n):
-            ret += sampler(probs)
+            ret += sampler(probs, 0)
         ret = ret / n
         assert np.isclose(ret, 0.7, rtol=1e-1)
 
@@ -18,7 +18,7 @@ class TestIsInfectedSampler:
         n = 2000
         ret = torch.zeros(4)
         for _ in range(n):
-            ret += sampler(probs)
+            ret += sampler(probs, 0)
 
         ret = ret / n
         assert np.allclose(ret, 1.0 - probs, rtol=1e-1)
