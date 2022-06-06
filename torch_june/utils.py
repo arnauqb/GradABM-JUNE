@@ -94,7 +94,7 @@ def fix_seed(seed=None):
     torch.cuda.manual_seed_all(seed)
 
 
-def create_simple_connected_graph(n_agents, n_inf):
+def create_simple_connected_graph(n_agents):
     # avoid circular import
     from torch_june.transmission import TransmissionSampler
 
@@ -119,11 +119,10 @@ def create_simple_connected_graph(n_agents, n_inf):
     symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long)
     symptoms["time_to_next_stage"] = torch.zeros(n_agents)
     data["agent"].symptoms = symptoms
-    data["group"].id = torch.zeros(1)
-    data["group"].people = n_agents
-    data["agent", "attends_group", "group"].edge_index = torch.vstack(
-        (data["agent"].id, torch.zeros(n_agents))
+    data["household"].id = torch.zeros(1)
+    data["household"].people = torch.tensor([n_agents])
+    data["agent", "attends_household", "household"].edge_index = torch.vstack(
+        (data["agent"].id, torch.zeros(n_agents, dtype=torch.long))
     )
     data = T.ToUndirected()(data)
-    indices = torch.arange(0, n_inf)
-    return infect_people_at_indices(data, indices)
+    return data
