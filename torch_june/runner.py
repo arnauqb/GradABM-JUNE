@@ -132,7 +132,7 @@ class Runner(torch.nn.Module):
         indices = np.arange(0, self.data["agent"].id.shape[0])
         np.random.shuffle(indices)
         indices = indices[: self.n_initial_cases]
-        return infect_people_at_indices(self.data, indices)
+        return infect_people_at_indices(self.data, indices, device=self.device)
 
     def forward(self):
         timer = self.timer
@@ -141,7 +141,7 @@ class Runner(torch.nn.Module):
         timer.reset()
         self.restore_initial_data()
         self.set_initial_cases()
-        #data = model(data, timer)
+        # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)

@@ -65,7 +65,7 @@ class TestFixSeed:
 
 class TestCreateSimpleGraph:
     def test(self):
-        data = create_simple_connected_graph(100, 10)
+        data = create_simple_connected_graph(100)
         assert data["agent"].id.shape[0] == 100
         assert data["agent"].age.shape[0] == 100
         assert data["agent"].sex.shape[0] == 100
