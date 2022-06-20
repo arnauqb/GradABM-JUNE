@@ -13,7 +13,8 @@ class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
         super().__init__(aggr="add", node_dim=-1)
         self.device = device
-        self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
+        #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
+        self.log_beta = torch.tensor(float(log_beta))
         self.name = self._get_name()
 
     @classmethod
@@ -33,6 +34,7 @@ class InfectionNetwork(MessagePassing):
 
     def _get_beta(self, policies, timer, data):
         interaction_policies = policies.interaction_policies
+        # beta = 10.0**torch.clamp(self.log_beta, min=-5, max=5)
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
