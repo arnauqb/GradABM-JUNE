@@ -4,19 +4,18 @@ import pyro
 import torch
 from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv import MessagePassing
-from pyro.nn import PyroModule, PyroParam, PyroSample
 
 from torch_june.paths import default_config_path
 import torch_june.infection_networks
 
 
-class InfectionNetwork(MessagePassing, PyroModule):
+class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
         super().__init__(aggr="add", node_dim=-1)
         self.device = device
         #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
-        #self.log_beta = torch.tensor(float(log_beta))
-        self.log_beta = PyroSample(pyro.distributions.Normal(log_beta, 0.5).to_event(1))
+        self.log_beta = torch.tensor(float(log_beta))
+        #self.log_beta = PyroSample(pyro.distributions.Normal(log_beta, 0.5).to_event(1))
         self.name = self._get_name()
 
     @classmethod
