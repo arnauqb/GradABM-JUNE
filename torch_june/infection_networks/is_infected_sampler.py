@@ -2,6 +2,7 @@ import torch
 import pyro
 from pyro import distributions
 
+
 class my_round_func(torch.autograd.function.InplaceFunction):
     @staticmethod
     def forward(ctx, input):
@@ -13,6 +14,7 @@ class my_round_func(torch.autograd.function.InplaceFunction):
         grad_input = grad_output.clone()
         return grad_input
 
+
 class IsInfectedSampler(torch.nn.Module):
     i = 0
 
@@ -22,7 +24,13 @@ class IsInfectedSampler(torch.nn.Module):
             temperature=torch.tensor(0.1),
             probs=infected_probs,
         ).to_event(1)
-        ret = pyro.sample(f"inf_{time_step}", dist)
+        # dist = distributions.Bernoulli(infected_probs).to_event(1)
+        ret = pyro.sample(
+            f"inf_{time_step}",
+            dist,
+            infer=dict(
+                baseline={"use_decaying_avg_baseline": True, "baseline_beta": 0.95}
+            ),
+        )
         self.i += 1
         return ret
-

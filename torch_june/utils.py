@@ -120,9 +120,14 @@ def create_simple_connected_graph(n_agents):
     symptoms["time_to_next_stage"] = torch.zeros(n_agents)
     data["agent"].symptoms = symptoms
     data["household"].id = torch.zeros(1)
+    data["school"].id = torch.zeros(1)
     data["household"].people = torch.tensor([n_agents])
+    data["school"].people = torch.tensor([n_agents])
     data["agent", "attends_household", "household"].edge_index = torch.vstack(
-        (data["agent"].id, torch.zeros(n_agents, dtype=torch.long))
+        (data["agent"].id[::2], torch.zeros(n_agents//2, dtype=torch.long))
+    )
+    data["agent", "attends_school", "school"].edge_index = torch.vstack(
+        (data["agent"].id[1::2], torch.zeros(n_agents//2, dtype=torch.long))
     )
     data = T.ToUndirected()(data)
     return data
