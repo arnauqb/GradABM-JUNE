@@ -83,8 +83,8 @@ class Runner(torch.nn.Module):
         data["agent"].symptoms = symptoms
         return data
 
-    def reset_model(self):
-        self.model = TorchJune.from_parameters(self.parameters)
+    #def reset_model(self):
+    #    self.model = TorchJune.from_parameters(self.parameters)
 
     def backup_infection_data(self, data):
         ret = {}
