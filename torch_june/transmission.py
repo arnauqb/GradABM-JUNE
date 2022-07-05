@@ -28,24 +28,37 @@ class TransmissionSampler:
     @classmethod
     def from_parameters(cls, params):
         ret = {}
-        tparams = params["transmission"]
         device = params["system"]["device"]
-        for key in tparams:
-            ret[key] = parse_distribution(tparams[key], device=device)
+        tparams = params["transmission"]
+        for variant in tparams:
+            ret[variant] = {}
+            for key in tparams[variant]:
+                ret[variant][key] = parse_distribution(tparams[key], device=device)
         return cls(**ret)
 
 
 class TransmissionUpdater(torch.nn.Module):
     def forward(self, data, timer):
-        shape = data["agent"]["infection_parameters"]["shape"]
-        shift = data["agent"]["infection_parameters"]["shift"]
-        rate = data["agent"]["infection_parameters"]["rate"]
-        max_infectiousness = data["agent"]["infection_parameters"]["max_infectiousness"]
         time_from_infection = timer.now - data["agent"].infection_time
-        sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
-        aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
-            (time_from_infection - shift) * rate, shape - 1.0
-        )
-        aux2 = torch.exp((shift - time_from_infection) * rate) * rate
-        ret = max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
+        ret = None
+        for infection_variant in data["infection_parameters"]["variants"]:
+            inf_params = data["agent"]["infection_parameters"]
+            shape = inf_params.get(infection_variant, inf_params["base"])["shape"]
+            shift = inf_params.get(infection_variant, inf_params["base"])["shift"]
+            rate = inf_params.get(infection_variant, inf_params["base"])["rate"]
+            max_infectiousness = inf_params.get(infection_variant, inf_params["base"])[
+                "max_infectiousness"
+            ]
+            sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
+            aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
+                (time_from_infection - shift) * rate, shape - 1.0
+            )
+            aux2 = torch.exp((shift - time_from_infection) * rate) * rate
+            variant_infectivity = (
+                max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
+            )
+            if ret is None:
+                ret = variant_infectivity
+            else:
+                ret = torch.vstack((ret, variant_infectivity))
         return ret

@@ -62,10 +62,7 @@ class TorchJune(torch.nn.Module):
             policies=self.policies,
         )
         new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
-        data["agent"].susceptibility = torch.maximum(
-            torch.tensor(0.0, device=self.device),
-            data["agent"].susceptibility - new_infected,
-        )
+        data["agent"].susceptibility = torch.clamp(data["agent"].susceptibility - new_infected, min=0.0)
         data["agent"].is_infected = data["agent"].is_infected + new_infected
         data["agent"].infection_time[new_infected.bool()] = timer.now
         data["symptoms"] = self.symptoms_updater(

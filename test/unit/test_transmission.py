@@ -16,7 +16,7 @@ class TestInfections:
     def test__generate_infections(self, data, timer):
         trans_updater = TransmissionUpdater()
         transmissions = trans_updater(data=data, timer=timer)
-        assert (transmissions == torch.zeros(100)).all()
+        assert (transmissions == torch.zeros(2, 100)).all()
         is_infected = np.zeros(100)
         infection_time = -1.0 * np.ones(100)
         is_infected[0] = 1
