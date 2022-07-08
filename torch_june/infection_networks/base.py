@@ -9,13 +9,17 @@ from torch_june.paths import default_config_path
 import torch_june.infection_networks
 
 
-class InfectionNetwork(MessagePassing):
+class InfectionNetwork(MessagePassing, pyro.nn.PyroModule):
     def __init__(self, log_beta, device="cpu"):
-        super().__init__(aggr="add", node_dim=-1)
+        MessagePassing.__init__(self, aggr="add", node_dim=-1)
         self.device = device
-        self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
-        #self.log_beta = torch.tensor(float(log_beta))
-        #self.log_beta = PyroSample(pyro.distributions.Normal(log_beta, 0.5).to_event(1))
+        #self.log_beta = pyro.nn.PyroParam(torch.tensor(float(log_beta)))
+        #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
+        #self.log_beta = pyro.nn.PyroSample(
+        #    pyro.distributions.Delta(torch.tensor(log_beta))
+        #)
+        self.log_beta = torch.tensor(float(log_beta))
+        # self.log_beta = PyroSample(pyro.distributions.Normal(log_beta, 0.5).to_event(1))
         self.name = self._get_name()
 
     @classmethod
@@ -88,7 +92,7 @@ class InfectionNetwork(MessagePassing):
         return x_j * y_i
 
 
-class InfectionNetworks(torch.nn.Module):
+class InfectionNetworks(pyro.nn.PyroModule):
     def __init__(self, device="cpu", **kwargs):
         super().__init__()
         self.networks = torch.nn.ModuleDict(kwargs)

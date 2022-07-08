@@ -40,8 +40,6 @@ class TestInfectionNetworks:
             data=small_data, timer=school_timer, policies=Policies()
         )
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
-        print("---")
-        print(infection_probabilities)
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
 
 

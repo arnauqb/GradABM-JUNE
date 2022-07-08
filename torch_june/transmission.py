@@ -1,5 +1,6 @@
 import torch
 import yaml
+import pyro
 
 from torch_june.paths import default_config_path
 from torch_june.utils import parse_distribution
@@ -35,7 +36,7 @@ class TransmissionSampler:
         return cls(**ret)
 
 
-class TransmissionUpdater(torch.nn.Module):
+class TransmissionUpdater(pyro.nn.PyroModule):
     def forward(self, data, timer):
         shape = data["agent"]["infection_parameters"]["shape"]
         shift = data["agent"]["infection_parameters"]["shift"]
