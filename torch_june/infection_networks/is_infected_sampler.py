@@ -21,16 +21,17 @@ class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs, time_step):
         infected_probs = 1.0 - not_infected_probs
         dist = distributions.RelaxedBernoulliStraightThrough(
-            temperature=torch.tensor(0.1),
+            temperature=torch.tensor(10.0),
             probs=infected_probs,
         ).to_event(1)
+        #dist = distributions.Bernoulli(infected_probs).to_event(1)
         # dist = distributions.Bernoulli(infected_probs).to_event(1)
         ret = pyro.sample(
             f"inf_{time_step}",
             dist,
-            infer=dict(
-                baseline={"use_decaying_avg_baseline": True, "baseline_beta": 0.95}
-            ),
+            #infer=dict(
+            #    baseline={"use_decaying_avg_baseline": True, "baseline_beta": 0.95}
+            #),
         )
         self.i += 1
         return ret

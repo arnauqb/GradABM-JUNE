@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import yaml
+import pyro
 from pathlib import Path
 
 from torch_june.paths import default_config_path
@@ -11,7 +12,7 @@ from torch_june.utils import read_path
 from torch_june.infection_seed import infect_people_at_indices
 
 
-class Runner(torch.nn.Module):
+class Runner(pyro.nn.PyroModule):
     def __init__(
         self,
         model,
@@ -83,7 +84,7 @@ class Runner(torch.nn.Module):
         data["agent"].symptoms = symptoms
         return data
 
-    #def reset_model(self):
+    # def reset_model(self):
     #    self.model = TorchJune.from_parameters(self.parameters)
 
     def backup_infection_data(self, data):
@@ -163,6 +164,10 @@ class Runner(torch.nn.Module):
         results = {
             "dates": dates,
             "cases_per_timestep": cases_per_timestep / self.n_agents,
+            "daily_cases_per_timestep": torch.diff(
+                cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
+            )
+            / self.n_agents,
             "deaths_per_timestep": deaths_per_timestep / self.n_agents,
         }
         for (i, key) in enumerate(self.age_bins[1:]):

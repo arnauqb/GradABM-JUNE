@@ -3,13 +3,14 @@ import yaml
 import re
 import datetime
 import torch
+import pyro
 
 import torch_june
 from torch_june.utils import read_date
 from torch_june.paths import default_config_path
 
 
-class Policy(torch.nn.Module):
+class Policy(pyro.nn.PyroModule):
     def __init__(self, start_date, end_date, device):
         super().__init__()
         self.start_date = read_date(start_date)
