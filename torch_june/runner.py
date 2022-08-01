@@ -174,9 +174,9 @@ class Runner(pyro.nn.PyroModule):
             results[f"cases_by_age_{key:02d}"] = (
                 cases_by_age[:, i] / self.population_by_age[i]
             )
-        return results
+        return results, data["agent"].is_infected
 
-    def save_results(self, results):
+    def save_results(self, results, is_infected):
         self.save_path.mkdir(exist_ok=True, parents=True)
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
@@ -185,6 +185,9 @@ class Runner(pyro.nn.PyroModule):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
+        df = pd.DataFrame()
+        df["is_infected"] = is_infected
+        df.to_csv(self.save_path / "results_is_infected.csv")
 
     def get_deaths_from_symptoms(self, symptoms):
         return torch.tensor(
