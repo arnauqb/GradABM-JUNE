@@ -1,3 +1,4 @@
+[![Docs](https://github.com/arnauqb/torch_june/actions/workflows/docs.yml/badge.svg)](https://arnauqb.github.io/torch_june/)
 [![codecov](https://codecov.io/gh/arnauqb/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/gh/arnauqb/torch_june)
 [![Build and test package](https://github.com/arnauqb/torch_june/actions/workflows/ci.yml/badge.svg)](https://github.com/arnauqb/torch_june/actions/workflows/ci.yml)
 
@@ -20,4 +21,4 @@ pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://
 
 # Usage
 
-See the docs.
+See the [docs](https://arnauqb.github.io/torch_june/).
