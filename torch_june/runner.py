@@ -75,6 +75,7 @@ class Runner(pyro.nn.PyroModule):
         data["agent"].susceptibility = torch.ones(n_agents, device=device)
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
+        data["agent"].infected_probs = torch.zeros(n_agents, device=device)
         symptoms = {}
         symptoms["current_stage"] = torch.ones(
             n_agents, dtype=torch.long, device=device
@@ -83,9 +84,6 @@ class Runner(pyro.nn.PyroModule):
         symptoms["time_to_next_stage"] = torch.zeros(n_agents, device=device)
         data["agent"].symptoms = symptoms
         return data
-
-    # def reset_model(self):
-    #    self.model = TorchJune.from_parameters(self.parameters)
 
     def backup_infection_data(self, data):
         ret = {}
@@ -115,6 +113,9 @@ class Runner(pyro.nn.PyroModule):
         )
         self.data["agent"].is_infected = (
             self.data_backup["is_infected"].detach().clone()
+        )
+        self.data["agent"].infected_probs = torch.zeros(
+            self.n_agents, device=self.device
         )
         self.data["agent"].infection_time = (
             self.data_backup["infection_time"].detach().clone()

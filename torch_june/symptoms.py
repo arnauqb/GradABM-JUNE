@@ -70,7 +70,6 @@ class SymptomsSampler:
         probs = self.stage_transition_probabilities[stages, ages]
         return probs
 
-    # @profile
     def sample_next_stage(
         self, ages, current_stage, next_stage, time_to_next_stage, time
     ):
