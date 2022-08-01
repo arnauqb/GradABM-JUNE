@@ -15,7 +15,7 @@ class my_round_func(torch.autograd.function.InplaceFunction):
         return grad_input
 
 
-class IsInfectedSampler(pyro.nn.PyroModule):
+class IsInfectedSampler(torch.nn.Module):
     i = 0
 
     def forward(self, not_infected_probs, time_step):

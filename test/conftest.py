@@ -52,6 +52,7 @@ def make_agent_data(sampler):
     data["agent"].susceptibility = torch.ones(n_agents)
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
+    data["agent"].infected_probs = torch.zeros(n_agents)
     symptoms = {}
     symptoms["current_stage"] = torch.ones(n_agents, dtype=torch.long)
     symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long)
@@ -82,26 +83,6 @@ def make_data(agent_data):
     )
     data = T.ToUndirected()(data)
     return data
-
-
-#@fixture(name="person_infector")
-#def make_person_infector():
-#    def infector(data, indices):
-#        susc = data["agent"]["susceptibility"].numpy()
-#        is_inf = data["agent"]["is_infected"].numpy()
-#        inf_t = data["agent"]["infection_time"].numpy()
-#        next_stage = data["agent"]["symptoms"]["next_stage"].numpy()
-#        susc[indices] = 0.0
-#        is_inf[indices] = 1.0
-#        inf_t[indices] = 0.0
-#        next_stage[indices] = 2
-#        data["agent"]["susceptibility"] = torch.tensor(susc)
-#        data["agent"]["is_infected"] = torch.tensor(is_inf)
-#        data["agent"]["infection_time"] = torch.tensor(inf_t)
-#        data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
-#        return data
-#
-#    return infector
 
 
 @fixture(name="inf_data")

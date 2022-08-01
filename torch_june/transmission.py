@@ -36,7 +36,7 @@ class TransmissionSampler:
         return cls(**ret)
 
 
-class TransmissionUpdater(pyro.nn.PyroModule):
+class TransmissionUpdater(torch.nn.Module):
     def forward(self, data, timer):
         shape = data["agent"]["infection_parameters"]["shape"]
         shift = data["agent"]["infection_parameters"]["shift"]

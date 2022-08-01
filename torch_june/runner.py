@@ -12,7 +12,7 @@ from torch_june.utils import read_path
 from torch_june.infection_seed import infect_people_at_indices
 
 
-class Runner(pyro.nn.PyroModule):
+class Runner(torch.nn.Module):
     def __init__(
         self,
         model,

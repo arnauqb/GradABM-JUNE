@@ -14,7 +14,7 @@ from torch_june.cuda_utils import get_fraction_gpu_used
 from torch_june.paths import default_config_path
 
 
-class TorchJune(pyro.nn.PyroModule):
+class TorchJune(torch.nn.Module):
     def __init__(
         self,
         symptoms_updater=None,
