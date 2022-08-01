@@ -3,3 +3,21 @@
 
 # Torch JUNE
 Implementation of the JUNE model using Graph Neural Networks in PyTorch
+
+# Setup 
+
+Install requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+and install PyTorch geometric, manually for now:
+
+```bash
+pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
+```
+
+# Usage
+
+See the docs.
