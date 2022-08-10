@@ -11,7 +11,9 @@ class AgentDataLoader:
             population = f["population"]
             data["agent"].id = torch.tensor(population["id"][:])
             data["agent"].age = torch.tensor(population["age"][:])
-            data["agent"].area = torch.tensor(population["area"][:].astype(str))
+            area_ids = population["area"][:]
+            area_names = f["geography"]["area_name"][:][area_ids].astype("U")
+            data["agent"].area = area_names
             sexes = population["sex"][:].astype(str).astype(object)
             sexes[sexes == "m"] = 0
             sexes[sexes == "f"] = 1

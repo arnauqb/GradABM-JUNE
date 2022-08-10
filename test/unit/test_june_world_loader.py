@@ -22,12 +22,15 @@ class TestLoadAgentData:
         data = HeteroData()
         agent_data_loader.load_agent_data(data)
         assert len(data["agent"]["id"]) == 769
+        assert len(data["agent"]["area"]) == 769
         assert len(data["agent"]["age"]) == 769
         assert len(data["agent"]["sex"]) == 769
         assert data["agent"]["age"][14] == 6
         assert data["agent"]["sex"][14] == 1
         assert data["agent"]["age"][22] == 8
         assert data["agent"]["sex"][22] == 0
+        assert data["agent"]["area"][14] == "E00023664"
+        assert data["agent"]["area"][300] == "E00079478"
 
 
 class TestNetworks:
