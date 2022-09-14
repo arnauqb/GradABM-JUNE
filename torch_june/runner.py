@@ -34,7 +34,7 @@ class Runner(torch.nn.Module):
         self.n_agents = data["agent"].id.shape[0]
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
-        self.parameters = parameters
+        self._parameters = parameters
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -147,6 +147,9 @@ class Runner(torch.nn.Module):
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
+        deaths_per_district_timestep = self.get_deaths_per_district(
+            data["agent"].symptoms
+        )
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -157,19 +160,23 @@ class Runner(torch.nn.Module):
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
+            deaths_per_district = self.get_deaths_per_district(data["agent"].symptoms)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
+            deaths_per_district_timestep = torch.vstack(
+                (deaths_per_district_timestep, deaths_per_district)
+            )
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
 
             dates.append(timer.date)
         results = {
             "dates": dates,
-            "cases_per_timestep": cases_per_timestep / self.n_agents,
+            "cases_per_timestep": cases_per_timestep,
             "daily_cases_per_timestep": torch.diff(
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
-            )
-            / self.n_agents,
-            "deaths_per_timestep": deaths_per_timestep / self.n_agents,
+            ),
+            "deaths_per_timestep": deaths_per_timestep,
+            "deaths_per_district_timestep": deaths_per_district_timestep.transpose(0,1),
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = (
@@ -195,6 +202,15 @@ class Runner(torch.nn.Module):
             symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
             device=self.device,
         )
+
+    def get_deaths_per_district(self, symptoms):
+        districts = self.data["agent"].district.unique()
+        dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
+        dead_districts = self.data["agent"].district[dead_idcs]
+        ret = torch.zeros(districts.shape, dtype=torch.long)
+        deaths, counts = torch.unique(dead_districts, return_counts=True)
+        ret[deaths] = counts
+        return ret
 
     def get_cases_by_age(self, data):
         ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
