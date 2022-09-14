@@ -189,7 +189,7 @@ class Runner(torch.nn.Module):
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
         for key in results:
-            if key == "dates":
+            if key in ("dates", "deaths_per_district_timestep"):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
@@ -204,13 +204,17 @@ class Runner(torch.nn.Module):
         )
 
     def get_deaths_per_district(self, symptoms):
-        districts = self.data["agent"].district.unique()
-        dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
-        dead_districts = self.data["agent"].district[dead_idcs]
-        ret = torch.zeros(districts.shape, dtype=torch.long)
-        deaths, counts = torch.unique(dead_districts, return_counts=True)
-        ret[deaths] = counts
-        return ret
+        if "district" in self.data["agent"]:
+            districts = self.data["agent"].district.unique()
+            dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
+            dead_districts = self.data["agent"].district[dead_idcs]
+            ret = torch.zeros(districts.shape, dtype=torch.long)
+            deaths, counts = torch.unique(dead_districts, return_counts=True)
+            ret[deaths] = counts
+            return ret
+        else:
+            return torch.zeros(1,1)
+
 
     def get_cases_by_age(self, data):
         ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)

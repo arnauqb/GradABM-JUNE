@@ -19,7 +19,7 @@ class TestRunner:
 
     def test__read_from_file(self, runner):
         file_runner = Runner.from_file()
-        assert file_runner.parameters == runner.parameters
+        assert file_runner._parameters == runner._parameters
 
     def test__get_data(self, runner):
         n_agents = runner.data["agent"].id.shape
@@ -68,6 +68,6 @@ class TestRunner:
         runner.save_results(results, is_infected)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
-            if key == "dates":
+            if key in ("dates", "deaths_per_district_timestep"):
                 continue
             assert np.allclose(loaded_results[key], results[key].numpy())

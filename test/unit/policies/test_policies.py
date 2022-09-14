@@ -39,16 +39,16 @@ class TestPolicies:
         assert policies.interaction_policies[0].end_date == datetime.datetime(
             2022, 3, 15
         )
-        assert policies.interaction_policies[0].beta_factors["school"].item() == 0.5
-        assert policies.interaction_policies[0].beta_factors["company"].item() == 0.5
+        assert policies.interaction_policies[0].beta_factors["school"] == 0.5
+        assert policies.interaction_policies[0].beta_factors["company"] == 0.5
         assert policies.interaction_policies[1].start_date == datetime.datetime(
             2022, 3, 15
         )
         assert policies.interaction_policies[1].end_date == datetime.datetime(
             2022, 4, 15
         )
-        assert policies.interaction_policies[1].beta_factors["pub"].item() == 0.5
-        assert policies.interaction_policies[1].beta_factors["grocery"].item() == 0.5
-        assert policies.interaction_policies[1].beta_factors["cinema"].item() == 0.5
-        assert policies.interaction_policies[1].beta_factors["gym"].item() == 0.5
-        assert policies.interaction_policies[1].beta_factors["visit"].item() == 0.5
+        assert policies.interaction_policies[1].beta_factors["pub"] == 0.5
+        assert policies.interaction_policies[1].beta_factors["grocery"] == 0.5
+        assert policies.interaction_policies[1].beta_factors["cinema"] == 0.5
+        assert policies.interaction_policies[1].beta_factors["gym"] == 0.5
+        assert policies.interaction_policies[1].beta_factors["visit"] == 0.5

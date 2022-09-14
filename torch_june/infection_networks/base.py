@@ -14,7 +14,10 @@ class InfectionNetwork(MessagePassing):
         super().__init__( aggr="add", node_dim=-1)
         self.device = device
         #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
-        self.log_beta = torch.tensor(float(log_beta))
+        if type(log_beta) != torch.nn.Parameter:
+            self.log_beta = torch.tensor(float(log_beta))
+        else:
+            self.log_beta = log_beta
         self.name = self._get_name()
 
     @classmethod
