@@ -15,7 +15,12 @@ class TestRunner:
     def make_runner(self):
         with open(default_config_path, "r") as f:
             parameters = yaml.safe_load(f)
-        return Runner.from_parameters(parameters)
+        runner = Runner.from_parameters(parameters)
+        for key in runner.model.infection_networks.networks.keys():
+            runner.model.infection_networks.networks[key].log_beta = torch.nn.Parameter(
+                runner.model.infection_networks.networks[key].log_beta
+            )
+        return runner
 
     def test__read_from_file(self, runner):
         file_runner = Runner.from_file()
@@ -71,3 +76,13 @@ class TestRunner:
             if key in ("dates", "deaths_per_district_timestep"):
                 continue
             assert np.allclose(loaded_results[key], results[key].numpy())
+
+    def test__deaths_gradient(self, runner):
+        results, is_infected = runner()
+        assert results["cases_per_timestep"].requires_grad
+        data = runner.data
+        data_results = data["results"]
+        daily_deaths = data_results["daily_deaths"]
+        assert (results["deaths_per_timestep"] == daily_deaths).all()
+        assert daily_deaths.shape[0] == runner._parameters["timer"]["total_days"] + 1
+        assert daily_deaths.requires_grad

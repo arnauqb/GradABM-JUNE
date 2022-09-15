@@ -78,11 +78,17 @@ class SymptomsSampler:
             current_stage, time_to_next_stage, time
         )
         n_agents = ages.shape[0]
-        # print(mask_transition)
         current_stage = current_stage - (current_stage - next_stage) * mask_transition
         # Sample possible next stages
-        probs = self._get_prob_next_symptoms_stage(ages, current_stage)
+        probs = self._get_prob_next_symptoms_stage(ages, current_stage.long())
         mask_symp_stage = torch.bernoulli(probs).to(torch.bool)
+        # mask_symp_stage = (
+        #    pyro.distributions.RelaxedBernoulliStraightThrough(
+        #        temperature=torch.tensor(0.1),
+        #        probs=probs,
+        #    )
+        #    .rsample()
+        # )
         # These ones would recover
         mask_recovered_stage = ~mask_symp_stage
         for i in range(
@@ -133,9 +139,12 @@ class SymptomsUpdater(pyro.nn.PyroModule):
     def forward(self, data, timer, new_infected):
         time = timer.now
         symptoms = data["agent"].symptoms
-        mask = new_infected.bool()
-        symptoms["next_stage"][mask] = 2
-        symptoms["time_to_next_stage"][mask] = time
+        symptoms["next_stage"] = symptoms["next_stage"] + new_infected * (
+            2.0 - symptoms["next_stage"]
+        )
+        symptoms["time_to_next_stage"] = symptoms[
+            "time_to_next_stage"
+        ] + new_infected * (time - symptoms["time_to_next_stage"])
         (
             current_stage,
             next_stage,

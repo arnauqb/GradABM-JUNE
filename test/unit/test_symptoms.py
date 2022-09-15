@@ -1,5 +1,7 @@
+from tkinter import W
 from pytest import fixture
 import numpy as np
+import pyro
 import torch
 
 from torch_june.symptoms import SymptomsSampler, SymptomsUpdater
@@ -38,7 +40,7 @@ class TestSymptomsSampler:
 
     @fixture(name="sp")
     def make_sp(self, input):
-        params = {"system" : {"device" : "cpu"}, "symptoms" : input}
+        params = {"system": {"device": "cpu"}, "symptoms": input}
         return SymptomsSampler.from_parameters(params)
 
     def test__read_input(self, sp):
@@ -138,7 +140,7 @@ class TestSymptomsSampler:
         assert nexts[0] == 0
         assert nexts[1] == 1
         assert np.isclose(nexts[2], 4 * 0.2, rtol=0.1)
-        assert np.isclose(nexts[3], 5 * 0.1, rtol=0.1)
+        assert np.isclose(nexts[3], 5 * 0.1, rtol=0.2)
         assert nexts[4] == 5
         assert nexts[5] == 5
 
@@ -197,9 +199,33 @@ class TestSymptomsUpdater:
         data["agent"]["symptoms"]["time_to_next_stage"] = torch.zeros(n_agents)
         for i in range(100):
             symptoms = su(
-                data=data, timer=timer, new_infected=torch.zeros(n_agents, dtype=torch.bool)
+                data=data,
+                timer=timer,
+                new_infected=torch.zeros(n_agents, dtype=torch.bool),
             )
             assert (
                 symptoms["current_stage"] == 7 * torch.ones(n_agents, dtype=torch.long)
             ).all()
             next(timer)
+
+    def test__symptoms_differentiable(self, su, data, timer):
+        # increase mortality for the test
+        su.symptoms_sampler.stage_transition_probabilities[2:, :] = torch.ones(
+            su.symptoms_sampler.stage_transition_probabilities[2:, :].shape
+        )
+        beta = torch.nn.Parameter(torch.tensor(10.0))
+        probs = 1 - torch.exp(-beta) * torch.ones(data["agent"].id.shape)
+        new_infected = pyro.distributions.RelaxedBernoulliStraightThrough(
+            temperature=torch.tensor(0.1),
+            probs=probs,
+        ).rsample()
+        symptoms = su(data=data, timer=timer, new_infected=new_infected)
+        new_infected_2 = torch.zeros(new_infected.shape)
+        for _ in range(100):
+            next(timer)
+            symptoms = su(data=data, timer=timer, new_infected=new_infected_2)
+        deaths = symptoms["current_stage"][symptoms["current_stage"] == 7]
+        assert len(deaths) > 0
+        total_deaths = deaths.sum()
+        total_deaths.backward()
+        assert deaths.requires_grad
