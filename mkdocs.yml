@@ -1,5 +1,5 @@
 site_name: TorchJune
-site_url: https://arnauqb.github.io/torch_june/
+site_url: https://largeagentcollider.github.io/torch_june/
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
