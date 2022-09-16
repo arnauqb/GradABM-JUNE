@@ -1,3 +1,4 @@
+from operator import ne
 import torch
 import yaml
 import pyro
@@ -67,7 +68,10 @@ class SymptomsSampler:
         return mask1 * mask2
 
     def _get_prob_next_symptoms_stage(self, ages, stages):
+        #print(ages)
+        #print(stages)
         probs = self.stage_transition_probabilities[stages, ages]
+        #print(probs)
         return probs
 
     def sample_next_stage(
@@ -124,6 +128,9 @@ class SymptomsUpdater(pyro.nn.PyroModule):
     def __init__(self, symptoms_sampler):
         super().__init__()
         self.symptoms_sampler = symptoms_sampler
+        #self.symptoms_sampler.stage_transition_probabilities[2:, :] = 0.25 * torch.ones(
+        #    self.symptoms_sampler.stage_transition_probabilities[2:, :].shape
+        #)
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -139,6 +146,17 @@ class SymptomsUpdater(pyro.nn.PyroModule):
     def forward(self, data, timer, new_infected):
         time = timer.now
         symptoms = data["agent"].symptoms
+        #print("***************************** symptoms *******************")
+        #print(time)
+        #print(symptoms["current_stage"])
+        #print(symptoms["next_stage"])
+        #print(symptoms["time_to_next_stage"])
+        #print("---------")
+        #print(symptoms["current_stage"].unique())
+        #print(symptoms["next_stage"].unique())
+        #mask = new_infected.bool()
+        #symptoms["next_stage"][mask] = 2
+        #symptoms["time_to_next_stage"][mask] = time
         symptoms["next_stage"] = symptoms["next_stage"] + new_infected * (
             2.0 - symptoms["next_stage"]
         )

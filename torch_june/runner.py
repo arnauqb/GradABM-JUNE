@@ -131,8 +131,8 @@ class Runner(torch.nn.Module):
         )
         # reset results
         self.data["results"] = {}
-        self.data["results"]["daily_deaths"] = torch.zeros(0)
-        self.data["results"]["daily_deaths_by_district"] = torch.zeros(0,0)
+        self.data["results"]["daily_deaths"] = None
+        self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
         indices = np.arange(0, self.data["agent"].id.shape[0])
@@ -152,7 +152,7 @@ class Runner(torch.nn.Module):
         cases_by_age = self.get_cases_by_age(data)
         self.store_differentiable_deaths(data, timer)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
-        deaths_per_district_timestep = self.get_deaths_per_district(
+        deaths_by_district_timestep = self.get_deaths_by_district(
             data["agent"].symptoms
         )
         dates = [timer.date]
@@ -166,10 +166,10 @@ class Runner(torch.nn.Module):
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
             self.store_differentiable_deaths(data, timer)
-            deaths_per_district = self.get_deaths_per_district(data["agent"].symptoms)
+            deaths_by_district = self.get_deaths_by_district(data["agent"].symptoms)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            deaths_per_district_timestep = torch.vstack(
-                (deaths_per_district_timestep, deaths_per_district)
+            deaths_by_district_timestep = torch.vstack(
+                (deaths_by_district_timestep, deaths_by_district)
             )
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
@@ -182,7 +182,7 @@ class Runner(torch.nn.Module):
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
-            "deaths_per_district_timestep": deaths_per_district_timestep.transpose(
+            "deaths_by_district_timestep": deaths_by_district_timestep.transpose(
                 0, 1
             ),
         }
@@ -197,7 +197,7 @@ class Runner(torch.nn.Module):
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
         for key in results:
-            if key in ("dates", "deaths_per_district_timestep"):
+            if key in ("dates", "deaths_by_district_timestep"):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
@@ -212,7 +212,7 @@ class Runner(torch.nn.Module):
             device=self.device,
         )
 
-    def get_deaths_per_district(self, symptoms):
+    def get_deaths_by_district(self, symptoms):
         if "district" in self.data["agent"]:
             districts = self.data["agent"].district.unique()
             dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
@@ -238,19 +238,25 @@ class Runner(torch.nn.Module):
             mask_critical * mask_to_die * mask_is_time * symptoms["current_stage"] / 7
         )
         if "district" in data["agent"]:
-            districts = torch.sort(data["agent"].district.unique())
+            districts, _ = torch.sort(data["agent"].district.unique())
             deaths_by_district = []
             for i, district in enumerate(districts):
                 mask_district = data["agent"].district == district
                 deaths_district = (deaths * mask_district).sum()
-                deaths_by_district.append(deaths_district)
+                deaths_by_district.append(deaths_district.reshape(1))
             deaths_by_district = torch.cat(deaths_by_district, 0)
-            data["results"]["daily_deaths_by_district"] = torch.vstack(
-                (data["results"]["daily_deaths_by_district"], deaths_by_district)
+            if data["results"]["daily_deaths_by_district"] is not None:
+                data["results"]["daily_deaths_by_district"] = torch.vstack(
+                    (data["results"]["daily_deaths_by_district"], deaths_by_district)
+                )
+            else:
+                data["results"]["daily_deaths_by_district"] = deaths_by_district
+        if data["results"]["daily_deaths"] is not None:
+            data["results"]["daily_deaths"] = torch.hstack(
+                (data["results"]["daily_deaths"], deaths.sum())
             )
-        data["results"]["daily_deaths"] = torch.hstack(
-            (data["results"]["daily_deaths"], deaths.sum())
-        )
+        else:
+            data["results"]["daily_deaths"] = deaths.sum()
 
     def get_cases_by_age(self, data):
         ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)

@@ -140,7 +140,7 @@ class TestSymptomsSampler:
         assert nexts[0] == 0
         assert nexts[1] == 1
         assert np.isclose(nexts[2], 4 * 0.2, rtol=0.1)
-        assert np.isclose(nexts[3], 5 * 0.1, rtol=0.2)
+        assert np.isclose(nexts[3], 5 * 0.1, rtol=0.1)
         assert nexts[4] == 5
         assert nexts[5] == 5
 
@@ -154,7 +154,7 @@ class TestSymptomsSampler:
             0.9 + 0.1 * np.exp(1.7 + 0.5**2 / 2) + 0.9 * np.exp(1.4 + 0.8**2 / 2)
         )
         assert np.isclose(stage_times[3], expected, rtol=1e-1)
-        assert np.isclose(stage_times[4], 0.1, rtol=2e-1)
+        assert np.isclose(stage_times[4], 0.1, rtol=1e-1)
         assert stage_times[5] == 0.5
 
 
