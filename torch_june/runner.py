@@ -75,7 +75,6 @@ class Runner(torch.nn.Module):
         data["agent"].susceptibility = torch.ones(n_agents, device=device)
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
-        data["agent"].infected_probs = torch.zeros(n_agents, device=device)
         symptoms = {}
         symptoms["current_stage"] = torch.ones(
             n_agents, dtype=torch.long, device=device
@@ -113,9 +112,6 @@ class Runner(torch.nn.Module):
         )
         self.data["agent"].is_infected = (
             self.data_backup["is_infected"].detach().clone()
-        )
-        self.data["agent"].infected_probs = torch.zeros(
-            self.n_agents, device=self.device
         )
         self.data["agent"].infection_time = (
             self.data_backup["infection_time"].detach().clone()
