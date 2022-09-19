@@ -1,6 +1,6 @@
-[![Docs](https://github.com/arnauqb/torch_june/actions/workflows/docs.yml/badge.svg)](https://arnauqb.github.io/torch_june/)
-[![codecov](https://codecov.io/gh/arnauqb/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/gh/arnauqb/torch_june)
-[![Build and test package](https://github.com/arnauqb/torch_june/actions/workflows/ci.yml/badge.svg)](https://github.com/arnauqb/torch_june/actions/workflows/ci.yml)
+[![Docs](https://github.com/LargeAgentCollider/torch_june/actions/workflows/docs.yml/badge.svg)](https://github.com/LargeAgentCollider/torch_june/actions/workflows/docs.yml)
+[![codecov](https://codecov.io/gh/largeagentcollider/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/gh/largeagentcollider/torch_june)
+[![Build and test package](https://github.com/LargeAgentCollider/torch_june/actions/workflows/ci.yml/badge.svg)](https://github.com/LargeAgentCollider/torch_june/actions/workflows/ci.yml)
 
 # Torch JUNE
 Implementation of the JUNE model using Graph Neural Networks in PyTorch
@@ -21,4 +21,4 @@ pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://
 
 # Usage
 
-See the [docs](https://arnauqb.github.io/torch_june/).
+See the [docs](https://largeagentcollider.github.io/torch_june/).
