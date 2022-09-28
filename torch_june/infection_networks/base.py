@@ -13,7 +13,6 @@ class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
         super().__init__( aggr="add", node_dim=-1)
         self.device = device
-        #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
         if type(log_beta) != torch.nn.Parameter:
             self.log_beta = torch.tensor(float(log_beta))
         else:
