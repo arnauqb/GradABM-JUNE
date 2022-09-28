@@ -18,7 +18,7 @@ class Runner(torch.nn.Module):
         model,
         data,
         timer,
-        n_initial_cases,
+        fraction_initial_cases,
         save_path,
         parameters,
         age_bins=(0, 18, 25, 65, 80, 100),
@@ -28,7 +28,7 @@ class Runner(torch.nn.Module):
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
-        self.n_initial_cases = n_initial_cases
+        self.fraction_initial_cases = fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.n_agents = data["agent"].id.shape[0]
@@ -51,7 +51,7 @@ class Runner(torch.nn.Module):
             model=model,
             data=data,
             timer=timer,
-            n_initial_cases=params["infection_seed"]["n_initial_cases"],
+            fraction_initial_cases=params["infection_seed"]["fraction_initial_cases"],
             save_path=params["save_path"],
             parameters=params,
         )
@@ -133,7 +133,8 @@ class Runner(torch.nn.Module):
     def set_initial_cases(self):
         indices = np.arange(0, self.data["agent"].id.shape[0])
         np.random.shuffle(indices)
-        indices = indices[: self.n_initial_cases]
+        max_idx = int(self.fraction_initial_cases * self.n_agents)
+        indices = indices[: max_idx]
         return infect_people_at_indices(self.data, indices, device=self.device)
 
     def forward(self):
