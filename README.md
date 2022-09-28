@@ -19,6 +19,13 @@ and install PyTorch geometric, manually for now:
 pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
 ```
 
+Then install the torch_june package
+
+```bash
+pip install --no-deps -e .
+```
+
+
 # Usage
 
 See the [docs](https://largeagentcollider.github.io/torch_june/).
