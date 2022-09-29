@@ -20,11 +20,11 @@ class SocialDistancing(InteractionPolicy):
         beta_factors_ = {}
         for key in beta_factors:
             beta_factors_[key] = torch.tensor(float(beta_factors[key]), device=device)
-        self.beta_factors = beta_factors
+        self.beta_factors = beta_factors_
 
     def apply(self, beta, name, timer):
         if self.is_active(timer.date):
-            factor = self.beta_factors.get(name, self.beta_factors.get("all", 1.0))
+            factor = self.beta_factors.get(name, self.beta_factors.get("all", torch.tensor(1.0)))
             return beta * factor
         else:
             return beta

@@ -126,7 +126,7 @@ symptoms:
     susceptible:
       0-100: 0.0
     exposed:
-      0-100: 0.0
+      0-100: 1.0
     infectious:
       0-10: 0.5
       10-20: 0.55
