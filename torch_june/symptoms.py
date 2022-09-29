@@ -19,6 +19,10 @@ class SymptomsSampler:
         device,
     ):
         self.stages = stages
+        self.stages_ids = torch.arange(0, len(stages))
+
+        print(self.stages)
+        print(self.stages_ids)
         self.stage_transition_probabilities = (
             self._parse_stage_transition_probabilities(
                 stage_transition_probabilities, device=device
