@@ -35,6 +35,7 @@ class Runner(torch.nn.Module):
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
         self._parameters = parameters
+        self.restore_initial_data()
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -134,7 +135,7 @@ class Runner(torch.nn.Module):
         indices = np.arange(0, self.data["agent"].id.shape[0])
         np.random.shuffle(indices)
         max_idx = int(self.fraction_initial_cases * self.n_agents)
-        indices = indices[: max_idx]
+        indices = indices[:max_idx]
         return infect_people_at_indices(self.data, indices, device=self.device)
 
     def forward(self):
@@ -147,7 +148,7 @@ class Runner(torch.nn.Module):
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
-        self.store_differentiable_deaths(data, timer)
+        self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         deaths_by_district_timestep = self.get_deaths_by_district(
             data["agent"].symptoms
@@ -162,7 +163,7 @@ class Runner(torch.nn.Module):
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
-            self.store_differentiable_deaths(data, timer)
+            self.store_differentiable_deaths(data)
             deaths_by_district = self.get_deaths_by_district(data["agent"].symptoms)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
             deaths_by_district_timestep = torch.vstack(
@@ -179,9 +180,7 @@ class Runner(torch.nn.Module):
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
-            "deaths_by_district_timestep": deaths_by_district_timestep.transpose(
-                0, 1
-            ),
+            "deaths_by_district_timestep": deaths_by_district_timestep.transpose(0, 1),
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = (
@@ -203,16 +202,19 @@ class Runner(torch.nn.Module):
         df.to_csv(self.save_path / "results_is_infected.csv")
 
     def get_deaths_from_symptoms(self, symptoms):
-        asd = (symptoms["current_stage"] == 7).sum()
         return torch.tensor(
-            symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
+            symptoms["current_stage"][
+                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
+            ].shape[0],
             device=self.device,
         )
 
     def get_deaths_by_district(self, symptoms):
         if "district" in self.data["agent"]:
             districts = self.data["agent"].district.unique()
-            dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
+            dead_idcs = self.data["agent"].district[
+                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
+            ]
             dead_districts = self.data["agent"].district[dead_idcs]
             ret = torch.zeros(districts.shape, dtype=torch.long)
             deaths, counts = torch.unique(dead_districts, return_counts=True)
@@ -221,19 +223,15 @@ class Runner(torch.nn.Module):
         else:
             return torch.zeros(1, 1)
 
-    def store_differentiable_deaths(self, data, timer):
+    def store_differentiable_deaths(self, data):
         """
         Returns differentiable deaths by district and global. The results are stored
         in data["results"]
         """
         # TODO: make numbers config adaptive
         symptoms = data["agent"].symptoms
-        mask_critical = symptoms["current_stage"] == 6
-        mask_to_die = symptoms["next_stage"] == 7
-        mask_is_time = symptoms["time_to_next_stage"] >= timer.now
-        deaths = (
-            mask_critical * mask_to_die * mask_is_time * symptoms["current_stage"] / 7
-        )
+        dead_idx = self.model.symptoms_updater.stages_ids[-1]
+        deaths = (symptoms["current_stage"] == dead_idx) * symptoms["current_stage"] / dead_idx
         if "district" in data["agent"]:
             districts, _ = torch.sort(data["agent"].district.unique())
             deaths_by_district = []

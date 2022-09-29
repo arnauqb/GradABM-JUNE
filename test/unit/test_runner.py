@@ -36,7 +36,9 @@ class TestRunner:
 
     def test__seed(self, runner):
         runner.set_initial_cases()
-        assert runner.data["agent"].is_infected.sum().item() == int(0.05 * runner.n_agents)
+        assert runner.data["agent"].is_infected.sum().item() == int(
+            0.05 * runner.n_agents
+        )
 
     def test__restore_data(self, runner):
         n_agents = runner.data["agent"].id.shape
@@ -86,3 +88,18 @@ class TestRunner:
         assert (results["deaths_per_timestep"] == daily_deaths).all()
         assert daily_deaths.shape[0] == runner._parameters["timer"]["total_days"] + 1
         assert daily_deaths.requires_grad
+
+    def test__save_deaths_by_district(self, runner):
+        district_ids = torch.randint(0, 2, size=(runner.n_agents,))
+        _, people_in_districts = torch.unique(district_ids, return_counts=True)
+        data = runner.data
+        symptoms = data["agent"].symptoms
+        data["agent"].district = district_ids
+        symptoms["current_stage"] = runner.model.symptoms_updater.stages_ids[
+            -1
+        ] * torch.ones(
+            symptoms["current_stage"].shape
+        )  # everyone is dead.
+        runner.store_differentiable_deaths(data)
+        deaths_by_district = data["results"]["daily_deaths_by_district"]
+        assert set(deaths_by_district.numpy()) == set(people_in_districts.numpy())
