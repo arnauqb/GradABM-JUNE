@@ -254,6 +254,7 @@ class Runner(torch.nn.Module):
             )
         else:
             data["results"]["daily_deaths"] = deaths.sum()
+        print(results["daily_deaths_by_district"])
 
     def get_cases_by_age(self, data):
         ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
