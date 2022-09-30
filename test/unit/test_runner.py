@@ -75,7 +75,7 @@ class TestRunner:
         runner.save_results(results, is_infected)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
-            if key in ("dates", "deaths_by_district_timestep"):
+            if key in ("dates", "daily_deaths_by_district"):
                 continue
             assert np.allclose(loaded_results[key], results[key].numpy())
 

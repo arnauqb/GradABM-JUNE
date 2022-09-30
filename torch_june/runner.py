@@ -150,9 +150,9 @@ class Runner(torch.nn.Module):
         cases_by_age = self.get_cases_by_age(data)
         self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
-        deaths_by_district_timestep = self.get_deaths_by_district(
-            data["agent"].symptoms
-        )
+        #deaths_by_district_timestep = self.get_deaths_by_district(
+        #    data["agent"].symptoms
+        #)
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -166,9 +166,9 @@ class Runner(torch.nn.Module):
             self.store_differentiable_deaths(data)
             deaths_by_district = self.get_deaths_by_district(data["agent"].symptoms)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            deaths_by_district_timestep = torch.vstack(
-                (deaths_by_district_timestep, deaths_by_district)
-            )
+            #deaths_by_district_timestep = torch.vstack(
+            #    (deaths_by_district_timestep, deaths_by_district)
+            #)
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
 
@@ -180,7 +180,7 @@ class Runner(torch.nn.Module):
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
-            "deaths_by_district_timestep": deaths_by_district_timestep.transpose(0, 1),
+            "daily_deaths_by_district": data["results"]["daily_deaths_by_district"]
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = (
@@ -193,7 +193,7 @@ class Runner(torch.nn.Module):
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
         for key in results:
-            if key in ("dates", "deaths_by_district_timestep"):
+            if key in ("dates", "daily_deaths_by_district"):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
@@ -228,7 +228,6 @@ class Runner(torch.nn.Module):
         Returns differentiable deaths by district and global. The results are stored
         in data["results"]
         """
-        # TODO: make numbers config adaptive
         symptoms = data["agent"].symptoms
         dead_idx = self.model.symptoms_updater.stages_ids[-1]
         deaths = (symptoms["current_stage"] == dead_idx) * symptoms["current_stage"] / dead_idx
