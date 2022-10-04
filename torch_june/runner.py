@@ -193,9 +193,9 @@ class Runner(torch.nn.Module):
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = (
-                cases_by_age[:, i] / self.population_by_age[i]
-            )
+            results[f"cases_by_age_{key:02d}"] = cases_by_age[
+                :, i
+            ]  # / self.population_by_age[i]
         return results, data["agent"].is_infected
 
     def save_results(self, results, is_infected):

@@ -12,7 +12,6 @@ class LeisureNetwork(InfectionNetwork):
         )
         self.weekday_probabilities = None
         self.weekend_probabilities = None
-        print(self.leisure_probabilities)
 
     @classmethod
     def from_parameters(cls, params):
