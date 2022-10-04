@@ -36,8 +36,10 @@ class TestRunner:
 
     def test__seed(self, runner):
         runner.set_initial_cases()
-        assert runner.data["agent"].is_infected.sum().item() == int(
-            0.05 * runner.n_agents
+        assert np.isclose(
+            runner.data["agent"].is_infected.sum().item(),
+            0.15 * runner.n_agents,
+            rtol=1e-1,
         )
 
     def test__restore_data(self, runner):
