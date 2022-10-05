@@ -34,7 +34,7 @@ class Runner(torch.nn.Module):
         self.n_agents = data["agent"].id.shape[0]
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
-        self._parameters = parameters
+        self.input_parameters = parameters
         self.restore_initial_data()
 
     @classmethod
