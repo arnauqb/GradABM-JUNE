@@ -24,7 +24,7 @@ class TestRunner:
 
     def test__read_from_file(self, runner):
         file_runner = Runner.from_file()
-        assert file_runner._parameters == runner._parameters
+        assert file_runner.input_parameters == runner.input_parameters
 
     def test__get_data(self, runner):
         n_agents = runner.data["agent"].id.shape
@@ -88,7 +88,7 @@ class TestRunner:
         data_results = data["results"]
         daily_deaths = data_results["daily_deaths"]
         assert (results["deaths_per_timestep"] == daily_deaths).all()
-        assert daily_deaths.shape[0] == runner._parameters["timer"]["total_days"] + 1
+        assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
         assert daily_deaths.requires_grad
 
     def test__save_deaths_by_district(self, runner):
