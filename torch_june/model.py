@@ -68,7 +68,9 @@ class TorchJune(torch.nn.Module):
             data["agent"].susceptibility - new_infected,
         )
         data["agent"].is_infected = data["agent"].is_infected + new_infected
-        data["agent"].infection_time[new_infected.bool()] = timer.now
+        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
+            timer.now - data["agent"].infection_time
+        )
         data["symptoms"] = self.symptoms_updater(
             data=data, timer=timer, new_infected=new_infected
         )
