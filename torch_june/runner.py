@@ -9,10 +9,7 @@ from pathlib import Path
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
 from torch_june.utils import read_path
-from torch_june.infection_seed import (
-    infect_people_at_indices,
-    infect_fraction_of_people,
-)
+from torch_june.infection_seed import infect_fraction_of_people
 
 
 class Runner(torch.nn.Module):
@@ -37,7 +34,7 @@ class Runner(torch.nn.Module):
         self.n_agents = data["agent"].id.shape[0]
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
-        self._parameters = parameters
+        self.input_parameters = parameters
         self.restore_initial_data()
 
     @classmethod
@@ -135,12 +132,21 @@ class Runner(torch.nn.Module):
         self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
-        infect_fraction_of_people(
+        new_infected = infect_fraction_of_people(
             data=self.data,
-            model=self.model,
             timer=self.timer,
-            fraction_initial_cases=self.fraction_initial_cases,
+            symptoms_updater=self.model.symptoms_updater,
+            device=self.device,
+            fraction=self.fraction_initial_cases,
         )
+        self.model.symptoms_updater(
+            data=self.data, timer=self.timer, new_infected=new_infected
+        )
+        # indices = np.arange(0, self.data["agent"].id.shape[0])
+        # np.random.shuffle(indices)
+        # max_idx = int(self.fraction_initial_cases * self.n_agents)
+        # indices = indices[:max_idx]
+        # return infect_people_at_indices(self.data, indices, device=self.device)
 
     def forward(self):
         timer = self.timer
@@ -187,9 +193,9 @@ class Runner(torch.nn.Module):
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = (
-                cases_by_age[:, i] / self.population_by_age[i]
-            )
+            results[f"cases_by_age_{key:02d}"] = cases_by_age[
+                :, i
+            ]  # / self.population_by_age[i]
         return results, data["agent"].is_infected
 
     def save_results(self, results, is_infected):

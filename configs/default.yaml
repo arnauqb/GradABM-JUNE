@@ -40,7 +40,7 @@ timer:
       - household
 
 infection_seed:
-  fraction_initial_cases: 0.05
+  fraction_initial_cases: 0.15
 
 networks:
   household:
