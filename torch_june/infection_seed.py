@@ -3,7 +3,7 @@ import pyro
 
 
 def infect_fraction_of_people(data, timer, symptoms_updater, fraction, device):
-    probs = fraction * torch.ones(data["agent"].id.shape)
+    probs = fraction * torch.ones(data["agent"].id.shape, device=device)
     dist = pyro.distributions.RelaxedBernoulliStraightThrough(
         temperature=torch.tensor(0.1),
         probs=probs,

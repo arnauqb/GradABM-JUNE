@@ -18,7 +18,7 @@ class Runner(torch.nn.Module):
         model,
         data,
         timer,
-        fraction_initial_cases,
+        log_fraction_initial_cases,
         save_path,
         parameters,
         age_bins=(0, 18, 25, 65, 80, 100),
@@ -28,7 +28,7 @@ class Runner(torch.nn.Module):
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
-        self.fraction_initial_cases = fraction_initial_cases
+        self.log_fraction_initial_cases = log_fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.n_agents = data["agent"].id.shape[0]
@@ -52,7 +52,7 @@ class Runner(torch.nn.Module):
             model=model,
             data=data,
             timer=timer,
-            fraction_initial_cases=params["infection_seed"]["fraction_initial_cases"],
+            log_fraction_initial_cases=params["infection_seed"]["log_fraction_initial_cases"],
             save_path=params["save_path"],
             parameters=params,
         )
@@ -132,12 +132,13 @@ class Runner(torch.nn.Module):
         self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
+        fraction_initial_cases = 10.0 ** self.log_fraction_initial_cases
         new_infected = infect_fraction_of_people(
             data=self.data,
             timer=self.timer,
             symptoms_updater=self.model.symptoms_updater,
             device=self.device,
-            fraction=self.fraction_initial_cases,
+            fraction=fraction_initial_cases,
         )
         self.model.symptoms_updater(
             data=self.data, timer=self.timer, new_infected=new_infected
