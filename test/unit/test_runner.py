@@ -38,7 +38,7 @@ class TestRunner:
         runner.set_initial_cases()
         assert np.isclose(
             runner.data["agent"].is_infected.sum().item(),
-            0.15 * runner.n_agents,
+            0.10 * runner.n_agents,
             rtol=1e-1,
         )
 

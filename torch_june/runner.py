@@ -31,6 +31,7 @@ class Runner(torch.nn.Module):
         self.log_fraction_initial_cases = log_fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
+        self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
         self.n_agents = data["agent"].id.shape[0]
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
@@ -52,7 +53,9 @@ class Runner(torch.nn.Module):
             model=model,
             data=data,
             timer=timer,
-            log_fraction_initial_cases=params["infection_seed"]["log_fraction_initial_cases"],
+            log_fraction_initial_cases=params["infection_seed"][
+                "log_fraction_initial_cases"
+            ],
             save_path=params["save_path"],
             parameters=params,
         )
@@ -132,7 +135,7 @@ class Runner(torch.nn.Module):
         self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
-        fraction_initial_cases = 10.0 ** self.log_fraction_initial_cases
+        fraction_initial_cases = 10.0**self.log_fraction_initial_cases
         new_infected = infect_fraction_of_people(
             data=self.data,
             timer=self.timer,
@@ -143,11 +146,6 @@ class Runner(torch.nn.Module):
         self.model.symptoms_updater(
             data=self.data, timer=self.timer, new_infected=new_infected
         )
-        # indices = np.arange(0, self.data["agent"].id.shape[0])
-        # np.random.shuffle(indices)
-        # max_idx = int(self.fraction_initial_cases * self.n_agents)
-        # indices = indices[:max_idx]
-        # return infect_people_at_indices(self.data, indices, device=self.device)
 
     def forward(self):
         timer = self.timer
@@ -159,11 +157,9 @@ class Runner(torch.nn.Module):
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
+        cases_by_ethnicity = self.get_cases_by_ethnicity(data)
         self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
-        # deaths_by_district_timestep = self.get_deaths_by_district(
-        #    data["agent"].symptoms
-        # )
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -175,14 +171,11 @@ class Runner(torch.nn.Module):
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
             self.store_differentiable_deaths(data)
-            # deaths_by_district = self.get_deaths_by_district(data["agent"].symptoms)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            # deaths_by_district_timestep = torch.vstack(
-            #    (deaths_by_district_timestep, deaths_by_district)
-            # )
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
-
+            cases_ethnicity = self.get_cases_by_ethnicity(data)
+            cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -194,9 +187,9 @@ class Runner(torch.nn.Module):
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = cases_by_age[
-                :, i
-            ]  # / self.population_by_age[i]
+            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        for (i, key) in enumerate(self.ethnicities):
+            results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
         return results, data["agent"].is_infected
 
     def save_results(self, results, is_infected):
@@ -273,7 +266,7 @@ class Runner(torch.nn.Module):
             mask1 = data["agent"].age < self.age_bins[i]
             mask2 = data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
-            ret[i - 1] = ret[i - 1] + data["agent"].is_infected[mask].sum()
+            ret[i - 1] = (data["agent"].is_infected * mask).sum()
         return ret
 
     def get_people_by_age(self):
@@ -283,4 +276,13 @@ class Runner(torch.nn.Module):
             mask2 = self.data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
             ret[i - 1] = mask.sum()
+        return ret
+
+    def get_cases_by_ethnicity(self, data):
+        ret = torch.zeros(len(self.ethnicities), device=self.device)
+        for i, ethnicity in enumerate(self.ethnicities):
+            mask = torch.tensor(
+                self.data["agent"].ethnicity == ethnicity, device=self.device
+            )
+            ret[i] = (mask * data["agent"].is_infected).sum()
         return ret
