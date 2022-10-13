@@ -22,7 +22,7 @@ class Runner(torch.nn.Module):
         log_fraction_initial_cases,
         save_path,
         parameters,
-        age_bins=(0, 18, 25, 65, 80, 100),
+        age_bins=(0, 18, 25, 45, 65, 100),
     ):
         super().__init__()
         self.model = model
@@ -157,7 +157,7 @@ class Runner(torch.nn.Module):
         self.set_initial_cases()
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
-        #cases_by_age = self.get_cases_by_age(data)
+        cases_by_age = self.get_cases_by_age(data)
         #cases_by_ethnicity = self.get_cases_by_ethnicity(data)
         self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
@@ -172,8 +172,8 @@ class Runner(torch.nn.Module):
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
             self.store_differentiable_deaths(data)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            #cases_age = self.get_cases_by_age(data)
-            #cases_by_age = torch.vstack((cases_by_age, cases_age))
+            cases_age = self.get_cases_by_age(data)
+            cases_by_age = torch.vstack((cases_by_age, cases_age))
             #cases_ethnicity = self.get_cases_by_ethnicity(data)
             #cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
@@ -186,8 +186,8 @@ class Runner(torch.nn.Module):
             "deaths_per_timestep": deaths_per_timestep,
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
-        #for (i, key) in enumerate(self.age_bins[1:]):
-        #    results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        for (i, key) in enumerate(self.age_bins[1:]):
+            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
         #for (i, key) in enumerate(self.ethnicities):
         #    results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
         return results, data["agent"].is_infected
