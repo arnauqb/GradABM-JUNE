@@ -135,7 +135,7 @@ class InfectionNetworks(torch.nn.Module):
         for activity in activity_order:
             network = self.networks[activity]
             trans_susc += network(data=data, timer=timer, policies=policies)
-            # trans_susc = trans_susc + checkpoint(network, data, timer, policies)
+            #trans_susc = trans_susc + checkpoint(network, data, timer, policies, dummy)
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
         )  # this is necessary to avoid gradient infs
