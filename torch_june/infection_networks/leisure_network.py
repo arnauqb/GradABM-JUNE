@@ -23,6 +23,11 @@ class LeisureNetwork(InfectionNetwork):
             **params["networks"][cls._get_name()]
         )
 
+    def to_device(self, device):
+        self.device = device
+        self.weekday_probabilities = self.weekday_probabilities.to(device)
+        self.weekend_probabilities = self.weekend_probabilities.to(device)
+
     def _parse_leisure_probabilities(self, leisure_probabilities):
         ret = torch.zeros((2, 2, 100), device=self.device)
         for i, day_type in enumerate(["weekday", "weekend"]):

@@ -20,6 +20,9 @@ class Policy(torch.nn.Module):
     def apply(self):
         raise NotImplementedError
 
+    def to_device(self):
+        pass
+
     def is_active(self, date: datetime.datetime) -> bool:
         """
         Returns true if the policy is active, false otherwise
@@ -119,6 +122,15 @@ class Policies(torch.nn.Module):
     @classmethod
     def _get_policies_by_type(cls, policies, type):
         return [policy for policy in policies if policy.spec == type]
+
+    def to_device(self, device):
+        for policy in self.interaction_policies:
+            policy.to_device(device)
+        for policy in self.close_venue_policies:
+            policy.to_device(device)
+        for policy in self.quarantine_policies:
+            policy.to_device(device)
+        return self.to(device)
 
     def apply(self, data, timer):
         if self.quarantine_policies:

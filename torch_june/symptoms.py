@@ -20,6 +20,8 @@ class SymptomsSampler:
     ):
         self.stages = stages
         self.stages_ids = torch.arange(0, len(stages))
+        self._stage_transition_times = stage_transition_times
+        self._recovery_times = recovery_times
 
         self.stage_transition_probabilities = (
             self._parse_stage_transition_probabilities(
@@ -40,6 +42,17 @@ class SymptomsSampler:
     @classmethod
     def from_parameters(cls, params):
         return cls(**params["symptoms"], device=params["system"]["device"])
+
+    def to_device(self, device):
+        self.stage_transition_probabilities = self.stage_transition_probabilities.to(
+            device
+        )
+        self.stage_transition_times = self._parse_stage_times(
+            self._stage_transition_times, device=device
+        )
+        self.recovery_times = self._parse_stage_times(
+            self._recovery_times, device=device
+        )
 
     def _parse_stage_transition_probabilities(
         self, stage_transition_probabilities, device
@@ -96,23 +109,25 @@ class SymptomsSampler:
         current_stage = current_stage - (current_stage - next_stage) * mask_transition
         # Sample possible next stages
         probs = self._get_prob_next_symptoms_stage(ages, current_stage.long())
-        mask_symp_stage = torch.bernoulli(probs).to(torch.bool) # no dependence on parameters here.
-        #mask_symp_stage = (
+        mask_symp_stage = torch.bernoulli(probs).to(
+            torch.bool
+        )  # no dependence on parameters here.
+        # mask_symp_stage = (
         #   pyro.distributions.RelaxedBernoulliStraightThrough(
         #       temperature=torch.tensor(0.1),
         #       probs=probs,
         #   )
         #   .rsample()
-        #)
+        # )
         # These ones would recover
         mask_recovered_stage = ~mask_symp_stage
         for i in range(
             2, len(self.stages) - 1
         ):  # skip recovered, susceptible, and dead
             # Check people at this stage that need updating
-            mask_stage = (current_stage == i)
+            mask_stage = current_stage == i
             # this makes sure the gradient flows, since we lost it in the previous line.
-            mask_stage = mask_stage * current_stage / i 
+            mask_stage = mask_stage * current_stage / i
             mask_updating = mask_stage * mask_transition
 
             # These people progress to another disease stage
@@ -152,6 +167,9 @@ class SymptomsUpdater(pyro.nn.PyroModule):
     def from_parameters(cls, params):
         ss = SymptomsSampler.from_parameters(params)
         return cls(symptoms_sampler=ss)
+
+    def to_device(self, device):
+        self.symptoms_sampler.to_device(device)
 
     def forward(self, data, timer, new_infected):
         time = timer.now

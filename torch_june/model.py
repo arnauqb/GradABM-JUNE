@@ -78,3 +78,11 @@ class TorchJune(torch.nn.Module):
             data=data, timer=timer, new_infected=new_infected
         )
         return data
+
+    def to_device(self, device):
+        self.symptoms_updater.to_device(device)
+        self.policies = self.policies.to_device(device)
+        self.infection_networks.to_device(device)
+        self.transmission_updater = self.transmission_updater.to(device)
+        self.is_infected_sampler = self.is_infected_sampler.to(device)
+        self.device = device

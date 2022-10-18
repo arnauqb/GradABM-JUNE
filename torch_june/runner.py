@@ -10,6 +10,7 @@ from pathlib import Path
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
 from torch_june.utils import read_path
+from torch_june.cuda_utils import get_fraction_gpu_used
 from torch_june.infection_seed import infect_fraction_of_people
 
 
@@ -89,6 +90,8 @@ class Runner(torch.nn.Module):
         data["agent"].symptoms = symptoms
         return data
 
+    def change_model_device(self, device):
+
     def backup_infection_data(self, data):
         ret = {}
         ret["susceptibility"] = data["agent"].susceptibility.detach().clone()
@@ -163,7 +166,16 @@ class Runner(torch.nn.Module):
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         dates = [timer.date]
         i = 0
+        cuda_device = 0
         while timer.date < timer.final_date:
+            fraction_gpu = get_fraction_gpu_used(cuda_device)
+            print(fraction_gpu)
+            if fraction_gpu > 0.9:
+                cuda_device += 1
+                model.to_device(cuda_device)
+                data = data.cuda(cuda_device)
+                cases_per_timestep = cases_per_timestep.cuda(cuda_device)
+                self.age_bins = self.age_bins.cuda(cuda_device)
             i += 1
             next(timer)
             data = model(data, timer)
@@ -181,7 +193,7 @@ class Runner(torch.nn.Module):
             "dates": dates,
             "cases_per_timestep": cases_per_timestep,
             "daily_cases_per_timestep": torch.diff(
-                cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
+                cases_per_timestep, prepend=torch.tensor([0.0], device=cases_per_timestep.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
