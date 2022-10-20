@@ -22,6 +22,9 @@ def get_gpu_memory_map():
 
 
 def get_fraction_gpu_used(i):
-    total = torch.cuda.get_device_properties(f"cuda:{i}").total_memory / 1e6  # MB
-    used = get_gpu_memory_map()[i]
-    return used / total
+    if torch.cuda.is_available():
+        total = torch.cuda.get_device_properties(f"cuda:{i}").total_memory / 1e6  # MB
+        used = get_gpu_memory_map()[i]
+        return used / total
+    else:
+        return 0.0

@@ -66,8 +66,8 @@ class TestRunner:
         assert len(results["deaths_per_timestep"]) == n_timesteps
         assert len(results["cases_by_age_18"]) == n_timesteps
         assert len(results["cases_by_age_25"]) == n_timesteps
+        assert len(results["cases_by_age_45"]) == n_timesteps
         assert len(results["cases_by_age_65"]) == n_timesteps
-        assert len(results["cases_by_age_80"]) == n_timesteps
         assert len(results["cases_by_age_100"]) == n_timesteps
         assert len(is_infected) == runner.n_agents
 
@@ -82,6 +82,10 @@ class TestRunner:
             assert np.allclose(loaded_results[key], results[key].numpy())
 
     def test__deaths_gradient(self, runner):
+        district_ids = torch.randint(0, 2, size=(runner.n_agents,))
+        _, people_in_districts = torch.unique(district_ids, return_counts=True)
+        data = runner.data
+        data["agent"].district = district_ids
         results, is_infected = runner()
         assert results["cases_per_timestep"].requires_grad
         data = runner.data
@@ -90,13 +94,14 @@ class TestRunner:
         assert (results["deaths_per_timestep"] == daily_deaths).all()
         assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
         assert daily_deaths.requires_grad
+        assert results["daily_deaths_by_district"].requires_grad
 
     def test__save_deaths_by_district(self, runner):
         district_ids = torch.randint(0, 2, size=(runner.n_agents,))
         _, people_in_districts = torch.unique(district_ids, return_counts=True)
         data = runner.data
-        symptoms = data["agent"].symptoms
         data["agent"].district = district_ids
+        symptoms = data["agent"].symptoms
         symptoms["current_stage"] = runner.model.symptoms_updater.stages_ids[
             -1
         ] * torch.ones(
