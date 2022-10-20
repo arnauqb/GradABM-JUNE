@@ -76,7 +76,11 @@ class TorchJune(torch.nn.Module):
         )
 
     def forward(self, data, timer):
+        print("?")
+        print(self.infection_networks.networks["household"].log_beta)
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
+        print("?")
+        print(self.infection_networks.networks["household"].log_beta)
         not_infected_probs = self.infection_networks(
             data=data,
             timer=timer,

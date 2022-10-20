@@ -64,6 +64,9 @@ class InfectionNetwork(MessagePassing):
         return mask * data["agent"].susceptibility
 
     def forward(self, data, timer, policies):
+        if self.__class__.__name__ == "HouseholdNetwork":
+            print("household")
+            print(self.log_beta)
         beta = self._get_beta(policies=policies, timer=timer, data=data)
         people_per_group = self._get_people_per_group(data)
         p_contact = torch.maximum(

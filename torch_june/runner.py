@@ -182,7 +182,6 @@ class Runner(torch.nn.Module):
                 data = model(data, timer)
             except RuntimeError:
                 cuda_device += 1
-                print(f"Changing GPU to {cuda_device}")
                 model = self.change_model_device(f"cuda:{cuda_device}")
                 data = data.cuda(cuda_device)
                 for key in data["agent"].symptoms:
