@@ -28,9 +28,8 @@ class InfectionNetwork(MessagePassing):
     def _get_name(cls):
         return "_".join(re.findall("[A-Z][^A-Z]*", cls.__name__)[:-1]).lower()
 
-    def to_device(self, device):
-        self.device = device
-        self.to(device)
+    def make_with_new_device(self, device):
+        return self.__class__(log_beta=self.log_beta, device=device)
 
     def _get_edge_index(self, data):
         return data["attends_" + self.name].edge_index
@@ -121,10 +120,11 @@ class InfectionNetworks(torch.nn.Module):
             params = yaml.safe_load(f)
         return cls.from_parameters(params)
 
-    def to_device(self, device):
+    def make_with_new_device(self, device):
+        dd = {}
         for network in self.networks:
-            self.networks[network].to_device(device)
-        self.device = device
+            dd[network] = self.networks[network].make_with_new_device(device)
+        return self.__class__(device=device, **dd)
 
     def forward(
         self,

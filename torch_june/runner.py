@@ -39,6 +39,7 @@ class Runner(torch.nn.Module):
         self.save_path = Path(save_path)
         self.input_parameters = parameters
         self.restore_initial_data()
+        self.first_device = model.device
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -91,6 +92,7 @@ class Runner(torch.nn.Module):
         return data
 
     def change_model_device(self, device):
+        return self.model.make_with_new_device(device)
 
     def backup_infection_data(self, data):
         ret = {}
@@ -153,15 +155,20 @@ class Runner(torch.nn.Module):
 
     def forward(self):
         timer = self.timer
-        model = self.model
-        data = self.data
+        model = self.change_model_device(self.first_device)
+        #first_device_num = int(self.first_device.split(":")[-1])
+        data = self.data.to(self.first_device)
+        for key in data["agent"].symptoms:
+            data["agent"].symptoms[key] = (
+                data["agent"].symptoms[key].to(self.first_device) #.cuda(first_device_num)
+            )
         timer.reset()
         self.restore_initial_data()
         self.set_initial_cases()
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
-        #cases_by_ethnicity = self.get_cases_by_ethnicity(data)
+        # cases_by_ethnicity = self.get_cases_by_ethnicity(data)
         self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         dates = [timer.date]
@@ -169,16 +176,21 @@ class Runner(torch.nn.Module):
         cuda_device = 0
         while timer.date < timer.final_date:
             fraction_gpu = get_fraction_gpu_used(cuda_device)
-            print(fraction_gpu)
-            if fraction_gpu > 0.9:
-                cuda_device += 1
-                model.to_device(cuda_device)
-                data = data.cuda(cuda_device)
-                cases_per_timestep = cases_per_timestep.cuda(cuda_device)
-                self.age_bins = self.age_bins.cuda(cuda_device)
             i += 1
             next(timer)
-            data = model(data, timer)
+            try:
+                data = model(data, timer)
+            except RuntimeError:
+                cuda_device += 1
+                print(f"Changing GPU to {cuda_device}")
+                model = self.change_model_device(f"cuda:{cuda_device}")
+                data = data.cuda(cuda_device)
+                for key in data["agent"].symptoms:
+                    data["agent"].symptoms[key] = (
+                        data["agent"].symptoms[key].cuda(cuda_device)
+                    )
+                cases_per_timestep = cases_per_timestep.cuda(cuda_device)
+                cases_by_age = cases_by_age.cuda(cuda_device)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
@@ -186,21 +198,22 @@ class Runner(torch.nn.Module):
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
-            #cases_ethnicity = self.get_cases_by_ethnicity(data)
-            #cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
+            # cases_ethnicity = self.get_cases_by_ethnicity(data)
+            # cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
         results = {
             "dates": dates,
             "cases_per_timestep": cases_per_timestep,
             "daily_cases_per_timestep": torch.diff(
-                cases_per_timestep, prepend=torch.tensor([0.0], device=cases_per_timestep.device)
+                cases_per_timestep,
+                prepend=torch.tensor([0.0], device=cases_per_timestep.device),
             ),
             "deaths_per_timestep": deaths_per_timestep,
             "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        #for (i, key) in enumerate(self.ethnicities):
+        # for (i, key) in enumerate(self.ethnicities):
         #    results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
         return results, data["agent"].is_infected
 
@@ -273,16 +286,20 @@ class Runner(torch.nn.Module):
             data["results"]["daily_deaths"] = deaths.sum()
 
     def get_cases_by_age(self, data):
-        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
-        for i in range(1, self.age_bins.shape[0]):
-            mask1 = data["agent"].age < self.age_bins[i]
-            mask2 = data["agent"].age > self.age_bins[i - 1]
+        device = data["agent"].is_infected.device
+        ret = torch.zeros(self.age_bins.shape[0] - 1, device=device)
+        age_bins = self.age_bins.to(data["agent"].age.device)
+        for i in range(1, age_bins.shape[0]):
+            mask1 = data["agent"].age < age_bins[i]
+            mask2 = data["agent"].age > age_bins[i - 1]
             mask = mask1 * mask2
+            mask = mask.to(device)
             ret[i - 1] = (data["agent"].is_infected * mask).sum()
         return ret
 
     def get_people_by_age(self):
-        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
+        device = self.data["agent"].is_infected.device
+        ret = torch.zeros(self.age_bins.shape[0] - 1, device=device)
         for i in range(1, self.age_bins.shape[0]):
             mask1 = self.data["agent"].age < self.age_bins[i]
             mask2 = self.data["agent"].age > self.age_bins[i - 1]

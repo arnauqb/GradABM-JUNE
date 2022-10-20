@@ -17,11 +17,15 @@ class Policy(torch.nn.Module):
         self.end_date = read_date(end_date)
         self.device = device
 
+    @classmethod
+    def date_to_str(self, date):
+        return str(date.date())
+
     def apply(self):
         raise NotImplementedError
 
-    def to_device(self):
-        pass
+    def make_with_new_device(self, device):
+        raise NotImplementedError
 
     def is_active(self, date: datetime.datetime) -> bool:
         """
@@ -45,6 +49,10 @@ class PolicyCollection(torch.nn.Module):
 
     def __getitem__(self, idx):
         return self.policies[idx]
+
+    def make_with_new_device(self, device):
+        pl = [policy.make_with_new_device(device) for policy in self.policies]
+        return self.__class__(pl)
 
 
 class Policies(torch.nn.Module):
@@ -123,14 +131,15 @@ class Policies(torch.nn.Module):
     def _get_policies_by_type(cls, policies, type):
         return [policy for policy in policies if policy.spec == type]
 
-    def to_device(self, device):
-        for policy in self.interaction_policies:
-            policy.to_device(device)
-        for policy in self.close_venue_policies:
-            policy.to_device(device)
-        for policy in self.quarantine_policies:
-            policy.to_device(device)
-        return self.to(device)
+    def make_with_new_device(self, device):
+        interaction_policies = self.interaction_policies.make_with_new_device(device)
+        quarantine_policies = self.quarantine_policies.make_with_new_device(device)
+        close_venue_policies = self.close_venue_policies.make_with_new_device(device)
+        return self.__class__(
+            interaction_policies=interaction_policies,
+            quarantine_policies=quarantine_policies,
+            close_venue_policies=close_venue_policies,
+        )
 
     def apply(self, data, timer):
         if self.quarantine_policies:

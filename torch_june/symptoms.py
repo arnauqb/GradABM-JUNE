@@ -20,6 +20,8 @@ class SymptomsSampler:
     ):
         self.stages = stages
         self.stages_ids = torch.arange(0, len(stages))
+        # this is used to rebuild in a different device
+        self._stage_transition_probabilities = stage_transition_probabilities
         self._stage_transition_times = stage_transition_times
         self._recovery_times = recovery_times
 
@@ -43,15 +45,13 @@ class SymptomsSampler:
     def from_parameters(cls, params):
         return cls(**params["symptoms"], device=params["system"]["device"])
 
-    def to_device(self, device):
-        self.stage_transition_probabilities = self.stage_transition_probabilities.to(
-            device
-        )
-        self.stage_transition_times = self._parse_stage_times(
-            self._stage_transition_times, device=device
-        )
-        self.recovery_times = self._parse_stage_times(
-            self._recovery_times, device=device
+    def make_with_new_device(self, device):
+        return self.__class__(
+            stages=self.stages,
+            stage_transition_probabilities=self._stage_transition_probabilities,
+            recovery_times=self._recovery_times,
+            stage_transition_times=self._stage_transition_times,
+            device=device,
         )
 
     def _parse_stage_transition_probabilities(
@@ -168,8 +168,9 @@ class SymptomsUpdater(pyro.nn.PyroModule):
         ss = SymptomsSampler.from_parameters(params)
         return cls(symptoms_sampler=ss)
 
-    def to_device(self, device):
-        self.symptoms_sampler.to_device(device)
+    def make_with_new_device(self, device):
+        symptoms_sampler = self.symptoms_sampler.make_with_new_device(device)
+        return self.__class__(symptoms_sampler=symptoms_sampler)
 
     def forward(self, data, timer, new_infected):
         time = timer.now

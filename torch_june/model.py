@@ -54,6 +54,17 @@ class TorchJune(torch.nn.Module):
             device=params["system"]["device"],
         )
 
+    def make_with_new_device(self, device):
+        su = self.symptoms_updater.make_with_new_device(device)
+        policies = self.policies.make_with_new_device(device)
+        inf_nets = self.infection_networks.make_with_new_device(device)
+        return self.__class__(
+            symptoms_updater=su,
+            policies=policies,
+            infection_networks=inf_nets,
+            device=device,
+        )
+
     def infect_people(self, data, timer, new_infected):
         data["agent"].susceptibility = torch.maximum(
             torch.tensor(0.0, device=self.device),
@@ -74,15 +85,5 @@ class TorchJune(torch.nn.Module):
         infected_probs = 1.0 - not_infected_probs
         new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
         self.infect_people(data, timer, new_infected)
-        self.symptoms_updater(
-            data=data, timer=timer, new_infected=new_infected
-        )
+        self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
         return data
-
-    def to_device(self, device):
-        self.symptoms_updater.to_device(device)
-        self.policies = self.policies.to_device(device)
-        self.infection_networks.to_device(device)
-        self.transmission_updater = self.transmission_updater.to(device)
-        self.is_infected_sampler = self.is_infected_sampler.to(device)
-        self.device = device

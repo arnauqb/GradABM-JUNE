@@ -7,6 +7,7 @@ from torch_june.utils import parse_age_probabilities
 class LeisureNetwork(InfectionNetwork):
     def __init__(self, log_beta, leisure_probabilities, device):
         super().__init__(log_beta=log_beta, device=device)
+        self._leisure_probabilities = leisure_probabilities
         self.leisure_probabilities = self._parse_leisure_probabilities(
             leisure_probabilities
         )
@@ -23,10 +24,12 @@ class LeisureNetwork(InfectionNetwork):
             **params["networks"][cls._get_name()]
         )
 
-    def to_device(self, device):
-        self.device = device
-        self.weekday_probabilities = self.weekday_probabilities.to(device)
-        self.weekend_probabilities = self.weekend_probabilities.to(device)
+    def make_with_new_device(self, device):
+        return self.__class__(
+            log_beta=self.log_beta,
+            leisure_probabilities=self._leisure_probabilities,
+            device=device,
+        )
 
     def _parse_leisure_probabilities(self, leisure_probabilities):
         ret = torch.zeros((2, 2, 100), device=self.device)
