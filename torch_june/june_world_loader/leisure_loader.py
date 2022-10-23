@@ -55,13 +55,34 @@ class LeisureNetworkLoader:
             ret[super_area] = people
         return ret
 
+#    def load_network(self, data):
+#        close_people_per_super_area = self._get_close_people_per_super_area(k=self.k)
+#        ret = torch.empty((2, 0), dtype=torch.long)
+#        for super_area in close_people_per_super_area:
+#            people = torch.tensor(
+#                close_people_per_super_area[super_area], dtype=torch.long
+#            )
+#            edges = torch.vstack(
+#                (people, super_area * torch.ones(len(people), dtype=torch.long))
+#            )
+#            ret = torch.hstack((ret, edges))
+#        data["agent", "attends_leisure", "leisure"].edge_index = ret
+#        data["leisure"].id = torch.tensor(list(close_people_per_super_area.keys()))
+#        data["leisure"].people = torch.tensor(
+#            [len(close_people_per_super_area[sa]) for sa in close_people_per_super_area]
+#        )
+
     def load_network(self, data):
         close_people_per_super_area = self._get_close_people_per_super_area(k=self.k)
         ret = torch.empty((2, 0), dtype=torch.long)
         for super_area in close_people_per_super_area:
+            to_choose = int(len(close_people_per_super_area[super_area]) / self.k)
+            indices = torch.randperm(len(close_people_per_super_area[super_area]))[
+                :to_choose
+            ]
             people = torch.tensor(
                 close_people_per_super_area[super_area], dtype=torch.long
-            )
+            )[indices]
             edges = torch.vstack(
                 (people, super_area * torch.ones(len(people), dtype=torch.long))
             )
