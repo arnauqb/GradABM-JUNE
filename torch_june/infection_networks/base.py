@@ -167,3 +167,6 @@ class CompanyNetwork(InfectionNetwork):
 
 class UniversityNetwork(InfectionNetwork):
     pass
+
+class CareVisitsNetwork(InfectionNetwork):
+    pass
