@@ -20,6 +20,7 @@ activity_hierarchy = [
     "gym",
     "grocery",
     "visit",
+    "care_visit",
     "cinema",
     "household",
 ]
