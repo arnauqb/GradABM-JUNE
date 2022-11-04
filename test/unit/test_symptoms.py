@@ -229,3 +229,6 @@ class TestSymptomsUpdater:
         total_deaths = deaths.sum()
         total_deaths.backward()
         assert deaths.requires_grad
+        assert symptoms["current_stage"].requires_grad
+        assert symptoms["time_to_next_stage"].requires_grad
+        assert symptoms["next_stage"].requires_grad

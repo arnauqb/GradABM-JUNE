@@ -56,6 +56,39 @@ class TestSocialDistancing:
             )
             next(timer)
 
+    def test__beta_reduction_all(self, timer):
+        sd = SocialDistancing(
+            start_date="2022-02-01",
+            end_date="2022-02-05",
+            beta_factors={"all": 0.8},
+            device="cpu",
+        )
+        while timer.date < timer.final_date:
+            if timer.date < datetime.datetime(2022, 2, 5):
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(3), name="school", timer=timer).item(),
+                    3 * 0.8,
+                )
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(2), name="company", timer=timer).item(),
+                    2 * 0.8,
+                )
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(3), name="leisure", timer=timer).item(), 3 * 0.8
+                )
+            else:
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(3), name="school", timer=timer).item(), 3
+                )
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(2), name="company", timer=timer).item(),
+                    2,
+                )
+                assert np.isclose(
+                    sd.apply(beta=torch.tensor(3), name="leisure", timer=timer).item(), 3 
+                )
+            next(timer)
+
     def test__integration(self, inf_data, networks):
         timer = Timer(
             initial_day="2022-02-01",

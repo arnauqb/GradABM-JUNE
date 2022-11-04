@@ -19,6 +19,8 @@ class SymptomsSampler:
         device,
     ):
         self.stages = stages
+        self.stages_ids = torch.arange(0, len(stages))
+
         self.stage_transition_probabilities = (
             self._parse_stage_transition_probabilities(
                 stage_transition_probabilities, device=device
@@ -63,17 +65,29 @@ class SymptomsSampler:
         return ret
 
     def _get_need_to_transition(self, current_stage, time_to_next_stage, time):
+        """
+        Gets a mask that is 1 for the agents that need to transition stage and 0
+        for the ones that don't.
+        """
         mask1 = time >= time_to_next_stage
         mask2 = current_stage < len(self.stages) - 1
         return mask1 * mask2
 
     def _get_prob_next_symptoms_stage(self, ages, stages):
+        """
+        Gets the probability of transitioning to the next symptoms stage,
+        given the agents' ages and current stages.
+        """
         probs = self.stage_transition_probabilities[stages, ages]
         return probs
 
     def sample_next_stage(
         self, ages, current_stage, next_stage, time_to_next_stage, time
     ):
+        """
+        Samples the next stage for each agent that needs updating.
+        Returns the current stages, next stages, and the time to next stages.
+        """
         # Check who has reached stage completion time and move them forward
         mask_transition = self._get_need_to_transition(
             current_stage, time_to_next_stage, time
@@ -82,21 +96,23 @@ class SymptomsSampler:
         current_stage = current_stage - (current_stage - next_stage) * mask_transition
         # Sample possible next stages
         probs = self._get_prob_next_symptoms_stage(ages, current_stage.long())
-        mask_symp_stage = torch.bernoulli(probs).to(torch.bool)
-        # mask_symp_stage = (
-        #    pyro.distributions.RelaxedBernoulliStraightThrough(
-        #        temperature=torch.tensor(0.1),
-        #        probs=probs,
-        #    )
-        #    .rsample()
-        # )
+        mask_symp_stage = torch.bernoulli(probs).to(torch.bool) # no dependence on parameters here.
+        #mask_symp_stage = (
+        #   pyro.distributions.RelaxedBernoulliStraightThrough(
+        #       temperature=torch.tensor(0.1),
+        #       probs=probs,
+        #   )
+        #   .rsample()
+        #)
         # These ones would recover
         mask_recovered_stage = ~mask_symp_stage
         for i in range(
             2, len(self.stages) - 1
         ):  # skip recovered, susceptible, and dead
             # Check people at this stage that need updating
-            mask_stage = current_stage == i
+            mask_stage = (current_stage == i)
+            # this makes sure the gradient flows, since we lost it in the previous line.
+            mask_stage = mask_stage * current_stage / i 
             mask_updating = mask_stage * mask_transition
 
             # These people progress to another disease stage
@@ -161,3 +177,7 @@ class SymptomsUpdater(pyro.nn.PyroModule):
         symptoms["next_stage"] = next_stage
         symptoms["time_to_next_stage"] = time_to_next_stage
         return symptoms
+
+    @property
+    def stages_ids(self):
+        return self.symptoms_sampler.stages_ids

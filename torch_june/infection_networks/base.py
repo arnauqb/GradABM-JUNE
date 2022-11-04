@@ -13,7 +13,6 @@ class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
         super().__init__( aggr="add", node_dim=-1)
         self.device = device
-        #self.log_beta = torch.nn.Parameter(torch.tensor(float(log_beta)))
         if type(log_beta) != torch.nn.Parameter:
             self.log_beta = torch.tensor(float(log_beta))
         else:
@@ -136,7 +135,7 @@ class InfectionNetworks(torch.nn.Module):
         for activity in activity_order:
             network = self.networks[activity]
             trans_susc += network(data=data, timer=timer, policies=policies)
-            # trans_susc = trans_susc + checkpoint(network, data, timer, policies)
+            #trans_susc = trans_susc + checkpoint(network, data, timer, policies, dummy)
         trans_susc = torch.clamp(
             trans_susc, min=1e-6
         )  # this is necessary to avoid gradient infs
@@ -167,4 +166,7 @@ class CompanyNetwork(InfectionNetwork):
 
 
 class UniversityNetwork(InfectionNetwork):
+    pass
+
+class CareVisitsNetwork(InfectionNetwork):
     pass

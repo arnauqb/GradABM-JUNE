@@ -2,6 +2,7 @@ import torch
 import pickle
 import numpy as np
 import pandas as pd
+from torch.utils.checkpoint import checkpoint
 import yaml
 import pyro
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 from torch_june.paths import default_config_path
 from torch_june import TorchJune, Timer, TransmissionSampler
 from torch_june.utils import read_path
-from torch_june.infection_seed import infect_people_at_indices
+from torch_june.infection_seed import infect_fraction_of_people
 
 
 class Runner(torch.nn.Module):
@@ -18,23 +19,25 @@ class Runner(torch.nn.Module):
         model,
         data,
         timer,
-        n_initial_cases,
+        log_fraction_initial_cases,
         save_path,
         parameters,
-        age_bins=(0, 18, 25, 65, 80, 100),
+        age_bins=(0, 18, 25, 35, 45, 55, 65, 75, 100),
     ):
         super().__init__()
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
-        self.n_initial_cases = n_initial_cases
+        self.log_fraction_initial_cases = log_fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
+        self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
         self.n_agents = data["agent"].id.shape[0]
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
-        self._parameters = parameters
+        self.input_parameters = parameters
+        self.restore_initial_data()
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -51,7 +54,9 @@ class Runner(torch.nn.Module):
             model=model,
             data=data,
             timer=timer,
-            n_initial_cases=params["infection_seed"]["n_initial_cases"],
+            log_fraction_initial_cases=params["infection_seed"][
+                "log_fraction_initial_cases"
+            ],
             save_path=params["save_path"],
             parameters=params,
         )
@@ -131,10 +136,17 @@ class Runner(torch.nn.Module):
         self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
-        indices = np.arange(0, self.data["agent"].id.shape[0])
-        np.random.shuffle(indices)
-        indices = indices[: self.n_initial_cases]
-        return infect_people_at_indices(self.data, indices, device=self.device)
+        fraction_initial_cases = 10.0**self.log_fraction_initial_cases
+        new_infected = infect_fraction_of_people(
+            data=self.data,
+            timer=self.timer,
+            symptoms_updater=self.model.symptoms_updater,
+            device=self.device,
+            fraction=fraction_initial_cases,
+        )
+        self.model.symptoms_updater(
+            data=self.data, timer=self.timer, new_infected=new_infected
+        )
 
     def forward(self):
         timer = self.timer
@@ -146,30 +158,24 @@ class Runner(torch.nn.Module):
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
-        self.store_differentiable_deaths(data, timer)
+        #cases_by_ethnicity = self.get_cases_by_ethnicity(data)
+        self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
-        deaths_by_district_timestep = self.get_deaths_by_district(
-            data["agent"].symptoms
-        )
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
             i += 1
             next(timer)
             data = model(data, timer)
-
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
-            self.store_differentiable_deaths(data, timer)
-            deaths_by_district = self.get_deaths_by_district(data["agent"].symptoms)
+            self.store_differentiable_deaths(data)
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
-            deaths_by_district_timestep = torch.vstack(
-                (deaths_by_district_timestep, deaths_by_district)
-            )
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
-
+            #cases_ethnicity = self.get_cases_by_ethnicity(data)
+            #cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -178,14 +184,12 @@ class Runner(torch.nn.Module):
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
-            "deaths_by_district_timestep": deaths_by_district_timestep.transpose(
-                0, 1
-            ),
+            "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = (
-                cases_by_age[:, i] / self.population_by_age[i]
-            )
+            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        #for (i, key) in enumerate(self.ethnicities):
+        #    results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
         return results, data["agent"].is_infected
 
     def save_results(self, results, is_infected):
@@ -193,7 +197,7 @@ class Runner(torch.nn.Module):
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
         for key in results:
-            if key in ("dates", "deaths_by_district_timestep"):
+            if key in ("dates", "daily_deaths_by_district"):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
@@ -202,36 +206,38 @@ class Runner(torch.nn.Module):
         df.to_csv(self.save_path / "results_is_infected.csv")
 
     def get_deaths_from_symptoms(self, symptoms):
-        asd = (symptoms["current_stage"] == 7).sum()
         return torch.tensor(
-            symptoms["current_stage"][symptoms["current_stage"] == 7].shape[0],
+            symptoms["current_stage"][
+                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
+            ].shape[0],
             device=self.device,
         )
 
     def get_deaths_by_district(self, symptoms):
         if "district" in self.data["agent"]:
             districts = self.data["agent"].district.unique()
-            dead_idcs = self.data["agent"].district[symptoms["current_stage"] == 7]
+            dead_idcs = self.data["agent"].district[
+                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
+            ]
             dead_districts = self.data["agent"].district[dead_idcs]
-            ret = torch.zeros(districts.shape, dtype=torch.long)
+            ret = torch.zeros(districts.shape, dtype=torch.long, device=self.device)
             deaths, counts = torch.unique(dead_districts, return_counts=True)
             ret[deaths] = counts
             return ret
         else:
             return torch.zeros(1, 1)
 
-    def store_differentiable_deaths(self, data, timer):
+    def store_differentiable_deaths(self, data):
         """
         Returns differentiable deaths by district and global. The results are stored
         in data["results"]
         """
-        # TODO: make numbers config adaptive
         symptoms = data["agent"].symptoms
-        mask_critical = symptoms["current_stage"] == 6
-        mask_to_die = symptoms["next_stage"] == 7
-        mask_is_time = symptoms["time_to_next_stage"] >= timer.now
+        dead_idx = self.model.symptoms_updater.stages_ids[-1]
         deaths = (
-            mask_critical * mask_to_die * mask_is_time * symptoms["current_stage"] / 7
+            (symptoms["current_stage"] == dead_idx)
+            * symptoms["current_stage"]
+            / dead_idx
         )
         if "district" in data["agent"]:
             districts, _ = torch.sort(data["agent"].district.unique())
@@ -260,7 +266,7 @@ class Runner(torch.nn.Module):
             mask1 = data["agent"].age < self.age_bins[i]
             mask2 = data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
-            ret[i - 1] = ret[i - 1] + data["agent"].is_infected[mask].sum()
+            ret[i - 1] = (data["agent"].is_infected * mask).sum()
         return ret
 
     def get_people_by_age(self):
@@ -270,4 +276,13 @@ class Runner(torch.nn.Module):
             mask2 = self.data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
             ret[i - 1] = mask.sum()
+        return ret
+
+    def get_cases_by_ethnicity(self, data):
+        ret = torch.zeros(len(self.ethnicities), device=self.device)
+        for i, ethnicity in enumerate(self.ethnicities):
+            mask = torch.tensor(
+                self.data["agent"].ethnicity == ethnicity, device=self.device
+            )
+            ret[i] = (mask * data["agent"].is_infected).sum()
         return ret

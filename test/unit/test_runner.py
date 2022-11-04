@@ -24,7 +24,7 @@ class TestRunner:
 
     def test__read_from_file(self, runner):
         file_runner = Runner.from_file()
-        assert file_runner._parameters == runner._parameters
+        assert file_runner.input_parameters == runner.input_parameters
 
     def test__get_data(self, runner):
         n_agents = runner.data["agent"].id.shape
@@ -36,7 +36,11 @@ class TestRunner:
 
     def test__seed(self, runner):
         runner.set_initial_cases()
-        assert runner.data["agent"].is_infected.sum().item() == 200
+        assert np.isclose(
+            runner.data["agent"].is_infected.sum().item(),
+            0.10 * runner.n_agents,
+            rtol=1e-1,
+        )
 
     def test__restore_data(self, runner):
         n_agents = runner.data["agent"].id.shape
@@ -73,7 +77,7 @@ class TestRunner:
         runner.save_results(results, is_infected)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
-            if key in ("dates", "deaths_by_district_timestep"):
+            if key in ("dates", "daily_deaths_by_district"):
                 continue
             assert np.allclose(loaded_results[key], results[key].numpy())
 
@@ -84,5 +88,20 @@ class TestRunner:
         data_results = data["results"]
         daily_deaths = data_results["daily_deaths"]
         assert (results["deaths_per_timestep"] == daily_deaths).all()
-        assert daily_deaths.shape[0] == runner._parameters["timer"]["total_days"] + 1
+        assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
         assert daily_deaths.requires_grad
+
+    def test__save_deaths_by_district(self, runner):
+        district_ids = torch.randint(0, 2, size=(runner.n_agents,))
+        _, people_in_districts = torch.unique(district_ids, return_counts=True)
+        data = runner.data
+        symptoms = data["agent"].symptoms
+        data["agent"].district = district_ids
+        symptoms["current_stage"] = runner.model.symptoms_updater.stages_ids[
+            -1
+        ] * torch.ones(
+            symptoms["current_stage"].shape
+        )  # everyone is dead.
+        runner.store_differentiable_deaths(data)
+        deaths_by_district = data["results"]["daily_deaths_by_district"]
+        assert set(deaths_by_district.numpy()) == set(people_in_districts.numpy())
