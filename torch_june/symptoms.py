@@ -97,13 +97,6 @@ class SymptomsSampler:
         # Sample possible next stages
         probs = self._get_prob_next_symptoms_stage(ages, current_stage.long())
         mask_symp_stage = torch.bernoulli(probs).to(torch.bool) # no dependence on parameters here.
-        #mask_symp_stage = (
-        #   pyro.distributions.RelaxedBernoulliStraightThrough(
-        #       temperature=torch.tensor(0.1),
-        #       probs=probs,
-        #   )
-        #   .rsample()
-        #)
         # These ones would recover
         mask_recovered_stage = ~mask_symp_stage
         for i in range(

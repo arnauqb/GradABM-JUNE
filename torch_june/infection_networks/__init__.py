@@ -13,5 +13,6 @@ from .leisure_network import (
     CinemaNetwork,
     VisitNetwork,
     GymNetwork,
+    CareVisitNetwork
 )
 from .is_infected_sampler import IsInfectedSampler

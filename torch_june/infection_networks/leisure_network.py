@@ -103,3 +103,18 @@ class GymNetwork(LeisureNetwork):
 
 class VisitNetwork(LeisureNetwork):
     pass
+
+class CareVisitNetwork(LeisureNetwork):
+    def _get_susceptibilities(self, data, policies, timer):
+        mask_age = data["agent"].age > 65
+        if self.weekday_probabilities is None:
+            self.initialize_leisure_probabilities(data)
+        if policies.quarantine_policies:
+            mask = policies.quarantine_policies.quarantine_mask
+        else:
+            mask = 1.0
+        if timer.day_type == "weekday":
+            leisure_mask = self.weekday_probabilities
+        else:
+            leisure_mask = self.weekend_probabilities
+        return mask * leisure_mask * data["agent"].susceptibility * mask_age
