@@ -66,8 +66,11 @@ class TestRunner:
         assert len(results["deaths_per_timestep"]) == n_timesteps
         assert len(results["cases_by_age_18"]) == n_timesteps
         assert len(results["cases_by_age_25"]) == n_timesteps
+        assert len(results["cases_by_age_35"]) == n_timesteps
+        assert len(results["cases_by_age_45"]) == n_timesteps
+        assert len(results["cases_by_age_55"]) == n_timesteps
         assert len(results["cases_by_age_65"]) == n_timesteps
-        assert len(results["cases_by_age_80"]) == n_timesteps
+        assert len(results["cases_by_age_75"]) == n_timesteps
         assert len(results["cases_by_age_100"]) == n_timesteps
         assert len(is_infected) == runner.n_agents
 
