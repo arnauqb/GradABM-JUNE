@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from torch_june.runner import Runner
-from torch_june.paths import default_config_path
+from grad_june.runner import Runner
+from grad_june.paths import default_config_path
 
 
 class TestRunner:

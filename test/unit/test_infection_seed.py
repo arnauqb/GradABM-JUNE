@@ -1,11 +1,11 @@
 import numpy as np
 
-from torch_june.infection_seed import (
+from grad_june.infection_seed import (
     infect_people_at_indices,
     infect_fraction_of_people,
 )
-from torch_june.timer import Timer
-from torch_june.symptoms import SymptomsUpdater
+from grad_june.timer import Timer
+from grad_june.symptoms import SymptomsUpdater
 
 
 class TestInfectionSeed:

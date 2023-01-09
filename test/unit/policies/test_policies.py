@@ -2,8 +2,8 @@ import datetime
 import pytest
 import torch
 
-from torch_june.policies import Policy, Policies
-from torch_june.policies.interaction_policies import (
+from grad_june.policies import Policy, Policies
+from grad_june.policies.interaction_policies import (
     InteractionPolicies,
     SocialDistancing,
 )

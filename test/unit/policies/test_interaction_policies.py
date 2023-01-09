@@ -3,13 +3,13 @@ import datetime
 import torch
 import numpy as np
 
-from torch_june.policies.interaction_policies import (
+from grad_june.policies.interaction_policies import (
     SocialDistancing,
     InteractionPolicies,
 )
-from torch_june.timer import Timer
-from torch_june.policies import Policies
-from torch_june.infection_networks.base import (
+from grad_june.timer import Timer
+from grad_june.policies import Policies
+from grad_june.infection_networks.base import (
     CompanyNetwork,
     SchoolNetwork,
     InfectionNetworks,

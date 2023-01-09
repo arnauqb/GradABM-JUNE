@@ -4,7 +4,7 @@ system:
   device: cpu
   random_seed: random
 
-data_path: '@torch_june/test/data/data.pkl'
+data_path: '@grad_june/test/data/data.pkl'
 
 save_path: ./example
 

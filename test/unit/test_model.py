@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from torch_june import TorchJune, Timer
-from torch_june.infection_networks import (
+from grad_june import TorchJune, Timer
+from grad_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
     HouseholdNetwork,

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from pytest import fixture
 
-from torch_june.transmission import TransmissionUpdater
+from grad_june.transmission import TransmissionUpdater
 
 
 class TestInfections:

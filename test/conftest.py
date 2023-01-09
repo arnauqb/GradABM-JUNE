@@ -7,9 +7,9 @@ from pyro.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.transmission import TransmissionSampler
-from torch_june.infection_seed import infect_people_at_indices
-from torch_june.timer import Timer
+from grad_june.transmission import TransmissionSampler
+from grad_june.infection_seed import infect_people_at_indices
+from grad_june.timer import Timer
 
 
 @fixture(autouse=True)

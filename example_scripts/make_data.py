@@ -1,5 +1,5 @@
 from torch_geometric.data import HeteroData
-from torch_june import GraphLoader, AgentDataLoader
+from grad_june import GraphLoader, AgentDataLoader
 import pickle
 import sys
 

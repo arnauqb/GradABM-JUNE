@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from torch_june.infection_networks.is_infected_sampler import IsInfectedSampler
+from grad_june.infection_networks.is_infected_sampler import IsInfectedSampler
 
 class TestIsInfectedSampler:
     def test__sample_infected(self):

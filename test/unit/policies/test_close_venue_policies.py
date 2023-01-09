@@ -3,9 +3,9 @@ import torch
 import numpy as np
 import datetime
 
-from torch_june.policies import CloseVenue, CloseVenuePolicies, Policies
-from torch_june.timer import Timer
-from torch_june.infection_networks.base import (
+from grad_june.policies import CloseVenue, CloseVenuePolicies, Policies
+from grad_june.timer import Timer
+from grad_june.infection_networks.base import (
     CompanyNetwork,
     SchoolNetwork,
     InfectionNetworks,

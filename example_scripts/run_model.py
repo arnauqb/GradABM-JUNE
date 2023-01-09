@@ -1,4 +1,4 @@
-from torch_june.runner import Runner
+from grad_june.runner import Runner
 import torch
 import sys
 

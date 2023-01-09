@@ -4,8 +4,8 @@ import numpy as np
 import pyro
 import torch
 
-from torch_june.symptoms import SymptomsSampler, SymptomsUpdater
-from torch_june.default_parameters import make_parameters
+from grad_june.symptoms import SymptomsSampler, SymptomsUpdater
+from grad_june.default_parameters import make_parameters
 
 
 class TestSymptomsSampler:

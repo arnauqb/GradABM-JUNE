@@ -3,14 +3,14 @@ import pytest
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.june_world_loader.agent_data_loader import AgentDataLoader
-from torch_june.june_world_loader.graph_loader import GraphLoader
-from torch_june.june_world_loader.household_loader import HouseholdNetworkLoader
-from torch_june.june_world_loader.care_home_loader import CareHomeNetworkLoader
-from torch_june.june_world_loader.company_loader import CompanyNetworkLoader
-from torch_june.june_world_loader.school_loader import SchoolNetworkLoader
-from torch_june.june_world_loader.university_loader import UniversityNetworkLoader
-from torch_june.june_world_loader.leisure_loader import LeisureNetworkLoader
+from grad_june.june_world_loader.agent_data_loader import AgentDataLoader
+from grad_june.june_world_loader.graph_loader import GraphLoader
+from grad_june.june_world_loader.household_loader import HouseholdNetworkLoader
+from grad_june.june_world_loader.care_home_loader import CareHomeNetworkLoader
+from grad_june.june_world_loader.company_loader import CompanyNetworkLoader
+from grad_june.june_world_loader.school_loader import SchoolNetworkLoader
+from grad_june.june_world_loader.university_loader import UniversityNetworkLoader
+from grad_june.june_world_loader.leisure_loader import LeisureNetworkLoader
 
 
 class TestLoadAgentData:
