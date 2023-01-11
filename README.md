@@ -1,5 +1,5 @@
 [![Docs](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/docs.yml/badge.svg)](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/docs.yml)
-[![codecov](https://codecov.io/gh/largeagentcollider/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/gh/largeagentcollider/torch_june)
+[![codecov](https://codecov.io/github/LargeAgentCollider/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/github/LargeAgentCollider/torch_june)
 [![Build and test package](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/ci.yml/badge.svg)](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/ci.yml)
 
 # GradABM-JUNE
