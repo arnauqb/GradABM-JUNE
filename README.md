@@ -28,4 +28,4 @@ pip install -e .
 
 # Usage
 
-See the [docs](https://largeagentcollider.github.io/GradABM-JUNE/).
+See the [docs](https://arnauqb.github.io/GradABM-JUNE/).
