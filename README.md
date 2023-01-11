@@ -16,13 +16,13 @@ pip install -r requirements.txt
 and install PyTorch geometric, manually for now:
 
 ```bash
-pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
+pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.13.0+cpu.html
 ```
 
 Then install the GradABM-JUNE package
 
 ```bash
-pip install --no-deps -e .
+pip install -e .
 ```
 
 
