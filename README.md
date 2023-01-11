@@ -1,6 +1,6 @@
-[![Docs](https://github.com/LargeAgentCollider/torch_june/actions/workflows/docs.yml/badge.svg)](https://github.com/LargeAgentCollider/torch_june/actions/workflows/docs.yml)
+[![Docs](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/docs.yml/badge.svg)](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/docs.yml)
 [![codecov](https://codecov.io/gh/largeagentcollider/torch_june/branch/main/graph/badge.svg?token=ddIEG0Eest)](https://codecov.io/gh/largeagentcollider/torch_june)
-[![Build and test package](https://github.com/LargeAgentCollider/torch_june/actions/workflows/ci.yml/badge.svg)](https://github.com/LargeAgentCollider/torch_june/actions/workflows/ci.yml)
+[![Build and test package](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/ci.yml/badge.svg)](https://github.com/arnauqb/GradABM-JUNE/actions/workflows/ci.yml)
 
 # GradABM-JUNE
 Implementation of the JUNE model using the GradABM framework.
