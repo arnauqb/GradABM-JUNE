@@ -19,7 +19,7 @@ and install PyTorch geometric, manually for now:
 pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
 ```
 
-Then install the GradABM-june package
+Then install the GradABM-JUNE package
 
 ```bash
 pip install --no-deps -e .
