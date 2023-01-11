@@ -2,11 +2,6 @@ h5py==3.7.0
 pytest==7.2.0
 pytest-cov==4.0.0
 torch==1.13.1
-torch-scatter==2.1.0
-torch-sparse==0.6.16
-torch-cluster==1.6.0
-torch-geometric==2.2.0
-torch-spline-conv==1.2.1
 pandas==1.5.2
 pyro-ppl==1.8.4
 pyyaml==6.0
