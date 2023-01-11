@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
     - uses: actions/checkout@v2
@@ -28,14 +28,14 @@ jobs:
 
     - name: Install pytorch geometric
       run: |
-        pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
+        pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.13.0+cpu.html
 
     - name: Install package
       run: python setup.py install
 
     - name: Test with pytest
       run: |
-        pytest --cov=torch_june test --cov-report xml
+        python -m pytest --cov=grad_abm test --cov-report xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
