@@ -2,9 +2,9 @@ import torch
 import pytest
 import numpy as np
 
-from torch_june.policies import Quarantine, QuarantinePolicies, Policies
-from torch_june.timer import Timer
-from torch_june.infection_networks.base import (
+from grad_june.policies import Quarantine, QuarantinePolicies, Policies
+from grad_june.timer import Timer
+from grad_june.infection_networks.base import (
     CompanyNetwork,
     HouseholdNetwork,
     InfectionNetworks,

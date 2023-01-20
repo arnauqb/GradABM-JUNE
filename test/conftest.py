@@ -7,9 +7,9 @@ from pyro.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
-from torch_june.transmission import TransmissionSampler
-from torch_june.infection_seed import infect_people_at_indices
-from torch_june.timer import Timer
+from grad_june.transmission import TransmissionSampler
+from grad_june.infection_seed import infect_people_at_indices
+from grad_june.timer import Timer
 
 
 @fixture(autouse=True)
@@ -85,26 +85,6 @@ def make_data(agent_data):
     )
     data = T.ToUndirected()(data)
     return data
-
-
-#@fixture(name="person_infector")
-#def make_person_infector():
-#    def infector(data, indices):
-#        susc = data["agent"]["susceptibility"].numpy()
-#        is_inf = data["agent"]["is_infected"].numpy()
-#        inf_t = data["agent"]["infection_time"].numpy()
-#        next_stage = data["agent"]["symptoms"]["next_stage"].numpy()
-#        susc[indices] = 0.0
-#        is_inf[indices] = 1.0
-#        inf_t[indices] = 0.0
-#        next_stage[indices] = 2
-#        data["agent"]["susceptibility"] = torch.tensor(susc)
-#        data["agent"]["is_infected"] = torch.tensor(is_inf)
-#        data["agent"]["infection_time"] = torch.tensor(inf_t)
-#        data["agent"]["symptoms"]["next_stage"] = torch.tensor(next_stage)
-#        return data
-#
-#    return infector
 
 
 @fixture(name="inf_data")

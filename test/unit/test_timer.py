@@ -2,7 +2,7 @@ from pytest import fixture
 from pathlib import Path
 import yaml
 
-from torch_june import Timer
+from grad_june import Timer
 
 """
 These are taken directly from JUNE.

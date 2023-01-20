@@ -4,7 +4,7 @@ system:
   device: cpu
   random_seed: random
 
-data_path: '@torch_june/test/data/data.pkl'
+data_path: '@grad_june/test/data/data.pkl'
 
 save_path: ./example
 
@@ -40,7 +40,7 @@ timer:
       - household
 
 infection_seed:
-  n_initial_cases: 200
+  log_fraction_initial_cases: -1
 
 networks:
   household:
@@ -138,7 +138,7 @@ symptoms:
       susceptible:
         0-100: 0.0
       exposed:
-        0-100: 0.0
+        0-100: 1.0
       infectious:
         0-10: 0.5
         10-20: 0.55

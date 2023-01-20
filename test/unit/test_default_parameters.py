@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from torch_june.default_parameters import make_parameters, convert_lognormal_parameters
+from grad_june.default_parameters import make_parameters, convert_lognormal_parameters
 
 
 def test__lognormal_converter():

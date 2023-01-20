@@ -133,6 +133,7 @@ notebooks
 my_scripts
 worlds
 **/*.pdf
+**/*.csv
 example_scripts/**/*
 !example_scripts/*
 !example_scripts/**/*.py

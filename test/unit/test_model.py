@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from torch_june import TorchJune, Timer
-from torch_june.infection_networks import (
+from grad_june import TorchJune, Timer
+from grad_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
     HouseholdNetwork,
@@ -15,9 +15,9 @@ from torch_june.infection_networks import (
 class TestModel:
     @fixture(name="model")
     def make_model(self):
-        cn = CompanyNetwork(log_beta=0.5)
-        hn = HouseholdNetwork(log_beta=0.5)
-        sn = SchoolNetwork(log_beta=0.5)
+        cn = CompanyNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
+        hn = HouseholdNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
+        sn = SchoolNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         networks = InfectionNetworks(household=hn, company=cn, school=sn)
         model = TorchJune(infection_networks=networks)
         return model

@@ -4,11 +4,11 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
 
-from torch_june.infection_networks import InfectionNetworks, IsInfectedSampler
-from torch_june.infection_networks.base import (
+from grad_june.infection_networks import InfectionNetworks, IsInfectedSampler
+from grad_june.infection_networks.base import (
     SchoolNetwork,
 )
-from torch_june.policies import Policies
+from grad_june.policies import Policies
 
 
 class TestInfectionNetworks:
@@ -40,8 +40,6 @@ class TestInfectionNetworks:
             data=small_data, timer=school_timer, policies=Policies()
         )
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
-        print("---")
-        print(infection_probabilities)
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
 
 

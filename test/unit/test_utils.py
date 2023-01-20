@@ -5,20 +5,20 @@ import torch
 import random
 from pathlib import Path
 
-from torch_june.utils import (
+from grad_june.utils import (
     parse_age_probabilities,
     read_date,
     fix_seed,
     read_path,
     create_simple_connected_graph,
 )
-from torch_june.paths import torch_june_path
+from grad_june.paths import grad_june_path
 
 
 class TestReadPath:
     def test__read_path(self):
         assert read_path("/test/to/path") == Path("/test/to/path")
-        assert read_path("@torch_june/to/path") == torch_june_path / "to/path"
+        assert read_path("@grad_june/to/path") == grad_june_path / "to/path"
 
 
 class TestParseProbabilities:

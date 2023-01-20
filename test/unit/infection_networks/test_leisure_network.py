@@ -3,9 +3,9 @@ import torch
 import numpy as np
 from torch_geometric.data import HeteroData
 
-from torch_june.infection_networks.leisure_network import LeisureNetwork
-from torch_june.policies import Policies
-from torch_june.timer import Timer
+from grad_june.infection_networks.leisure_network import LeisureNetwork
+from grad_june.policies import Policies
+from grad_june.timer import Timer
 import torch_geometric.transforms as T
 
 
