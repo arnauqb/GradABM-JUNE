@@ -7,18 +7,29 @@ from grad_june.utils import parse_distribution
 
 
 class TransmissionSampler:
-    def __init__(self, max_infectiousness, shape, rate, shift):
+    def __init__(self, infection_names, max_infectiousness, shape, rate, shift):
+        """
+        Samples transmission parameters per infection type.
+
+        Parameters
+        ----------
+        infection_names:
+            list with the names of the infections, eg, ["base", "delta", "omicron"]
+        max_infectiousness:
+            maximum value of infectiousness
+        shape:
+            shape parameter of the Gamma distribution. This should have the same dimension as the number of infections.
+        rate:
+            rate parameter of the Gamma distribution. This should have the same dimension as the number of infections.
+        shift:
+            shift parameter of the Gamma distribution. This should have the same dimension as the number of infections.
+        """
+        self.n_infections = len(infection_names)
+        self.infection_names = infection_names
         self.max_infectiousness = max_infectiousness
         self.shape = shape
         self.rate = rate
         self.shift = shift
-
-    def __call__(self, n):
-        maxi = self.max_infectiousness.rsample((n,))
-        shape = self.shape.rsample((n,))
-        rate = self.rate.rsample((n,))
-        shift = self.shift.rsample((n,))
-        return torch.vstack((maxi, shape, rate, shift))
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -28,38 +39,65 @@ class TransmissionSampler:
 
     @classmethod
     def from_parameters(cls, params):
-        ret = {}
+        param_data = {}
         device = params["system"]["device"]
         tparams = params["transmission"]
         for variant in tparams:
-            ret[variant] = {}
+            param_data[variant] = {}
             for key in tparams[variant]:
-                ret[variant][key] = parse_distribution(tparams[key], device=device)
-        return cls(**ret)
+                param_data[variant][key] = parse_distribution(
+                    tparams[variant][key], device=device
+                )
+        # autofill missing values with base default
+        for variant in tparams:
+            if variant == "base":
+                continue
+            for key in tparams["base"]:
+                if key not in param_data[variant]:
+                    param_data[variant][key] = param_data["base"][key]
+        # build tensors
+        parameter_names = [key for key in param_data["base"]]
+        infection_names = list(tparams.keys())
+        n_infections = len(infection_names)
+        ret = {}
+        for pname in parameter_names:
+            ret[pname] = [param_data[variant][pname] for variant in tparams]
+        return cls(**ret, infection_names=infection_names)
+
+    def __call__(self, n_agents):
+        ret = {
+            "n_infections": self.n_infections,
+            "infection_ids": torch.arange(0, self.n_infections),
+            "infection_names": self.infection_names,
+        }
+        for pname in ["max_infectiousness", "shape", "rate", "shift"]:
+            ret[pname] = torch.zeros((self.n_infections, n_agents))
+            for i in range(self.n_infections):
+                ret[pname][i] = getattr(self, pname)[i].rsample(
+                    (n_agents,)
+                )
+        return ret
 
 
 class TransmissionUpdater(torch.nn.Module):
+    """
+    Updates the infectivity value for each agent / variant over time.
+    """
+
     def forward(self, data, timer):
         time_from_infection = timer.now - data["agent"].infection_time
-        ret = None
-        for infection_variant in data["infection_parameters"]["variants"]:
-            inf_params = data["agent"]["infection_parameters"]
-            shape = inf_params.get(infection_variant, inf_params["base"])["shape"]
-            shift = inf_params.get(infection_variant, inf_params["base"])["shift"]
-            rate = inf_params.get(infection_variant, inf_params["base"])["rate"]
-            max_infectiousness = inf_params.get(infection_variant, inf_params["base"])[
-                "max_infectiousness"
-            ]
-            sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
-            aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
-                (time_from_infection - shift) * rate, shape - 1.0
-            )
-            aux2 = torch.exp((shift - time_from_infection) * rate) * rate
-            variant_infectivity = (
-                max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
-            )
-            if ret is None:
-                ret = variant_infectivity
-            else:
-                ret = torch.vstack((ret, variant_infectivity))
+        inf_params = data["agent"]["infection_parameters"]
+        agent_infection_ids = data["agent"].infection_id.reshape(1,-1)
+        shape = torch.gather(inf_params["shape"], 0, agent_infection_ids).flatten()
+        shift = torch.gather(inf_params["shift"], 0, agent_infection_ids).flatten()
+        rate = torch.gather(inf_params["rate"], 0, agent_infection_ids).flatten()
+        max_infectiousness = torch.gather(inf_params["max_infectiousness"], 0, agent_infection_ids).flatten()
+        sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
+        aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
+            (time_from_infection - shift) * rate, shape - 1.0
+        )
+        aux2 = torch.exp((shift - time_from_infection) * rate) * rate
+        ret = (
+            max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
+        )
         return ret

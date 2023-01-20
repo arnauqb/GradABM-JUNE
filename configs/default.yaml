@@ -113,7 +113,7 @@ transmission:
   delta: 
     max_infectiousness:
       dist: LogNormal
-      loc: 0.7 # mean twise as wild
+      loc: 0.7 # mean twice as wild
       scale: 0.5
   omicron:
     max_infectiousness:

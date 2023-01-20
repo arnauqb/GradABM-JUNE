@@ -7,11 +7,18 @@ from grad_june.transmission import TransmissionUpdater
 
 class TestInfections:
     def test__sampler(self, sampler):
-        assert np.isclose(sampler.max_infectiousness.mean, 1.1331, rtol=1e-3)
-        assert sampler.shape.mean == 1.56
-        assert sampler.rate.mean == 0.53
-        assert sampler.shift.mean == -2.12
-        assert sampler(10).shape == (4, 10)
+        assert sampler.infection_names == ["base", "delta", "omicron"]
+        assert np.isclose(sampler.max_infectiousness[0].mean, 1.1331, rtol=1e-3)
+        assert sampler.shape[0].mean == 1.56
+        assert sampler.rate[0].mean == 0.53
+        assert sampler.shift[0].mean == -2.12
+        assert np.isclose(sampler.max_infectiousness[1].mean, 2.2819, rtol=1e-3)
+        assert np.isclose(sampler.max_infectiousness[2].mean, 4.5951, rtol=1e-3)
+        params_per_infection = sampler(10)
+        assert params_per_infection["n_infections"] == 3
+        assert params_per_infection["infection_ids"].equal(torch.tensor([0,1,2]))
+        for pname in ["max_infectiousness", "shape", "rate", "shift"]:
+            assert params_per_infection[pname].shape == (3, 10)
 
     def test__generate_infections(self, data, timer):
         trans_updater = TransmissionUpdater()
