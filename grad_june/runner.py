@@ -70,16 +70,14 @@ class Runner(torch.nn.Module):
         n_agents = len(data["agent"]["id"])
         inf_params = {}
         transmission_sampler = TransmissionSampler.from_parameters(params)
-        transmission_values = transmission_sampler(n_agents)
-        inf_params["max_infectiousness"] = transmission_values[0, :]
-        inf_params["shape"] = transmission_values[1, :]
-        inf_params["rate"] = transmission_values[2, :]
-        inf_params["shift"] = transmission_values[3, :]
-        data["agent"].infection_parameters = inf_params
+        parameters_per_infection = transmission_sampler(n_agents)
+        n_infections = parameters_per_infection["n_infections"]
+        data["agent"].infection_parameters = parameters_per_infection
         data["agent"].transmission = torch.zeros(n_agents, device=device)
-        data["agent"].susceptibility = torch.ones(n_agents, device=device)
+        data["agent"].susceptibility = torch.ones((n_infections, n_agents))
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
+        data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
         symptoms = {}
         symptoms["current_stage"] = torch.ones(
             n_agents, dtype=torch.long, device=device

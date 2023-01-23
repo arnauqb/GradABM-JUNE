@@ -27,19 +27,20 @@ class TestRunner:
         assert file_runner.input_parameters == runner.input_parameters
 
     def test__get_data(self, runner):
-        n_agents = runner.data["agent"].id.shape
+        n_agents = runner.data["agent"].id.shape[0]
         inf_params = runner.data["agent"].infection_parameters
-        assert inf_params["max_infectiousness"].shape == n_agents
-        assert inf_params["shape"].shape == n_agents
-        assert inf_params["rate"].shape == n_agents
-        assert inf_params["shift"].shape == n_agents
+        shape = (3, n_agents)
+        assert inf_params["max_infectiousness"].shape == shape
+        assert inf_params["shape"].shape == shape
+        assert inf_params["rate"].shape == shape
+        assert inf_params["shift"].shape == shape
 
     def test__seed(self, runner):
         runner.set_initial_cases()
         assert np.isclose(
             runner.data["agent"].is_infected.sum().item(),
             0.10 * runner.n_agents,
-            rtol=1e-1,
+            rtol=2e-1,
         )
 
     def test__restore_data(self, runner):

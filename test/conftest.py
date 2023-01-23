@@ -41,18 +41,13 @@ def make_agent_data(sampler):
     data["agent"].id = torch.arange(0, n_agents)
     data["agent"].age = torch.randint(0, 100, (n_agents,))
     data["agent"].sex = torch.randint(0, 2, (n_agents,))
-    inf_params = {}
-    inf_params_values = sampler(n_agents)
-    inf_params["max_infectiousness"] = inf_params_values[0]
-    inf_params["shape"] = inf_params_values[1]
-    inf_params["rate"] = inf_params_values[2]
-    inf_params["shift"] = inf_params_values[3]
-    data["agent"].infection_parameters = inf_params
+    parameters_per_infection = sampler(n_agents)
+    data["agent"].infection_parameters = parameters_per_infection
     data["agent"].transmission = torch.zeros(n_agents)
-    data["agent"].susceptibility = torch.ones(n_agents)
+    data["agent"].susceptibility = torch.ones((3, n_agents))
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
-    data["agent"].infected_probs = torch.zeros(n_agents)
+    data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
     symptoms = {}
     symptoms["current_stage"] = torch.ones(n_agents, dtype=torch.long)
     symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long)

@@ -69,13 +69,3 @@ class TestCreateSimpleGraph:
         assert data["agent"].id.shape[0] == 100
         assert data["agent"].age.shape[0] == 100
         assert data["agent"].sex.shape[0] == 100
-        #for i in range(10):
-        #    assert data["agent"]["susceptibility"][i] == 0.0
-        #    assert data["agent"]["is_infected"][i] == 1
-        #    assert data["agent"]["infection_time"][i] == 0.0
-        #    assert data["agent"]["symptoms"]["next_stage"][i] == 2.0
-        #for i in range(10, 100):
-        #    assert data["agent"]["susceptibility"][i] == 1.0
-        #    assert data["agent"]["is_infected"][i] == 0
-        #    assert data["agent"]["infection_time"][i] == 0.0
-        #    assert data["agent"]["symptoms"]["next_stage"][i] == 1.0

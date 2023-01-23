@@ -9,9 +9,8 @@ def infect_fraction_of_people(data, timer, symptoms_updater, fraction, device):
         probs=probs,
     )
     new_infected = dist.rsample()
-    data["agent"].susceptibility = torch.maximum(
-        torch.tensor(0.0, device=device),
-        data["agent"].susceptibility - new_infected,
+    data["agent"].susceptibility = torch.clamp(
+        data["agent"].susceptibility - new_infected, min=0.0
     )
     data["agent"].is_infected = data["agent"].is_infected + new_infected
     data["agent"].infection_time = data["agent"].infection_time + new_infected * (
@@ -26,7 +25,7 @@ def infect_people_at_indices(data, indices, device="cpu"):
     inf_t = data["agent"]["infection_time"].cpu().numpy()
     next_stage = data["agent"]["symptoms"]["next_stage"].cpu().numpy()
     current_stage = data["agent"]["symptoms"]["current_stage"].cpu().numpy()
-    susc[indices] = 0.0
+    susc[:, indices] = 0.0
     is_inf[indices] = 1.0
     inf_t[indices] = 0.0
     next_stage[indices] = 2

@@ -93,22 +93,33 @@ policies:
           visit: 0.5
 
 transmission:
-  max_infectiousness:
-    dist: LogNormal
-    loc: 0.0
-    scale: 0.5
-  shape:
-    dist: Normal
-    loc: 1.56
-    scale: 0.08
-  rate:
-    dist: Normal
-    loc: 0.53
-    scale: 0.03
-  shift:
-    dist: Normal
-    loc: -2.12
-    scale: 0.1
+  base:
+    max_infectiousness:
+      dist: LogNormal
+      loc: 0.0
+      scale: 0.5
+    shape:
+      dist: Normal
+      loc: 1.56
+      scale: 0.08
+    rate:
+      dist: Normal
+      loc: 0.53
+      scale: 0.03
+    shift:
+      dist: Normal
+      loc: -2.12
+      scale: 0.1
+  delta: 
+    max_infectiousness:
+      dist: LogNormal
+      loc: 0.7 # mean twice as wild
+      scale: 0.5
+  omicron:
+    max_infectiousness:
+      dist: LogNormal
+      loc: 1.4 # mean is twice delta
+      scale: 0.5
 
 symptoms:
   stages:
