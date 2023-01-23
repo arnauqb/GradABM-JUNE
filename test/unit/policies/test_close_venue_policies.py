@@ -55,7 +55,7 @@ class TestCloseVenue:
         inf_data["agent"]["transmission"] = inf_data["agent"]["transmission"] + 1.0
         ret = networks(data=inf_data, timer=timer, policies=Policies([]))
         assert np.isclose(
-            ret.sum().detach(), 10.0
+            ret[0,:].sum().detach(), 10.0
         )  # Only the 10 in the seed don't get infected.
         policy = CloseVenue(
             names=("company",),
@@ -66,4 +66,4 @@ class TestCloseVenue:
         policies = Policies.from_policy_list([policy])
         ret = networks(data=inf_data, timer=timer, policies=policies)
         n_agents = inf_data["agent"].id.shape[0]
-        assert np.isclose(ret.sum().detach(), n_agents)  # No-one gets infected
+        assert np.isclose(ret[0,:].sum().detach(), n_agents)  # No-one gets infected

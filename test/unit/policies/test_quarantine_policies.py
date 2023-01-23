@@ -57,9 +57,10 @@ class TestQuarantine:
         )
         policies = Policies.from_policy_list([quarantine])
         ret = networks(data=inf_data, timer=timer, policies=policies)
-        assert np.isclose(
-            ret.sum().detach(), n_agents
-        )  # No-one gets infected since they all quarantine
+        for i in range(3):
+            assert np.isclose(
+                ret[i,:].sum().detach(), n_agents
+            )  # No-one gets infected since they all quarantine
         while not timer.is_weekend:
             next(timer)
         ret = networks(
@@ -68,5 +69,5 @@ class TestQuarantine:
             policies=policies,
         )
         assert np.isclose(
-            ret.sum().detach().item(), 10.0
+            ret[0,:].sum().detach().item(), 10.0
         )  # people living in the same household get infected, seed survives

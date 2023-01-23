@@ -43,8 +43,8 @@ def make_agent_data(sampler):
     data["agent"].sex = torch.randint(0, 2, (n_agents,))
     parameters_per_infection = sampler(n_agents)
     data["agent"].infection_parameters = parameters_per_infection
-    data["agent"].transmission = torch.zeros((2, n_agents))
-    data["agent"].susceptibility = torch.ones((2, n_agents))
+    data["agent"].transmission = torch.zeros(n_agents)
+    data["agent"].susceptibility = torch.ones((3, n_agents))
     data["agent"].is_infected = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
     data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)

@@ -73,9 +73,7 @@ class TransmissionSampler:
         for pname in ["max_infectiousness", "shape", "rate", "shift"]:
             ret[pname] = torch.zeros((self.n_infections, n_agents))
             for i in range(self.n_infections):
-                ret[pname][i] = getattr(self, pname)[i].rsample(
-                    (n_agents,)
-                )
+                ret[pname][i] = getattr(self, pname)[i].rsample((n_agents,))
         return ret
 
 
@@ -87,17 +85,17 @@ class TransmissionUpdater(torch.nn.Module):
     def forward(self, data, timer):
         time_from_infection = timer.now - data["agent"].infection_time
         inf_params = data["agent"]["infection_parameters"]
-        agent_infection_ids = data["agent"].infection_id.reshape(1,-1)
+        agent_infection_ids = data["agent"].infection_id.reshape(1, -1)
         shape = torch.gather(inf_params["shape"], 0, agent_infection_ids).flatten()
         shift = torch.gather(inf_params["shift"], 0, agent_infection_ids).flatten()
         rate = torch.gather(inf_params["rate"], 0, agent_infection_ids).flatten()
-        max_infectiousness = torch.gather(inf_params["max_infectiousness"], 0, agent_infection_ids).flatten()
+        max_infectiousness = torch.gather(
+            inf_params["max_infectiousness"], 0, agent_infection_ids
+        ).flatten()
         sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
         aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
             (time_from_infection - shift) * rate, shape - 1.0
         )
         aux2 = torch.exp((shift - time_from_infection) * rate) * rate
-        ret = (
-            max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
-        )
+        ret = max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
         return ret

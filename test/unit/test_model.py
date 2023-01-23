@@ -29,7 +29,9 @@ class TestModel:
         results = model(timer=timer, data=inf_data)
         # check at least someone infected
         assert results["agent"]["is_infected"].sum() > 10
-        assert results["agent"]["susceptibility"].sum() < 90
+        assert results["agent"]["susceptibility"][0, :].sum() < 90
+        assert results["agent"]["susceptibility"][1, :].sum() < 90
+        assert results["agent"]["susceptibility"][2, :].sum() < 90
 
     def test__model_gradient(self, model, inf_data):
         timer = Timer(
@@ -158,8 +160,7 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            model.infection_networks[name].log_beta
-            for name in ["company", "school"]
+            model.infection_networks[name].log_beta for name in ["company", "school"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters])
         assert len(grads) == 2
@@ -179,7 +180,6 @@ class TestModel:
         cases = int(is_infected.sum().item())
         assert cases > 10
         symptoms = data["agent"].symptoms
-        assert (
-            symptoms["current_stage"][is_infected.bool()]
-            == 2 * torch.ones(cases, dtype=torch.long)
-        ).all()
+        assert symptoms["current_stage"][is_infected.bool()].equal(
+            2 * torch.ones(cases, dtype=torch.long)
+        )

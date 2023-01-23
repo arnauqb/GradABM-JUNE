@@ -54,7 +54,7 @@ class TorchJune(torch.nn.Module):
             device=params["system"]["device"],
         )
 
-    def infect_people(self, data, timer, new_infected):
+    def infect_people(self, data, timer, new_infected, new_infection_type):
         data["agent"].susceptibility = torch.clamp(
             data["agent"].susceptibility - new_infected, min=0.0
         )
@@ -62,6 +62,7 @@ class TorchJune(torch.nn.Module):
         data["agent"].infection_time = data["agent"].infection_time + new_infected * (
             timer.now - data["agent"].infection_time
         )
+        data["agent"].infection_id = new_infection_type
 
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
@@ -71,7 +72,9 @@ class TorchJune(torch.nn.Module):
             policies=self.policies,
         )
         infected_probs = 1.0 - not_infected_probs
-        new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
-        self.infect_people(data, timer, new_infected)
+        new_infected, new_infection_type = self.is_infected_sampler(
+            not_infected_probs, timer.now
+        )
+        self.infect_people(data, timer, new_infected, new_infection_type)
         self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
         return data
