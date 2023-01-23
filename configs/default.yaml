@@ -64,6 +64,24 @@ networks:
   care_home:
     log_beta: -0.4
 
+vaccines:
+  pfizer:
+    base:
+      sterilization_efficacy: 0.5
+      symptomatic_efficacy: 0.95
+    delta:
+    omicron:
+      sterilization_efficacy: 0.2
+      symptomatic_efficacy: 0.95
+  astrazeneca:
+    base:
+      sterilization_efficacy: 0.3
+      symptomatic_efficacy: 0.90
+    delta:
+    omicron:
+      sterilization_efficacy: 0.1
+      symptomatic_efficacy: 0.90
+
 policies:
   interaction:
     social_distancing:

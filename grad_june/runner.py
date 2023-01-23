@@ -75,6 +75,7 @@ class Runner(torch.nn.Module):
         data["agent"].infection_parameters = parameters_per_infection
         data["agent"].transmission = torch.zeros(n_agents, device=device)
         data["agent"].susceptibility = torch.ones((n_infections, n_agents))
+        data["agent"].symptoms_susceptibility = torch.ones((n_infections, n_agents))
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
         data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
