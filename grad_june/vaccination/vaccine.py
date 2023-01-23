@@ -66,8 +66,33 @@ class Vaccines:
                 )
             sterilization_efficacies.append(sterilization_efficacies_)
             symptomatic_efficacies.append(symptomatic_efficacies_)
-        return (
-            torch.tensor(sterilization_efficacies),
-            torch.tensor(symptomatic_efficacies),
-            torch.tensor(coverages),
+        # no vax option for coverages.
+        coverages = torch.tensor(coverages)
+        no_vax = 1.0 - coverages.sum(0)
+        coverages = torch.vstack((no_vax, coverages))
+        sterilization_efficacies = torch.tensor(
+            sterilization_efficacies, dtype=torch.float64
         )
+        sterilization_efficacies = torch.vstack(
+            (torch.zeros(sterilization_efficacies.shape[1]), sterilization_efficacies)
+        )
+        symptomatic_efficacies = torch.tensor(
+            symptomatic_efficacies, dtype=torch.float64
+        )
+        symptomatic_efficacies = torch.vstack(
+            (torch.zeros(symptomatic_efficacies.shape[1]), symptomatic_efficacies)
+        )
+        return sterilization_efficacies, symptomatic_efficacies, coverages
+
+    def sample_efficacies(self, ages):
+        coverage_probs = self.coverages[:, ages]
+        sample_vax = torch.nn.functional.gumbel_softmax(
+            torch.log(coverage_probs), dim=0, tau=0.1, hard=True
+        )
+        ster_efficacies = torch.matmul(
+            self.sterilization_efficacies.transpose(0, 1), sample_vax
+        )
+        symp_efficacies = torch.matmul(
+            self.symptomatic_efficacies.transpose(0, 1), sample_vax
+        )
+        return ster_efficacies, symp_efficacies

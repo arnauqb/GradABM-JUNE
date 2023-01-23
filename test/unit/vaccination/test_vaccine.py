@@ -21,28 +21,95 @@ class TestVaccine:
             },
         }
 
-    def test__init_vaccines(self, config):
+    @pytest.fixture(name="vaccines")
+    def make_vax(self, config):
         vaccines = Vaccines.from_parameters(config)
+        return vaccines
+
+    def test__init_vaccines(self, vaccines):
         assert vaccines.names == ["pfizer", "astrazeneca"]
         assert vaccines.ids.equal(torch.tensor([0, 1]))
-        assert vaccines.sterilization_efficacies.equal(
-            torch.tensor([[0.7, 0.3], [0.75, 0.1]])
-        )
-        assert vaccines.symptomatic_efficacies.equal(
-            torch.tensor([[0.9, 0.8], [0.8, 0.8]])
+        assert torch.allclose(
+            vaccines.sterilization_efficacies,
+            torch.tensor([[0, 0], [0.7, 0.3], [0.75, 0.1]], dtype=torch.float64),
         )
         assert torch.allclose(
-            vaccines.coverages[0, 0:50], 0.7 * torch.ones(50, dtype=torch.float64)
+            vaccines.symptomatic_efficacies,
+            torch.tensor([[0, 0], [0.9, 0.8], [0.8, 0.8]], dtype=torch.float64),
         )
         assert torch.allclose(
-            vaccines.coverages[0, 50:], 0.3 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[0, 0:50], 0.15 * torch.ones(50, dtype=torch.float64)
         )
         assert torch.allclose(
-            vaccines.coverages[1, 0:50], 0.15 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[0, 50:], 0.1 * torch.ones(50, dtype=torch.float64)
         )
         assert torch.allclose(
-            vaccines.coverages[1, 50:], 0.6 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[1, 0:50], 0.7 * torch.ones(50, dtype=torch.float64)
+        )
+        assert torch.allclose(
+            vaccines.coverages[1, 50:], 0.3 * torch.ones(50, dtype=torch.float64)
+        )
+        assert torch.allclose(
+            vaccines.coverages[2, 0:50], 0.15 * torch.ones(50, dtype=torch.float64)
+        )
+        assert torch.allclose(
+            vaccines.coverages[2, 50:], 0.6 * torch.ones(50, dtype=torch.float64)
         )
 
-    def test__symptoms_susceptibility(self, data):
-        pass
+    def test__vaccine_distribution(self, vaccines):
+        ages = torch.tensor([10, 20, 80])
+        ret_ster = torch.zeros((2, 3))
+        ret_symp = torch.zeros((2, 3))
+        n = 1000
+        for i in range(n):
+            ster, symp = vaccines.sample_efficacies(ages=ages)
+            ret_ster += ster
+            ret_symp += symp
+        ret_ster = ret_ster / n
+        ret_symp = ret_symp / n
+        rtol = 0.05
+        assert torch.allclose(
+            ret_ster[0, :],
+            torch.tensor(
+                [
+                    0.7 * 0.7 + 0.15 * 0.75,
+                    0.7 * 0.7 + 0.15 * 0.75,
+                    0.3 * 0.7 + 0.6 * 0.75,
+                ]
+            ),
+            rtol=rtol,
+        )
+        assert torch.allclose(
+            ret_ster[1, :],
+            torch.tensor(
+                [
+                    0.7 * 0.3 + 0.15 * 0.10,
+                    0.7 * 0.3 + 0.15 * 0.10,
+                    0.3 * 0.3 + 0.6 * 0.10,
+                ]
+            ),
+            rtol=rtol,
+        )
+
+        assert torch.allclose(
+            ret_symp[0, :],
+            torch.tensor(
+                [
+                    0.7 * 0.9 + 0.15 * 0.80,
+                    0.7 * 0.9 + 0.15 * 0.80,
+                    0.3 * 0.9 + 0.6 * 0.80,
+                ]
+            ),
+            rtol=rtol,
+        )
+        assert torch.allclose(
+            ret_symp[1, :],
+            torch.tensor(
+                [
+                    0.7 * 0.8 + 0.15 * 0.80,
+                    0.7 * 0.8 + 0.15 * 0.80,
+                    0.3 * 0.8 + 0.6 * 0.80,
+                ]
+            ),
+            rtol=rtol,
+        )
