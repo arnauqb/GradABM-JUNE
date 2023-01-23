@@ -56,7 +56,7 @@ class TestVaccine:
             vaccines.coverages[2, 50:], 0.6 * torch.ones(50, dtype=torch.float64)
         )
 
-    def test__vaccine_distribution(self, vaccines):
+    def test__vaccine_efficacies(self, vaccines):
         ages = torch.tensor([10, 20, 80])
         ret_ster = torch.zeros((2, 3))
         ret_symp = torch.zeros((2, 3))
@@ -109,6 +109,70 @@ class TestVaccine:
                     0.7 * 0.8 + 0.15 * 0.80,
                     0.7 * 0.8 + 0.15 * 0.80,
                     0.3 * 0.8 + 0.6 * 0.80,
+                ]
+            ),
+            rtol=rtol,
+        )
+
+    def test_vaccination(self, vaccines):
+        ages = torch.tensor([10, 20, 80])
+        susceptibilities_avg = torch.zeros(2, 3)
+        symp_susceptibilities_avg = torch.zeros(2, 3)
+        n = 1000
+        for i in range(n):
+            susceptibilities = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+            symptom_susceptibilities = torch.tensor([[1.0, 0.0, 1.0], [1.0, 0.0, 1.0]])
+            susceptibilities, symptom_susceptibilities = vaccines.vaccinate(
+                ages=ages,
+                susceptibilities=susceptibilities,
+                symptom_susceptibilities=symptom_susceptibilities,
+            )
+            susceptibilities_avg += susceptibilities
+            symp_susceptibilities_avg += symptom_susceptibilities
+        susceptibilities_avg = susceptibilities_avg / n
+        symp_susceptibilities_avg = symp_susceptibilities_avg / n
+        rtol = 0.05
+        assert torch.allclose(
+            susceptibilities_avg[0, :],
+            torch.tensor(
+                [
+                    1.0 - (0.7 * 0.7 + 0.15 * 0.75),
+                    1.0 - (0.7 * 0.7 + 0.15 * 0.75),
+                    1.0 - (0.3 * 0.7 + 0.6 * 0.75),
+                ]
+            ),
+            rtol=rtol,
+        )
+        assert torch.allclose(
+            susceptibilities_avg[1, :],
+            torch.tensor(
+                [
+                    1.0 - (0.7 * 0.3 + 0.15 * 0.10),
+                    1.0 - (0.7 * 0.3 + 0.15 * 0.10),
+                    1.0 - (0.3 * 0.3 + 0.6 * 0.10),
+                ]
+            ),
+            rtol=rtol,
+        )
+
+        assert torch.allclose(
+            symp_susceptibilities_avg[0, :],
+            torch.tensor(
+                [
+                    1.0 - (0.7 * 0.9 + 0.15 * 0.80),
+                    0.0,
+                    1.0 - (0.3 * 0.9 + 0.6 * 0.80),
+                ]
+            ),
+            rtol=rtol,
+        )
+        assert torch.allclose(
+            symp_susceptibilities_avg[1, :],
+            torch.tensor(
+                [
+                    1.0 - (0.7 * 0.8 + 0.15 * 0.80),
+                    0.0,
+                    1.0 - (0.3 * 0.8 + 0.6 * 0.80),
                 ]
             ),
             rtol=rtol,

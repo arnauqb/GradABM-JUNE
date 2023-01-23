@@ -96,3 +96,11 @@ class Vaccines:
             self.symptomatic_efficacies.transpose(0, 1), sample_vax
         )
         return ster_efficacies, symp_efficacies
+
+    def vaccinate(self, ages, susceptibilities, symptom_susceptibilities):
+        ster_efficacies, symp_efficacies = self.sample_efficacies(ages)
+        susceptibilities = torch.clamp(susceptibilities - ster_efficacies, min=0.0)
+        symptom_susceptibilities = torch.clamp(
+            symptom_susceptibilities - symp_efficacies, min=0.0
+        )
+        return susceptibilities, symptom_susceptibilities
