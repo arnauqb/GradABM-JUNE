@@ -73,16 +73,30 @@ class SymptomsSampler:
         mask2 = current_stage < len(self.stages) - 1
         return mask1 * mask2
 
-    def _get_prob_next_symptoms_stage(self, ages, stages):
+    def _get_prob_next_symptoms_stage(
+        self, ages, stages, symptoms_susceptibility, infection_ids
+    ):
         """
         Gets the probability of transitioning to the next symptoms stage,
         given the agents' ages and current stages.
+        We retrieve the agent's symptoms_susceptibility, for the variant that they
+        currently have.
         """
-        probs = self.stage_transition_probabilities[stages, ages]
-        return probs
+        base_probs = self.stage_transition_probabilities[stages, ages]
+        symptoms_susceptibility = torch.gather(
+            symptoms_susceptibility, 0, infection_ids.reshape(1, -1)
+        ).flatten()
+        return base_probs * symptoms_susceptibility
 
     def sample_next_stage(
-        self, ages, current_stage, next_stage, time_to_next_stage, time
+        self,
+        ages,
+        symptoms_susceptibility,
+        infection_ids,
+        current_stage,
+        next_stage,
+        time_to_next_stage,
+        time,
     ):
         """
         Samples the next stage for each agent that needs updating.
@@ -95,17 +109,27 @@ class SymptomsSampler:
         n_agents = ages.shape[0]
         current_stage = current_stage - (current_stage - next_stage) * mask_transition
         # Sample possible next stages
-        probs = self._get_prob_next_symptoms_stage(ages, current_stage.long())
-        mask_symp_stage = torch.bernoulli(probs).to(torch.bool) # no dependence on parameters here.
-        # These ones would recover
-        mask_recovered_stage = ~mask_symp_stage
+        probs = self._get_prob_next_symptoms_stage(
+            ages=ages,
+            stages=current_stage.long(),
+            symptoms_susceptibility=symptoms_susceptibility,
+            infection_ids=infection_ids,
+        )
+        probs = torch.vstack(
+            (probs, 1.0 - probs)
+        )  # probability of developing more symptoms or recovering.
+        do_progress = torch.nn.functional.gumbel_softmax(
+            torch.log(probs), dim=0, tau=0.1, hard=True
+        )
+        mask_symp_stage = do_progress[0, :]  # pass to next symptoms stage
+        mask_recovered_stage = do_progress[1, :]  # recover
         for i in range(
             2, len(self.stages) - 1
         ):  # skip recovered, susceptible, and dead
             # Check people at this stage that need updating
-            mask_stage = (current_stage == i)
+            mask_stage = current_stage == i
             # this makes sure the gradient flows, since we lost it in the previous line.
-            mask_stage = mask_stage * current_stage / i 
+            mask_stage = mask_stage * current_stage / i
             mask_updating = mask_stage * mask_transition
 
             # These people progress to another disease stage
@@ -161,6 +185,8 @@ class SymptomsUpdater(pyro.nn.PyroModule):
             time_to_next_stage,
         ) = self.symptoms_sampler.sample_next_stage(
             ages=data["agent"].age,
+            symptoms_susceptibility=data["agent"].symptoms_susceptibility,
+            infection_ids=data["agent"].infection_id,
             current_stage=symptoms["current_stage"],
             next_stage=symptoms["next_stage"],
             time_to_next_stage=symptoms["time_to_next_stage"],

@@ -11,6 +11,7 @@ from grad_june.paths import default_config_path
 from grad_june import TorchJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
 from grad_june.infection_seed import infect_fraction_of_people
+from grad_june.vaccination import Vaccines
 
 
 class Runner(torch.nn.Module):
@@ -22,6 +23,7 @@ class Runner(torch.nn.Module):
         log_fraction_initial_cases,
         save_path,
         parameters,
+        vaccines=None,
         age_bins=(0, 18, 25, 35, 45, 55, 65, 75, 100),
     ):
         super().__init__()
@@ -37,6 +39,7 @@ class Runner(torch.nn.Module):
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
         self.input_parameters = parameters
+        self.vaccines = vaccines
         self.restore_initial_data()
 
     @classmethod
@@ -50,6 +53,10 @@ class Runner(torch.nn.Module):
         model = TorchJune.from_parameters(params)
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
+        if "vaccines" in params:
+            vaccines = Vaccines.from_parameters(params["vaccines"])
+        else:
+            vaccines = None
         return cls(
             model=model,
             data=data,
@@ -58,6 +65,7 @@ class Runner(torch.nn.Module):
                 "log_fraction_initial_cases"
             ],
             save_path=params["save_path"],
+            vaccines=vaccines,
             parameters=params,
         )
 
@@ -75,6 +83,7 @@ class Runner(torch.nn.Module):
         data["agent"].infection_parameters = parameters_per_infection
         data["agent"].transmission = torch.zeros(n_agents, device=device)
         data["agent"].susceptibility = torch.ones((n_infections, n_agents))
+        data["agent"].symptoms_susceptibility = torch.ones((n_infections, n_agents))
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
         data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
@@ -90,7 +99,11 @@ class Runner(torch.nn.Module):
     def backup_infection_data(self, data):
         ret = {}
         ret["susceptibility"] = data["agent"].susceptibility.detach().clone()
+        ret["symptoms_susceptibility"] = (
+            data["agent"].symptoms_susceptibility.detach().clone()
+        )
         ret["is_infected"] = data["agent"].is_infected.detach().clone()
+        ret["infection_id"] = data["agent"].infection_id.detach().clone()
         ret["infection_time"] = data["agent"].infection_time.detach().clone()
         ret["transmission"] = data["agent"].transmission.detach().clone()
         symptoms = {}
@@ -113,8 +126,14 @@ class Runner(torch.nn.Module):
         self.data["agent"].susceptibility = (
             self.data_backup["susceptibility"].detach().clone()
         )
+        self.data["agent"].symptoms_susceptibility = (
+            self.data_backup["symptoms_susceptibility"].detach().clone()
+        )
         self.data["agent"].is_infected = (
             self.data_backup["is_infected"].detach().clone()
+        )
+        self.data["agent"].infection_id = (
+            self.data_backup["infection_id"].detach().clone()
         )
         self.data["agent"].infection_time = (
             self.data_backup["infection_time"].detach().clone()
@@ -146,6 +165,16 @@ class Runner(torch.nn.Module):
             data=self.data, timer=self.timer, new_infected=new_infected
         )
 
+    def vaccinate(self):
+        if self.vaccines:
+            susc, symp_susc = self.vaccines.vaccinate(
+                ages=self.data["agent"].age,
+                susceptibilities=self.data["agent"].susceptibility,
+                symptom_susceptibilities=self.data["agent"].symptoms_susceptibility,
+            )
+            self.data["agent"].susceptibility = susc
+            self.data["agent"].symptoms_susceptibility = symp_susc
+
     def forward(self):
         timer = self.timer
         model = self.model
@@ -153,10 +182,11 @@ class Runner(torch.nn.Module):
         timer.reset()
         self.restore_initial_data()
         self.set_initial_cases()
+        self.vaccinate()
         # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
-        #cases_by_ethnicity = self.get_cases_by_ethnicity(data)
+        # cases_by_ethnicity = self.get_cases_by_ethnicity(data)
         self.store_differentiable_deaths(data)
         deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         dates = [timer.date]
@@ -172,8 +202,8 @@ class Runner(torch.nn.Module):
             deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
-            #cases_ethnicity = self.get_cases_by_ethnicity(data)
-            #cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
+            # cases_ethnicity = self.get_cases_by_ethnicity(data)
+            # cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -186,11 +216,11 @@ class Runner(torch.nn.Module):
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        #for (i, key) in enumerate(self.ethnicities):
+        # for (i, key) in enumerate(self.ethnicities):
         #    results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
-        return results, data["agent"].is_infected
+        return results
 
-    def save_results(self, results, is_infected):
+    def save_results(self, results):
         self.save_path.mkdir(exist_ok=True, parents=True)
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
@@ -199,9 +229,6 @@ class Runner(torch.nn.Module):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
-        df = pd.DataFrame()
-        df["is_infected"] = is_infected
-        df.to_csv(self.save_path / "results_is_infected.csv")
 
     def get_deaths_from_symptoms(self, symptoms):
         return torch.tensor(
