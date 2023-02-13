@@ -3,6 +3,7 @@ site_url: https://largeagentcollider.github.io/GradABM-JUNE/
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - Synthetic population: synthetic_population.md
 theme: readthedocs
 markdown_extensions:
   - pymdownx.arithmatex:
