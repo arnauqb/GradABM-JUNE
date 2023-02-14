@@ -61,7 +61,7 @@ class TestRunner:
 
     def test__run_model(self, runner):
         results = runner()
-        n_timesteps = 16
+        n_timesteps = 31
         assert len(results["dates"]) == n_timesteps
         assert len(results["cases_per_timestep"]) == n_timesteps
         assert len(results["deaths_per_timestep"]) == n_timesteps

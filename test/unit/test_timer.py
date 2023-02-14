@@ -72,7 +72,7 @@ class TestTimer:
     def test__read_from_file(self):
         timer = Timer.from_file()
         assert timer.date_str == "2022-02-01"
-        assert timer.total_days == 15
+        assert timer.total_days == 30
         assert timer.weekday_step_duration == {0: 24}
         assert timer.weekend_step_duration == {0: 24}
         assert timer.weekday_activities == {
