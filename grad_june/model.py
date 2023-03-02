@@ -14,7 +14,7 @@ from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
 
 
-class TorchJune(torch.nn.Module):
+class GradJune(torch.nn.Module):
     def __init__(
         self,
         symptoms_updater=None,

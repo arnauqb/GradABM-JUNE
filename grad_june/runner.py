@@ -8,7 +8,7 @@ import pyro
 from pathlib import Path
 
 from grad_june.paths import default_config_path
-from grad_june import TorchJune, Timer, TransmissionSampler
+from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
 from grad_june.infection_seed import infect_fraction_of_people
 from grad_june.vaccination import Vaccines
@@ -50,7 +50,7 @@ class Runner(torch.nn.Module):
 
     @classmethod
     def from_parameters(cls, params):
-        model = TorchJune.from_parameters(params)
+        model = GradJune.from_parameters(params)
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         if "vaccines" in params:
