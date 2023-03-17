@@ -55,7 +55,7 @@ class Runner(torch.nn.Module):
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         if "vaccines" in params:
-            vaccines = Vaccines.from_parameters(params["vaccines"])
+            vaccines = Vaccines.from_parameters(params["vaccines"], device=model.device)
         else:
             vaccines = None
         return cls(
@@ -83,8 +83,12 @@ class Runner(torch.nn.Module):
         n_infections = parameters_per_infection["n_infections"]
         data["agent"].infection_parameters = parameters_per_infection
         data["agent"].transmission = torch.zeros(n_agents, device=device)
-        data["agent"].susceptibility = torch.ones((n_infections, n_agents))
-        data["agent"].symptoms_susceptibility = torch.ones((n_infections, n_agents))
+        data["agent"].susceptibility = torch.ones(
+            (n_infections, n_agents), device=device
+        )
+        data["agent"].symptoms_susceptibility = torch.ones(
+            (n_infections, n_agents), device=device
+        )
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
         data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
