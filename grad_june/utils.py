@@ -74,7 +74,7 @@ def parse_age_probabilities(age_dict, fill_value=0):
 def parse_distribution(dict, device):
     dd = deepcopy(dict)
     dist_name = dd.pop("dist")
-    dist_class = getattr(dist, dist_name)
+    dist_class = getattr(torch.distributions, dist_name)
     input = {
         key: torch.tensor(value, device=device, dtype=torch.float)
         for key, value in dd.items()
