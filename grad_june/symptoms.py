@@ -1,8 +1,6 @@
 from operator import ne
 import torch
 import yaml
-import pyro
-from pyro import distributions as dist
 
 from grad_june.utils import parse_age_probabilities, parse_distribution
 from grad_june.default_parameters import make_parameters
@@ -154,7 +152,7 @@ class SymptomsSampler:
         return current_stage, next_stage, time_to_next_stage
 
 
-class SymptomsUpdater(pyro.nn.PyroModule):
+class SymptomsUpdater(torch.nn.Module):
     def __init__(self, symptoms_sampler):
         super().__init__()
         self.symptoms_sampler = symptoms_sampler

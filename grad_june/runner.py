@@ -4,13 +4,12 @@ import numpy as np
 import pandas as pd
 from torch.utils.checkpoint import checkpoint
 import yaml
-import pyro
 from pathlib import Path
 
 from grad_june.paths import default_config_path
 from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
-from grad_june.infection_seed import infect_fraction_of_people
+from grad_june.infection import infect_fraction_of_people
 from grad_june.vaccination import Vaccines
 
 
@@ -24,6 +23,7 @@ class Runner(torch.nn.Module):
         save_path,
         parameters,
         vaccines=None,
+        initial_cases_infection_type=0,
         age_bins=(0, 18, 25, 35, 45, 55, 65, 75, 100),
     ):
         super().__init__()
@@ -32,6 +32,7 @@ class Runner(torch.nn.Module):
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
         self.log_fraction_initial_cases = log_fraction_initial_cases
+        self.initial_cases_infection_type = initial_cases_infection_type
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
@@ -160,6 +161,7 @@ class Runner(torch.nn.Module):
             symptoms_updater=self.model.symptoms_updater,
             device=self.device,
             fraction=fraction_initial_cases,
+            infection_type=self.initial_cases_infection_type,
         )
         self.model.symptoms_updater(
             data=self.data, timer=self.timer, new_infected=new_infected

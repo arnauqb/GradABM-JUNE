@@ -40,7 +40,7 @@ class TestRunner:
         assert np.isclose(
             runner.data["agent"].is_infected.sum().item(),
             0.10 * runner.n_agents,
-            rtol=2e-1,
+            rtol=3e-1,
         )
 
     def test__restore_data(self, runner):

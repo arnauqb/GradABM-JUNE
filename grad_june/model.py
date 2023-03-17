@@ -1,6 +1,5 @@
 import torch
 import yaml
-import pyro
 from torch.utils.checkpoint import checkpoint
 
 from grad_june import (
@@ -12,7 +11,7 @@ from grad_june import (
 from grad_june.policies import Policies
 from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
-
+from grad_june.infection import infect_people
 
 class GradJune(torch.nn.Module):
     def __init__(
@@ -54,16 +53,6 @@ class GradJune(torch.nn.Module):
             device=params["system"]["device"],
         )
 
-    def infect_people(self, data, timer, new_infected, new_infection_type):
-        data["agent"].susceptibility = torch.clamp(
-            data["agent"].susceptibility - new_infected, min=0.0
-        )
-        data["agent"].is_infected = data["agent"].is_infected + new_infected
-        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
-            timer.now - data["agent"].infection_time
-        )
-        data["agent"].infection_id = new_infection_type
-
     def forward(self, data, timer):
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
         not_infected_probs = self.infection_networks(
@@ -73,6 +62,6 @@ class GradJune(torch.nn.Module):
         )
         infected_probs = 1.0 - not_infected_probs
         new_infected, new_infection_type = self.is_infected_sampler(not_infected_probs)
-        self.infect_people(data, timer, new_infected, new_infection_type)
+        infect_people(data, timer, new_infected, new_infection_type)
         self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
         return data

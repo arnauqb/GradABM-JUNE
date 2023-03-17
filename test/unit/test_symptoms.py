@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from grad_june.symptoms import SymptomsSampler, SymptomsUpdater
-from grad_june.infection_networks import IsInfectedSampler
+from grad_june.infection import IsInfectedSampler
 from grad_june.default_parameters import make_parameters
 
 
