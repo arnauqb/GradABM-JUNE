@@ -3,7 +3,6 @@ import torch
 import torch_geometric.transforms as T
 import numpy as np
 import random
-from pyro.distributions import Normal, LogNormal
 from pytest import fixture
 from torch_geometric.data import HeteroData
 
