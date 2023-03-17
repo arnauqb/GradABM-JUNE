@@ -15,7 +15,7 @@ class my_round_func(torch.autograd.function.InplaceFunction):
 
 
 class IsInfectedSampler(torch.nn.Module):
-    def forward(self, not_infected_probs, time_step):
+    def forward(self, not_infected_probs):
         """
         Here we need to sample the infection status of each agent and the variant that
         the agent gets in case of infection.

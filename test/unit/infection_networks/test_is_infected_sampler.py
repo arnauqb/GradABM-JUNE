@@ -11,7 +11,7 @@ class TestIsInfectedSampler:
         is_infected = 0
         variants = 0
         for _ in range(n):
-            is_infected_, variants_ = sampler(probs, 0)
+            is_infected_, variants_ = sampler(probs)
             is_infected += is_infected_
             variants += variants_
         is_infected = is_infected / n
@@ -21,7 +21,7 @@ class TestIsInfectedSampler:
         n = 2000
         ret = torch.zeros(4)
         for _ in range(n):
-            ret_ = sampler(probs, 0)[0]
+            ret_ = sampler(probs)[0]
             ret += ret_
         ret = ret / n
         assert np.allclose(ret, 1.0 - probs, rtol=1e-1)
