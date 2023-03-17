@@ -23,7 +23,7 @@ class TestVaccine:
 
     @pytest.fixture(name="vaccines")
     def make_vax(self, config):
-        vaccines = Vaccines.from_parameters(config)
+        vaccines = Vaccines.from_parameters(config, device="cpu")
         return vaccines
 
     def test__init_vaccines(self, vaccines):
@@ -31,29 +31,29 @@ class TestVaccine:
         assert vaccines.ids.equal(torch.tensor([0, 1]))
         assert torch.allclose(
             vaccines.sterilization_efficacies,
-            torch.tensor([[0, 0], [0.7, 0.3], [0.75, 0.1]], dtype=torch.float64),
+            torch.tensor([[0, 0], [0.7, 0.3], [0.75, 0.1]], dtype=torch.float),
         )
         assert torch.allclose(
             vaccines.symptomatic_efficacies,
-            torch.tensor([[0, 0], [0.9, 0.8], [0.8, 0.8]], dtype=torch.float64),
+            torch.tensor([[0, 0], [0.9, 0.8], [0.8, 0.8]], dtype=torch.float),
         )
         assert torch.allclose(
-            vaccines.coverages[0, 0:50], 0.15 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[0, 0:50], 0.15 * torch.ones(50, dtype=torch.float)
         )
         assert torch.allclose(
-            vaccines.coverages[0, 50:], 0.1 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[0, 50:], 0.1 * torch.ones(50, dtype=torch.float)
         )
         assert torch.allclose(
-            vaccines.coverages[1, 0:50], 0.7 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[1, 0:50], 0.7 * torch.ones(50, dtype=torch.float)
         )
         assert torch.allclose(
-            vaccines.coverages[1, 50:], 0.3 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[1, 50:], 0.3 * torch.ones(50, dtype=torch.float)
         )
         assert torch.allclose(
-            vaccines.coverages[2, 0:50], 0.15 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[2, 0:50], 0.15 * torch.ones(50, dtype=torch.float)
         )
         assert torch.allclose(
-            vaccines.coverages[2, 50:], 0.6 * torch.ones(50, dtype=torch.float64)
+            vaccines.coverages[2, 50:], 0.6 * torch.ones(50, dtype=torch.float)
         )
 
     def test__vaccine_efficacies(self, vaccines):

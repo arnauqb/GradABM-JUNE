@@ -20,16 +20,17 @@ class Vaccines:
     def from_file(cls, fpath=default_config_path):
         with open(fpath, "r") as f:
             params = yaml.safe_load(f)
-        return cls.from_parameters(params["vaccines"])
+            device = params["system"]["device"]
+        return cls.from_parameters(params["vaccines"], device=device)
 
     @classmethod
-    def from_parameters(cls, params):
+    def from_parameters(cls, params, device):
         names = list(params.keys())
         (
             sterilization_efficacies,
             symptomatic_efficacies,
             coverages,
-        ) = cls._parse_parameters(params)
+        ) = cls._parse_parameters(params, device=device)
         return cls(
             names=names,
             sterilization_efficacies=sterilization_efficacies,
@@ -38,7 +39,7 @@ class Vaccines:
         )
 
     @classmethod
-    def _parse_parameters(cls, params):
+    def _parse_parameters(cls, params, device):
         params = deepcopy(params)
         sterilization_efficacies = []
         symptomatic_efficacies = []
@@ -67,20 +68,26 @@ class Vaccines:
             sterilization_efficacies.append(sterilization_efficacies_)
             symptomatic_efficacies.append(symptomatic_efficacies_)
         # no vax option for coverages.
-        coverages = torch.tensor(coverages)
+        coverages = torch.tensor(coverages, dtype=torch.float, device=device)
         no_vax = 1.0 - coverages.sum(0)
         coverages = torch.vstack((no_vax, coverages))
         sterilization_efficacies = torch.tensor(
-            sterilization_efficacies, dtype=torch.float64
+            sterilization_efficacies, dtype=torch.float, device=device
         )
         sterilization_efficacies = torch.vstack(
-            (torch.zeros(sterilization_efficacies.shape[1]), sterilization_efficacies)
+            (
+                torch.zeros(sterilization_efficacies.shape[1], device=device),
+                sterilization_efficacies,
+            )
         )
         symptomatic_efficacies = torch.tensor(
-            symptomatic_efficacies, dtype=torch.float64
+            symptomatic_efficacies, dtype=torch.float, device=device
         )
         symptomatic_efficacies = torch.vstack(
-            (torch.zeros(symptomatic_efficacies.shape[1]), symptomatic_efficacies)
+            (
+                torch.zeros(symptomatic_efficacies.shape[1], device=device),
+                symptomatic_efficacies,
+            )
         )
         return sterilization_efficacies, symptomatic_efficacies, coverages
 
