@@ -22,7 +22,7 @@ class Runner(torch.nn.Module):
         log_fraction_initial_cases,
         save_path,
         parameters,
-        age_bins=(0, 18, 25, 35, 45, 55, 65, 75, 100),
+        age_bins=(0, 18, 65, 100),
     ):
         super().__init__()
         self.model = model
