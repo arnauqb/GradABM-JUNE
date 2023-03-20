@@ -132,7 +132,6 @@ class Runner(torch.nn.Module):
         # reset results
         self.data["results"] = {}
         self.data["results"]["daily_deaths"] = None
-        self.data["results"]["daily_deaths_by_district"] = None
 
     def set_initial_cases(self):
         fraction_initial_cases = 10.0**self.log_fraction_initial_cases
@@ -183,7 +182,6 @@ class Runner(torch.nn.Module):
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
             "deaths_per_timestep": deaths_per_timestep,
-            "daily_deaths_by_district": data["results"]["daily_deaths_by_district"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
@@ -196,7 +194,7 @@ class Runner(torch.nn.Module):
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
         for key in results:
-            if key in ("dates", "daily_deaths_by_district"):
+            if key in ("dates"):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
@@ -212,23 +210,9 @@ class Runner(torch.nn.Module):
             device=self.device,
         )
 
-    def get_deaths_by_district(self, symptoms):
-        if "district" in self.data["agent"]:
-            districts = self.data["agent"].district.unique()
-            dead_idcs = self.data["agent"].district[
-                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
-            ]
-            dead_districts = self.data["agent"].district[dead_idcs]
-            ret = torch.zeros(districts.shape, dtype=torch.long, device=self.device)
-            deaths, counts = torch.unique(dead_districts, return_counts=True)
-            ret[deaths] = counts
-            return ret
-        else:
-            return torch.zeros(1, 1)
-
     def store_differentiable_deaths(self, data):
         """
-        Returns differentiable deaths by district and global. The results are stored
+        Returns differentiable deaths. The results are stored
         in data["results"]
         """
         symptoms = data["agent"].symptoms
@@ -238,20 +222,6 @@ class Runner(torch.nn.Module):
             * symptoms["current_stage"]
             / dead_idx
         )
-        if "district" in data["agent"]:
-            districts, _ = torch.sort(data["agent"].district.unique())
-            deaths_by_district = []
-            for i, district in enumerate(districts):
-                mask_district = data["agent"].district == district
-                deaths_district = (deaths * mask_district).sum()
-                deaths_by_district.append(deaths_district.reshape(1))
-            deaths_by_district = torch.cat(deaths_by_district, 0)
-            if data["results"]["daily_deaths_by_district"] is not None:
-                data["results"]["daily_deaths_by_district"] = torch.vstack(
-                    (data["results"]["daily_deaths_by_district"], deaths_by_district)
-                )
-            else:
-                data["results"]["daily_deaths_by_district"] = deaths_by_district
         if data["results"]["daily_deaths"] is not None:
             data["results"]["daily_deaths"] = torch.hstack(
                 (data["results"]["daily_deaths"], deaths.sum())
