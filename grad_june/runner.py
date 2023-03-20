@@ -131,7 +131,7 @@ class Runner(torch.nn.Module):
         )
         # reset results
         self.data["results"] = {}
-        self.data["results"]["daily_deaths"] = None
+        self.data["results"]["deaths_per_timestep"] = None
 
     def set_initial_cases(self):
         fraction_initial_cases = 10.0**self.log_fraction_initial_cases
@@ -153,12 +153,9 @@ class Runner(torch.nn.Module):
         timer.reset()
         self.restore_initial_data()
         self.set_initial_cases()
-        # data = model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
-        #cases_by_ethnicity = self.get_cases_by_ethnicity(data)
         self.store_differentiable_deaths(data)
-        deaths_per_timestep = self.get_deaths_from_symptoms(data["agent"].symptoms)
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -167,13 +164,9 @@ class Runner(torch.nn.Module):
             data = model(data, timer)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
-            deaths = self.get_deaths_from_symptoms(data["agent"].symptoms)
             self.store_differentiable_deaths(data)
-            deaths_per_timestep = torch.hstack((deaths_per_timestep, deaths))
             cases_age = self.get_cases_by_age(data)
             cases_by_age = torch.vstack((cases_by_age, cases_age))
-            #cases_ethnicity = self.get_cases_by_ethnicity(data)
-            #cases_by_ethnicity = torch.vstack((cases_by_ethnicity, cases_ethnicity))
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -181,12 +174,10 @@ class Runner(torch.nn.Module):
             "daily_cases_per_timestep": torch.diff(
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
-            "deaths_per_timestep": deaths_per_timestep,
+            "deaths_per_timestep": data.results["deaths_per_timestep"],
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        #for (i, key) in enumerate(self.ethnicities):
-        #    results[f"cases_by_ethnicity_{key}"] = cases_by_ethnicity[:, i]
         return results, data["agent"].is_infected
 
     def save_results(self, results, is_infected):
@@ -202,14 +193,6 @@ class Runner(torch.nn.Module):
         df["is_infected"] = is_infected
         df.to_csv(self.save_path / "results_is_infected.csv")
 
-    def get_deaths_from_symptoms(self, symptoms):
-        return torch.tensor(
-            symptoms["current_stage"][
-                symptoms["current_stage"] == self.model.symptoms_updater.stages_ids[-1]
-            ].shape[0],
-            device=self.device,
-        )
-
     def store_differentiable_deaths(self, data):
         """
         Returns differentiable deaths. The results are stored
@@ -222,12 +205,12 @@ class Runner(torch.nn.Module):
             * symptoms["current_stage"]
             / dead_idx
         )
-        if data["results"]["daily_deaths"] is not None:
-            data["results"]["daily_deaths"] = torch.hstack(
-                (data["results"]["daily_deaths"], deaths.sum())
+        if data["results"]["deaths_per_timestep"] is not None:
+            data["results"]["deaths_per_timestep"] = torch.hstack(
+                (data["results"]["deaths_per_timestep"], deaths.sum())
             )
         else:
-            data["results"]["daily_deaths"] = deaths.sum()
+            data["results"]["deaths_per_timestep"] = deaths.sum()
 
     def get_cases_by_age(self, data):
         ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
