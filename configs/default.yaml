@@ -27,6 +27,7 @@ timer:
       - gym
       - cinema
       - visit 
+      - care_visit
       - care_home
       - household
     weekend:
@@ -36,6 +37,7 @@ timer:
       - gym
       - cinema
       - visit 
+      - care_visit
       - care_home
       - household
 
@@ -61,6 +63,8 @@ networks:
     log_beta: -1.2
   university:
     log_beta: -0.5
+  care_visit:
+    log_beta: -0.4
   care_home:
     log_beta: -0.4
 
@@ -410,3 +414,13 @@ leisure:
         51-66: 0.1405
         66-86: 0.1145
         86-100: 0.075
+  care_visit:
+    weekday:
+      female:
+        0-75: 0.0
+        75-85: 0.25
+        75-100: 0.5
+      male:
+        0-65: 0.0
+        75-85: 0.25
+        75-100: 0.5
