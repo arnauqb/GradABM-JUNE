@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 
-from grad_june import TorchJune, Timer
+from grad_june import GradJune, Timer
 from grad_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
@@ -19,7 +19,7 @@ class TestModel:
         hn = HouseholdNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         sn = SchoolNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         networks = InfectionNetworks(household=hn, company=cn, school=sn)
-        model = TorchJune(infection_networks=networks)
+        model = GradJune(infection_networks=networks)
         return model
 
     def test__run_model(self, model, inf_data, timer):

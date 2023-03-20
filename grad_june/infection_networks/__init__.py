@@ -15,4 +15,3 @@ from .leisure_network import (
     GymNetwork,
     CareVisitNetwork
 )
-from .is_infected_sampler import IsInfectedSampler

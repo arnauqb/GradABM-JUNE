@@ -4,7 +4,8 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
 
-from grad_june.infection_networks import InfectionNetworks, IsInfectedSampler
+from grad_june.infection_networks import InfectionNetworks
+from grad_june.infection import IsInfectedSampler
 from grad_june.infection_networks.base import (
     SchoolNetwork,
 )

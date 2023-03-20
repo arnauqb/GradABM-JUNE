@@ -11,7 +11,7 @@ from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
 
 from grad_june.paths import grad_june_path
-from grad_june.infection_seed import infect_people_at_indices
+from grad_june.infection import infect_people_at_indices
 
 
 def read_path(path_str):

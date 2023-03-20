@@ -1,6 +1,6 @@
 import numpy as np
 
-from grad_june.infection_seed import (
+from grad_june.infection import (
     infect_people_at_indices,
     infect_fraction_of_people,
 )

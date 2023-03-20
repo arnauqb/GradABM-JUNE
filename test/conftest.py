@@ -7,7 +7,7 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from grad_june.transmission import TransmissionSampler
-from grad_june.infection_seed import infect_people_at_indices
+from grad_june.infection import infect_people_at_indices
 from grad_june.timer import Timer
 
 

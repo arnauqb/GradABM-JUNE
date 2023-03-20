@@ -7,9 +7,9 @@ import yaml
 from pathlib import Path
 
 from grad_june.paths import default_config_path
-from grad_june import TorchJune, Timer, TransmissionSampler
+from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
-from grad_june.infection_seed import infect_fraction_of_people
+from grad_june.infection import infect_fraction_of_people
 
 
 class Runner(torch.nn.Module):
@@ -46,7 +46,7 @@ class Runner(torch.nn.Module):
 
     @classmethod
     def from_parameters(cls, params):
-        model = TorchJune.from_parameters(params)
+        model = GradJune.from_parameters(params)
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         return cls(

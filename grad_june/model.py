@@ -13,7 +13,7 @@ from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
 
 
-class TorchJune(torch.nn.Module):
+class GradJune(torch.nn.Module):
     def __init__(
         self,
         symptoms_updater=None,
@@ -71,7 +71,7 @@ class TorchJune(torch.nn.Module):
             policies=self.policies,
         )
         infected_probs = 1.0 - not_infected_probs
-        new_infected = self.is_infected_sampler(not_infected_probs, timer.now)
+        new_infected = self.is_infected_sampler(not_infected_probs)
         self.infect_people(data, timer, new_infected)
         self.symptoms_updater(
             data=data, timer=timer, new_infected=new_infected
