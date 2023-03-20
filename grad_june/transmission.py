@@ -1,6 +1,5 @@
 import torch
 import yaml
-import pyro
 
 from grad_june.paths import default_config_path
 from grad_june.utils import parse_distribution

@@ -1,14 +1,8 @@
 import torch
-import pyro
 
 
 def infect_fraction_of_people(data, timer, symptoms_updater, fraction, device):
     probs = fraction * torch.ones(data["agent"].id.shape, device=device)
-    #dist = pyro.distributions.RelaxedBernoulliStraightThrough(
-    #    temperature=torch.tensor(0.1),
-    #    probs=probs,
-    #)
-    #new_infected = dist.rsample()
     not_infected_probs = 1.0 - probs.reshape(1,-1)
     not_infected_total = torch.prod(not_infected_probs, 0)
     logits = torch.log(

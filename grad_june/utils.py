@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from pathlib import Path
 from itertools import chain
-from pyro import distributions as dist
+from torch import distributions as dist
 import datetime
 import random
 from typing import Union
