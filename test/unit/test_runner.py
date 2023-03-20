@@ -75,7 +75,7 @@ class TestRunner:
         runner.save_results(results, is_infected)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
-            if key in ("dates", "daily_deaths_by_district"):
+            if key in ("dates"):
                 continue
             assert np.allclose(loaded_results[key], results[key].numpy())
 
@@ -88,18 +88,3 @@ class TestRunner:
         assert (results["deaths_per_timestep"] == daily_deaths).all()
         assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
         assert daily_deaths.requires_grad
-
-    def test__save_deaths_by_district(self, runner):
-        district_ids = torch.randint(0, 2, size=(runner.n_agents,))
-        _, people_in_districts = torch.unique(district_ids, return_counts=True)
-        data = runner.data
-        symptoms = data["agent"].symptoms
-        data["agent"].district = district_ids
-        symptoms["current_stage"] = runner.model.symptoms_updater.stages_ids[
-            -1
-        ] * torch.ones(
-            symptoms["current_stage"].shape
-        )  # everyone is dead.
-        runner.store_differentiable_deaths(data)
-        deaths_by_district = data["results"]["daily_deaths_by_district"]
-        assert set(deaths_by_district.numpy()) == set(people_in_districts.numpy())

@@ -85,12 +85,22 @@ class TestTimer:
                 "gym",
                 "cinema",
                 "visit",
+                "care_visit",
                 "care_home",
                 "household",
             ]
         }
         assert timer.weekend_activities == {
-            0: ["pub", "grocery", "gym", "cinema", "visit", "care_home", "household"]
+            0: [
+                "pub",
+                "grocery",
+                "gym",
+                "cinema",
+                "visit",
+                "care_visit",
+                "care_home",
+                "household",
+            ]
         }
         assert timer.day_of_week == "Tuesday"
         assert timer.day_type == "weekday"
