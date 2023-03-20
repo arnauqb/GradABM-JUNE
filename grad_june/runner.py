@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from torch.utils.checkpoint import checkpoint
 import yaml
-import pyro
 from pathlib import Path
 
 from grad_june.paths import default_config_path

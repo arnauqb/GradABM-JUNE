@@ -1,6 +1,5 @@
 import torch
 import yaml
-import pyro
 from torch.utils.checkpoint import checkpoint
 
 from grad_june import (

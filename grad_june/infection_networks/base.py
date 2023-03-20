@@ -1,6 +1,5 @@
 import re
 import yaml
-import pyro
 import torch
 from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv import MessagePassing

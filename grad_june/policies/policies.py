@@ -3,7 +3,6 @@ import yaml
 import re
 import datetime
 import torch
-import pyro
 
 import grad_june
 from grad_june.utils import read_date
