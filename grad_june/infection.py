@@ -11,9 +11,7 @@ class IsInfectedSampler(torch.nn.Module):
         the agent not getting infected, so that it can be sampled as an outcome using
         the Gumbel-Softmax reparametrization of the categorical distribution.
         """
-        not_infected_probs = not_infected_probs.reshape(1, -1)
-        not_infected_total = torch.prod(not_infected_probs, 0)
-        logits = torch.log(torch.vstack((not_infected_total, 1.0 - not_infected_probs)))
+        logits = torch.log(torch.vstack((not_infected_probs, 1.0 - not_infected_probs)))
         infection = torch.nn.functional.gumbel_softmax(
             logits, dim=0, tau=0.1, hard=True
         )

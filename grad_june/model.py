@@ -70,7 +70,6 @@ class GradJune(torch.nn.Module):
             timer=timer,
             policies=self.policies,
         )
-        infected_probs = 1.0 - not_infected_probs
         new_infected = self.is_infected_sampler(not_infected_probs)
         self.infect_people(data, timer, new_infected)
         self.symptoms_updater(
