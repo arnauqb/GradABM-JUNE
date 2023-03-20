@@ -6,7 +6,7 @@ import sys
 june_world_path = sys.argv[1]
 
 data = HeteroData()
-data = GraphLoader(june_world_path, k_leisure=10).load_graph(data)
+data = GraphLoader(june_world_path, k_leisure=3).load_graph(data)
 AgentDataLoader(june_world_path).load_agent_data(data)
 
 with open("./data.pkl", "wb") as f:
