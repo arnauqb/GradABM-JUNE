@@ -1,5 +1,21 @@
 import torch
 
+def gumbel_softmax(logits: torch.Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> torch.Tensor:
+    gumbels = -(
+        -torch.rand_like(logits, memory_format=torch.legacy_contiguous_format).log()
+    ).log()
+    gumbels = (logits.log() + gumbels) / tau
+    y_soft = gumbels.softmax(dim)
+
+    if hard:
+        # Straight through.
+        index = y_soft.max(dim, keepdim=True)[1]
+        y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
+        ret = y_hard - y_soft.detach() + y_soft
+    else:
+        # Reparametrization trick.
+        ret = y_soft
+    return ret
 
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):
@@ -11,10 +27,11 @@ class IsInfectedSampler(torch.nn.Module):
         the agent not getting infected, so that it can be sampled as an outcome using
         the Gumbel-Softmax reparametrization of the categorical distribution.
         """
-        logits = torch.log(torch.vstack((not_infected_probs, 1.0 - not_infected_probs)))
-        infection = torch.nn.functional.gumbel_softmax(
+        logits = torch.vstack((not_infected_probs, 1.0 - not_infected_probs))
+        infection = gumbel_softmax(
             logits, dim=0, tau=0.1, hard=True
         )
+        print(infection)
         is_infected = 1.0 - infection[0, :]
         return is_infected
 
