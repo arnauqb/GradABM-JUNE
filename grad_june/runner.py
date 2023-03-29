@@ -49,6 +49,7 @@ class Runner(torch.nn.Module):
         model = GradJune.from_parameters(params)
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
+        age_bins_to_save = params.get("age_bins_to_save", (0, 18, 65, 100))
         return cls(
             model=model,
             data=data,
@@ -58,6 +59,7 @@ class Runner(torch.nn.Module):
             ],
             save_path=params["save_path"],
             parameters=params,
+            age_bins = age_bins_to_save
         )
 
     @staticmethod
@@ -222,12 +224,12 @@ class Runner(torch.nn.Module):
         return ret
 
     def get_people_by_age(self):
-        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
+        ret = {}
         for i in range(1, self.age_bins.shape[0]):
             mask1 = self.data["agent"].age < self.age_bins[i]
             mask2 = self.data["agent"].age > self.age_bins[i - 1]
             mask = mask1 * mask2
-            ret[i - 1] = mask.sum()
+            ret[int(self.age_bins[i].item())] = mask.sum()
         return ret
 
     def get_cases_by_ethnicity(self, data):

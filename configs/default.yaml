@@ -7,6 +7,7 @@ system:
 data_path: '@grad_june/test/data/data.pkl'
 
 save_path: ./example
+age_bins_to_save: [0, 18, 65, 100]
 
 timer:
   total_days: 15
