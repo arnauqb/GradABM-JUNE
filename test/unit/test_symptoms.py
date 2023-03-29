@@ -1,11 +1,9 @@
-from tkinter import W
 from pytest import fixture
 import numpy as np
 import pyro
 import torch
 
 from grad_june.symptoms import SymptomsSampler, SymptomsUpdater
-from grad_june.default_parameters import make_parameters
 
 
 class TestSymptomsSampler:
