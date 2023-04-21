@@ -25,6 +25,7 @@ class SocialDistancing(InteractionPolicy):
     def apply(self, beta, name, timer):
         if self.is_active(timer.date):
             factor = self.beta_factors.get(name, self.beta_factors.get("all", torch.tensor(1.0)))
+            #print(f"factor for {name} is {factor}")
             return beta * factor
         else:
             return beta

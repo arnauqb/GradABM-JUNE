@@ -129,24 +129,101 @@ class SymptomsSampler:
 
 
 class SymptomsUpdater(torch.nn.Module):
+    """
+    A PyTorch module for updating symptoms of agents in an epidemic simulation.
+
+    Args:
+        symptoms_sampler (SymptomsSampler): A sampler for generating new symptoms based on current symptoms and other factors.
+
+    Attributes:
+        symptoms_sampler (SymptomsSampler): A sampler for generating new symptoms based on current symptoms and other factors.
+
+    Methods:
+        from_file(cls, fpath=default_config_path): Class method for creating a SymptomsUpdater instance from a YAML file.
+        from_parameters(cls, params): Class method for creating a SymptomsUpdater instance from a dictionary of parameters.
+        forward(self, data, timer, new_infected): Method for updating symptoms of agents based on current symptoms and other factors.
+        stages_ids(self): Property for getting the IDs of all possible symptom stages.
+
+    Raises:
+        TypeError: If symptoms_sampler is not an instance of SymptomsSampler.
+        KeyError: If data does not contain the "agent" key.
+        KeyError: If symptoms does not contain the "current_stage", "next_stage", or "time_to_next_stage" keys.
+
+    Returns:
+        A SymptomsUpdater instance.
+    """
+
     def __init__(self, symptoms_sampler):
         super().__init__()
+        if not isinstance(symptoms_sampler, SymptomsSampler):
+            raise TypeError("symptoms_sampler must be an instance of SymptomsSampler.")
         self.symptoms_sampler = symptoms_sampler
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
-        with open(fpath, "r") as f:
-            params = yaml.safe_load(f)
-        return cls.from_parameters(params)
+        """
+        Class method for creating a SymptomsUpdater instance from a YAML file.
+
+        Args:
+            fpath (str): The path to the YAML file containing the parameters.
+
+        Raises:
+            FileNotFoundError: If the file at fpath does not exist.
+            yaml.YAMLError: If the file at fpath is not a valid YAML file.
+            KeyError: If the YAML file does not contain the "symptoms_sampler" key.
+
+        Returns:
+            A SymptomsUpdater instance.
+        """
+        try:
+            with open(fpath, "r") as f:
+                params = yaml.safe_load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No file found at {fpath}.")
+        except yaml.YAMLError:
+            raise yaml.YAMLError(f"Invalid YAML file at {fpath}.")
+        ss = SymptomsSampler.from_parameters(params)
+        return cls(symptoms_sampler=ss)
 
     @classmethod
     def from_parameters(cls, params):
+        """
+        Class method for creating a SymptomsUpdater instance from a dictionary of parameters.
+
+        Args:
+            params (dict): A dictionary of parameters.
+
+        Raises:
+
+        Returns:
+            A SymptomsUpdater instance.
+        """
         ss = SymptomsSampler.from_parameters(params)
         return cls(symptoms_sampler=ss)
 
     def forward(self, data, timer, new_infected):
+        """
+        Method for updating symptoms of agents based on current symptoms and other factors.
+
+        Args:
+            data (dict): A dictionary containing information about the agents.
+            timer (Timer): A timer object for keeping track of time in the simulation.
+            new_infected (int): The number of new agents who have become infected.
+
+        Raises:
+            KeyError: If data does not contain the "agent" key.
+            KeyError: If symptoms does not contain the "current_stage", "next_stage", or "time_to_next_stage" keys.
+
+        Returns:
+            A dictionary containing the updated symptoms of the agents.
+        """
+        try:
+            symptoms = data["agent"].symptoms
+        except KeyError:
+            raise KeyError("data must contain the 'agent' key.")
+        if not all(key in symptoms for key in ["current_stage", "next_stage", "time_to_next_stage"]):
+            raise KeyError("symptoms must contain the 'current_stage', 'next_stage', and 'time_to_next_stage' keys.")
         time = timer.now
-        symptoms = data["agent"].symptoms
         symptoms["next_stage"] = symptoms["next_stage"] + new_infected * (
             2.0 - symptoms["next_stage"]
         )
@@ -171,4 +248,10 @@ class SymptomsUpdater(torch.nn.Module):
 
     @property
     def stages_ids(self):
+        """
+        Property for getting the IDs of all possible symptom stages.
+
+        Returns:
+            A list of integers representing the IDs of all possible symptom stages.
+        """
         return self.symptoms_sampler.stages_ids
