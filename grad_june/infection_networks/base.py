@@ -138,6 +138,7 @@ class InfectionNetworks(torch.nn.Module):
             trans_susc, min=1e-6, max = 100
         )  # this is necessary to avoid gradient nans
         not_infected_probs = torch.exp(-trans_susc * delta_time)
+        not_infected_probs = torch.clamp(not_infected_probs, min=0.0, max=1.0)
         return not_infected_probs
 
 
