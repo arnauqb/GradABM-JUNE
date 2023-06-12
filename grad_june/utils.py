@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from pathlib import Path
 from itertools import chain
-from torch import distributions as dist
 import datetime
 import random
 from typing import Union
@@ -75,7 +74,7 @@ def parse_age_probabilities(age_dict, fill_value=0):
 def parse_distribution(dict, device):
     dd = deepcopy(dict)
     dist_name = dd.pop("dist")
-    dist_class = getattr(dist, dist_name)
+    dist_class = getattr(torch.distributions, dist_name)
     input = {
         key: torch.tensor(value, device=device, dtype=torch.float)
         for key, value in dd.items()
@@ -105,14 +104,11 @@ def create_simple_connected_graph(n_agents):
     data["agent"].sex = torch.randint(0, 2, (n_agents,))
     inf_params = {}
     inf_params_values = sampler(n_agents)
-    inf_params["max_infectiousness"] = inf_params_values[0]
-    inf_params["shape"] = inf_params_values[1]
-    inf_params["rate"] = inf_params_values[2]
-    inf_params["shift"] = inf_params_values[3]
     data["agent"].infection_parameters = inf_params
     data["agent"].transmission = torch.zeros(n_agents)
     data["agent"].susceptibility = torch.ones(n_agents)
     data["agent"].is_infected = torch.zeros(n_agents)
+    data["agent"].infection_id = torch.zeros(n_agents)
     data["agent"].infection_time = torch.zeros(n_agents)
     symptoms = {}
     symptoms["current_stage"] = torch.ones(n_agents, dtype=torch.long)

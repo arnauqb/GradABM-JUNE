@@ -10,7 +10,16 @@ import grad_june.infection_networks
 
 class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
-        super().__init__( aggr="add", node_dim=-1)
+        """
+        This class represents a contact network within the population.
+
+        **Arguments**
+
+        - `log_beta`: The log of the "transmission rate". This is a parameter that is
+            typically learned by the model.
+        - `device`: The device on which the network is stored.
+        """
+        super().__init__(aggr="add", node_dim=-1)
         self.device = device
         if type(log_beta) != torch.nn.Parameter:
             self.log_beta = torch.tensor(float(log_beta))
@@ -45,11 +54,19 @@ class InfectionNetwork(MessagePassing):
         return data[self.name]["people"]
 
     def _get_transmissions(self, data, policies, timer):
+        infection_ids = data["agent"].infection_id
+        infection_ids_onehot = torch.nn.functional.one_hot(
+            infection_ids,
+            num_classes=data["agent"].infection_parameters["n_infections"],
+        ).transpose(0, 1)
+        # This creates a tensor of size M x N, where M is the number of infections and
+        # N the number of agents.
+        transmissions = infection_ids_onehot * data["agent"].transmission
         if policies.quarantine_policies:
             mask = policies.quarantine_policies.quarantine_mask
         else:
             mask = 1.0
-        return mask * data["agent"].transmission
+        return mask * transmissions
 
     def _get_susceptibilities(self, data, policies, timer):
         if policies.quarantine_policies:
@@ -124,7 +141,11 @@ class InfectionNetworks(torch.nn.Module):
         n_agents = len(data["agent"].id)
         delta_time = timer.duration
         policies.apply(timer=timer, data=data)
-        trans_susc = torch.zeros(n_agents, device=self.device)
+        trans_susc = torch.zeros(
+            data["agent"].infection_parameters["n_infections"],
+            n_agents,
+            device=self.device,
+        )
         activity_order = timer.get_activity_order()
         if policies.close_venue_policies:
             activity_order = policies.close_venue_policies.apply(
@@ -134,8 +155,8 @@ class InfectionNetworks(torch.nn.Module):
             network = self.networks[activity]
             trans_susc += network(data=data, timer=timer, policies=policies)
         trans_susc = torch.clamp(
-            trans_susc, min=1e-6, max = 100
-        )  # this is necessary to avoid gradient nans
+            trans_susc, min=1e-8, max=100.0
+        )  # this is necessary to avoid gradient infs
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         not_infected_probs = torch.clamp(not_infected_probs, min=0.0, max=1.0)
         return not_infected_probs
@@ -143,7 +164,13 @@ class InfectionNetworks(torch.nn.Module):
 
 class HouseholdNetwork(InfectionNetwork):
     def _get_transmissions(self, data, policies, timer):
-        return data["agent"].transmission
+        infection_ids = data["agent"].infection_id
+        infection_ids_onehot = torch.nn.functional.one_hot(
+            infection_ids,
+            num_classes=data["agent"].infection_parameters["n_infections"],
+        ).transpose(0, 1)
+        transmissions = infection_ids_onehot * data["agent"].transmission
+        return transmissions
 
     def _get_susceptibilities(self, data, policies, timer):
         return data["agent"].susceptibility
@@ -165,4 +192,3 @@ class CompanyNetwork(InfectionNetwork):
 
 class UniversityNetwork(InfectionNetwork):
     pass
-

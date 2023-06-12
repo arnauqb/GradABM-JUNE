@@ -27,12 +27,13 @@ class TestRunner:
         assert file_runner.input_parameters == runner.input_parameters
 
     def test__get_data(self, runner):
-        n_agents = runner.data["agent"].id.shape
+        n_agents = runner.data["agent"].id.shape[0]
         inf_params = runner.data["agent"].infection_parameters
-        assert inf_params["max_infectiousness"].shape == n_agents
-        assert inf_params["shape"].shape == n_agents
-        assert inf_params["rate"].shape == n_agents
-        assert inf_params["shift"].shape == n_agents
+        shape = (3, n_agents)
+        assert inf_params["max_infectiousness"].shape == shape
+        assert inf_params["shape"].shape == shape
+        assert inf_params["rate"].shape == shape
+        assert inf_params["shift"].shape == shape
 
     def test__seed(self, runner):
         runner.set_initial_cases()
@@ -59,20 +60,19 @@ class TestRunner:
         assert runner.data["agent"].symptoms["time_to_next_stage"].sum().item() == 0
 
     def test__run_model(self, runner):
-        results, is_infected = runner()
-        n_timesteps = 16
+        results = runner()
+        n_timesteps = 31
         assert len(results["dates"]) == n_timesteps
         assert len(results["cases_per_timestep"]) == n_timesteps
         assert len(results["deaths_per_timestep"]) == n_timesteps
         assert len(results["cases_by_age_18"]) == n_timesteps
         assert len(results["cases_by_age_65"]) == n_timesteps
         assert len(results["cases_by_age_100"]) == n_timesteps
-        assert len(is_infected) == runner.n_agents
 
     def test__save_results(self, runner):
         with torch.no_grad():
-            results, is_infected = runner()
-        runner.save_results(results, is_infected)
+            results = runner()
+        runner.save_results(results)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
             if key in ("dates"):
@@ -80,7 +80,7 @@ class TestRunner:
             assert np.allclose(loaded_results[key], results[key].numpy())
 
     def test__deaths_gradient(self, runner):
-        results, is_infected = runner()
+        results = runner()
         assert results["cases_per_timestep"].requires_grad
         data = runner.data
         data_results = data["results"]

@@ -30,7 +30,7 @@ class LeisureNetwork(InfectionNetwork):
                 parsed_probs = parse_age_probabilities(
                     leisure_probabilities[day_type][sex]
                 )
-                ret[i, j, :] = torch.tensor(parsed_probs, device=self.device)
+                ret[i, j, :] = torch.tensor(parsed_probs, dtype=torch.float, device=self.device)
         return ret
 
     def initialize_leisure_probabilities(self, data):

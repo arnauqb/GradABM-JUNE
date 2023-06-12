@@ -10,7 +10,7 @@ save_path: ./example
 age_bins_to_save: [0, 18, 65, 100]
 
 timer:
-  total_days: 15
+  total_days: 30
   initial_day: '2022-02-01'
   step_duration:
     weekday:
@@ -69,6 +69,34 @@ networks:
   care_home:
     log_beta: -0.4
 
+vaccines:
+  pfizer:
+    base:
+      sterilization_efficacy: 0.5
+      symptomatic_efficacy: 0.95
+    delta:
+      sterilization_efficacy: 0.5
+      symptomatic_efficacy: 0.95
+    omicron:
+      sterilization_efficacy: 0.2
+      symptomatic_efficacy: 0.95
+    coverage:
+      0-50: 0.7
+      50-100: 0.3
+  astrazeneca:
+    base:
+      sterilization_efficacy: 0.3
+      symptomatic_efficacy: 0.90
+    delta:
+      sterilization_efficacy: 0.3
+      symptomatic_efficacy: 0.90
+    omicron:
+      sterilization_efficacy: 0.1
+      symptomatic_efficacy: 0.90
+    coverage:
+      0-50: 0.2
+      50-100: 0.6
+
 policies:
   interaction:
     social_distancing:
@@ -98,22 +126,33 @@ policies:
           visit: 0.5
 
 transmission:
-  max_infectiousness:
-    dist: LogNormal
-    loc: 0.0
-    scale: 0.5
-  shape:
-    dist: Normal
-    loc: 1.56
-    scale: 0.08
-  rate:
-    dist: Normal
-    loc: 0.53
-    scale: 0.03
-  shift:
-    dist: Normal
-    loc: -2.12
-    scale: 0.1
+  base:
+    max_infectiousness:
+      dist: LogNormal
+      loc: 0.0
+      scale: 0.5
+    shape:
+      dist: Normal
+      loc: 1.56
+      scale: 0.08
+    rate:
+      dist: Normal
+      loc: 0.53
+      scale: 0.03
+    shift:
+      dist: Normal
+      loc: -2.12
+      scale: 0.1
+  delta: 
+    max_infectiousness:
+      dist: LogNormal
+      loc: 0.7 # mean twice as wild
+      scale: 0.5
+  omicron:
+    max_infectiousness:
+      dist: LogNormal
+      loc: 1.4 # mean is twice delta
+      scale: 0.5
 
 symptoms:
   stages:
@@ -418,19 +457,19 @@ leisure:
   care_visit:
     weekday:
       female:
-        0-75: 0.0
-        75-85: 0.25
+        0-65: 0.0
+        65-75: 0.25
         75-100: 0.5
       male:
-        0-75: 0.0
-        75-85: 0.25
+        0-65: 0.0
+        65-75: 0.25
         75-100: 0.5
     weekend:
       female:
-        0-75: 0.0
-        75-85: 0.25
+        0-65: 0.0
+        65-75: 0.25
         75-100: 0.5
       male:
-        0-75: 0.0
-        75-85: 0.25
+        0-65: 0.0
+        65-75: 0.25
         75-100: 0.5

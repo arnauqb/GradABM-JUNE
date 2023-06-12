@@ -23,7 +23,9 @@ class TestInfectionNetworks:
         data = HeteroData()
         data["agent"].id = torch.arange(6)
         data["agent"].transmission = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-        data["agent"].susceptibility = torch.tensor([1, 2, 3, 0.5, 0.7, 1.0])
+        data["agent"].susceptibility = torch.tensor([[1, 2, 3, 0.5, 0.7, 1.0]])
+        data["agent"].infection_id = torch.zeros(6, dtype=torch.long)
+        data["agent"].infection_parameters = {"n_infections": 1}
 
         data["school"].id = torch.arange(2)
         data["school"].people = torch.tensor([2, 2])

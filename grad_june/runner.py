@@ -10,6 +10,7 @@ from grad_june.paths import default_config_path
 from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
 from grad_june.infection import infect_fraction_of_people
+from grad_june.vaccination import Vaccines
 
 
 class Runner(torch.nn.Module):
@@ -22,13 +23,31 @@ class Runner(torch.nn.Module):
         save_path,
         parameters,
         age_bins=(0, 18, 65, 100),
+        vaccines=None,
+        initial_cases_infection_type=0,
     ):
+        """
+        Runner class to facilitate running the model.
+
+        **Arguments**
+
+        - `model`: The GradJune model to run.
+        - `data`: The data to run the model on.
+        - `timer`: The timer to use for the model.
+        - `log_fraction_initial_cases`: The log of the fraction of people to infect
+        - `save_path`: The path to save the results to.
+        - `parameters`: The parameters used to run the model.
+        - `age_bins`: The age bins that are used to save the cases / deaths results.
+        - `vaccines`: The vaccines to use in the model.
+        - `initial_cases_infection_type`: The infection type to use for the initial number of cases.
+        """
         super().__init__()
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
         self.log_fraction_initial_cases = log_fraction_initial_cases
+        self.initial_cases_infection_type = initial_cases_infection_type
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
@@ -36,6 +55,7 @@ class Runner(torch.nn.Module):
         self.population_by_age = self.get_people_by_age()
         self.save_path = Path(save_path)
         self.input_parameters = parameters
+        self.vaccines = vaccines
         self.restore_initial_data()
 
     @classmethod
@@ -50,6 +70,10 @@ class Runner(torch.nn.Module):
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         age_bins_to_save = params.get("age_bins_to_save", (0, 18, 65, 100))
+        if "vaccines" in params:
+            vaccines = Vaccines.from_parameters(params["vaccines"], device=model.device)
+        else:
+            vaccines = None
         return cls(
             model=model,
             data=data,
@@ -58,6 +82,7 @@ class Runner(torch.nn.Module):
                 "log_fraction_initial_cases"
             ],
             save_path=params["save_path"],
+            vaccines=vaccines,
             parameters=params,
             age_bins = age_bins_to_save
         )
@@ -69,18 +94,20 @@ class Runner(torch.nn.Module):
         with open(data_path, "rb") as f:
             data = pickle.load(f).to(device)
         n_agents = len(data["agent"]["id"])
-        inf_params = {}
         transmission_sampler = TransmissionSampler.from_parameters(params)
-        transmission_values = transmission_sampler(n_agents)
-        inf_params["max_infectiousness"] = transmission_values[0, :]
-        inf_params["shape"] = transmission_values[1, :]
-        inf_params["rate"] = transmission_values[2, :]
-        inf_params["shift"] = transmission_values[3, :]
-        data["agent"].infection_parameters = inf_params
+        parameters_per_infection = transmission_sampler(n_agents)
+        n_infections = parameters_per_infection["n_infections"]
+        data["agent"].infection_parameters = parameters_per_infection
         data["agent"].transmission = torch.zeros(n_agents, device=device)
-        data["agent"].susceptibility = torch.ones(n_agents, device=device)
+        data["agent"].susceptibility = torch.ones(
+            (n_infections, n_agents), device=device
+        )
+        data["agent"].symptoms_susceptibility = torch.ones(
+            (n_infections, n_agents), device=device
+        )
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
+        data["agent"].infection_id = torch.zeros(n_agents, dtype=torch.long)
         symptoms = {}
         symptoms["current_stage"] = torch.ones(
             n_agents, dtype=torch.long, device=device
@@ -93,7 +120,11 @@ class Runner(torch.nn.Module):
     def backup_infection_data(self, data):
         ret = {}
         ret["susceptibility"] = data["agent"].susceptibility.detach().clone()
+        ret["symptoms_susceptibility"] = (
+            data["agent"].symptoms_susceptibility.detach().clone()
+        )
         ret["is_infected"] = data["agent"].is_infected.detach().clone()
+        ret["infection_id"] = data["agent"].infection_id.detach().clone()
         ret["infection_time"] = data["agent"].infection_time.detach().clone()
         ret["transmission"] = data["agent"].transmission.detach().clone()
         symptoms = {}
@@ -116,8 +147,14 @@ class Runner(torch.nn.Module):
         self.data["agent"].susceptibility = (
             self.data_backup["susceptibility"].detach().clone()
         )
+        self.data["agent"].symptoms_susceptibility = (
+            self.data_backup["symptoms_susceptibility"].detach().clone()
+        )
         self.data["agent"].is_infected = (
             self.data_backup["is_infected"].detach().clone()
+        )
+        self.data["agent"].infection_id = (
+            self.data_backup["infection_id"].detach().clone()
         )
         self.data["agent"].infection_time = (
             self.data_backup["infection_time"].detach().clone()
@@ -143,10 +180,21 @@ class Runner(torch.nn.Module):
             symptoms_updater=self.model.symptoms_updater,
             device=self.device,
             fraction=fraction_initial_cases,
+            infection_type=self.initial_cases_infection_type,
         )
         self.model.symptoms_updater(
             data=self.data, timer=self.timer, new_infected=new_infected
         )
+
+    def vaccinate(self):
+        if self.vaccines:
+            susc, symp_susc = self.vaccines.vaccinate(
+                ages=self.data["agent"].age,
+                susceptibilities=self.data["agent"].susceptibility,
+                symptom_susceptibilities=self.data["agent"].symptoms_susceptibility,
+            )
+            self.data["agent"].susceptibility = susc
+            self.data["agent"].symptoms_susceptibility = symp_susc
 
     def forward(self):
         timer = self.timer
@@ -155,6 +203,8 @@ class Runner(torch.nn.Module):
         timer.reset()
         self.restore_initial_data()
         self.set_initial_cases()
+        self.vaccinate()
+        # initialize results
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
         self.store_differentiable_deaths(data)
@@ -180,9 +230,9 @@ class Runner(torch.nn.Module):
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        return results, data["agent"].is_infected
+        return results
 
-    def save_results(self, results, is_infected):
+    def save_results(self, results):
         self.save_path.mkdir(exist_ok=True, parents=True)
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
@@ -191,9 +241,6 @@ class Runner(torch.nn.Module):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
-        df = pd.DataFrame()
-        df["is_infected"] = is_infected
-        df.to_csv(self.save_path / "results_is_infected.csv")
 
     def store_differentiable_deaths(self, data):
         """

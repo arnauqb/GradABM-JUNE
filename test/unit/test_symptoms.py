@@ -1,9 +1,9 @@
 from pytest import fixture
 import numpy as np
-import pyro
 import torch
 
 from grad_june.symptoms import SymptomsSampler, SymptomsUpdater
+from grad_june.infection import IsInfectedSampler
 
 
 class TestSymptomsSampler:
@@ -92,15 +92,19 @@ class TestSymptomsSampler:
         current_stage = torch.tensor([0, 1, 2, 3, 4, 5])
         next_stage = torch.tensor([0, 1, 3, 4, 5, 5])
         time_to_next_stage = torch.tensor([1.1, 2.5, 0.7, 0.9, 0.1, 0.5])
+        symptoms_susceptibility = torch.ones((3, 6))
+        infection_ids = torch.zeros(6, dtype=torch.long)
 
         time = 1.0
         need_to_trans = sp._get_need_to_transition(
             current_stage, time_to_next_stage, time
         )
         assert (need_to_trans == torch.tensor([0, 0, 1, 1, 1, 0]).to(torch.bool)).all()
-
         probability_next_symptomatic_stage = sp._get_prob_next_symptoms_stage(
-            ages, next_stage
+            ages,
+            next_stage,
+            symptoms_susceptibility=symptoms_susceptibility,
+            infection_ids=infection_ids,
         )
         assert (
             probability_next_symptomatic_stage
@@ -116,7 +120,13 @@ class TestSymptomsSampler:
             next_stage = torch.tensor([0, 1, 3, 4, 5, 5])
             time_to_next_stage = torch.tensor([1.1, 2.5, 0.7, 0.9, 0.1, 0.5])
             current, next, stage_time = sp.sample_next_stage(
-                ages, current_stage, next_stage, time_to_next_stage, time
+                ages=ages,
+                symptoms_susceptibility=symptoms_susceptibility,
+                infection_ids=infection_ids,
+                current_stage=current_stage,
+                next_stage=next_stage,
+                time_to_next_stage=time_to_next_stage,
+                time=time,
             )
             currents += current
             nexts += next
@@ -212,11 +222,8 @@ class TestSymptomsUpdater:
             su.symptoms_sampler.stage_transition_probabilities[2:, :].shape
         )
         beta = torch.nn.Parameter(torch.tensor(10.0))
-        probs = 1 - torch.exp(-beta) * torch.ones(data["agent"].id.shape)
-        new_infected = pyro.distributions.RelaxedBernoulliStraightThrough(
-            temperature=torch.tensor(0.1),
-            probs=probs,
-        ).rsample()
+        not_infected_probs = torch.exp(-beta) * torch.ones(data["agent"].id.shape).reshape(1,-1)
+        new_infected, _ = IsInfectedSampler()(not_infected_probs)
         symptoms = su(data=data, timer=timer, new_infected=new_infected)
         new_infected_2 = torch.zeros(new_infected.shape)
         for _ in range(100):
