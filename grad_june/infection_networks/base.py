@@ -35,7 +35,6 @@ class InfectionNetwork(MessagePassing):
 
     def _get_beta(self, policies, timer, data):
         interaction_policies = policies.interaction_policies
-        # beta = 10.0**torch.clamp(self.log_beta, min=-5, max=5)
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)

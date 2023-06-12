@@ -12,6 +12,7 @@ from grad_june.policies import Policies
 from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
 
+
 class GradJune(torch.nn.Module):
     """
     This class represents an epidemiological simulation model.
@@ -111,36 +112,33 @@ class GradJune(torch.nn.Module):
     def forward(self, data, timer):
         """
         This function represents a forward pass through the epidemiological simulation model.
-    
+
         Args:
             data: A PyTorch geometric data object containing simulation data.
             timer: An integer representing the current simulation time.
-    
+
         Returns:
             A A PyTorch geometric data object containing updated simulation data.
         """
-    
+
         # Updates agent transmission based on current transmission updater values.
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
-    
+
         # Calculates probability of not being infected for each agent based on current policies.
         not_infected_probs = self.infection_networks(
             data=data,
             timer=timer,
             policies=self.policies,
         )
-    
+
         # Samples which agents will be infected based on their not_infected probabilities.
         new_infected = self.is_infected_sampler(not_infected_probs)
-    
+
         # Infects agents who were sampled as new_infected.
         self.infect_people(data, timer, new_infected)
-    
+
         # Updates agents' symptoms based on their infection status.
-        self.symptoms_updater(
-            data=data, timer=timer, new_infected=new_infected
-        )
-    
+        self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
+
         # Returns updated simulation data.
         return data
-    
