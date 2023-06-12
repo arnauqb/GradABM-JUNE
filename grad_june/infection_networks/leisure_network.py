@@ -52,13 +52,19 @@ class LeisureNetwork(InfectionNetwork):
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * torch.ones(len(data["leisure"]["id"]), device=self.device)
+        beta = beta * torch.ones(1, len(data["leisure"]["id"]), device=self.device)
         return beta
 
     def _get_people_per_group(self, data):
         return data["leisure"]["people"]
 
     def _get_transmissions(self, data, policies, timer):
+        infection_ids = data["agent"].infection_id
+        infection_ids_onehot = torch.nn.functional.one_hot(
+            infection_ids,
+            num_classes=data["agent"].infection_parameters["n_infections"],
+        ).transpose(0, 1)
+        transmissions = infection_ids_onehot * data["agent"].transmission
         if self.weekday_probabilities is None:
             self.initialize_leisure_probabilities(data)
         if policies.quarantine_policies:
@@ -69,7 +75,7 @@ class LeisureNetwork(InfectionNetwork):
             leisure_mask = self.weekday_probabilities
         else:
             leisure_mask = self.weekend_probabilities
-        return mask * leisure_mask * data["agent"].transmission
+        return mask * leisure_mask * transmissions
 
     def _get_susceptibilities(self, data, policies, timer):
         if self.weekday_probabilities is None:

@@ -185,6 +185,7 @@ class Runner(torch.nn.Module):
         self.model.symptoms_updater(
             data=self.data, timer=self.timer, new_infected=new_infected
         )
+        cases_per_timestep = self.data["agent"].is_infected.sum().reshape(1)
 
     def vaccinate(self):
         if self.vaccines:
@@ -205,7 +206,6 @@ class Runner(torch.nn.Module):
         self.set_initial_cases()
         self.vaccinate()
         # initialize results
-        cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = self.get_cases_by_age(data)
         self.store_differentiable_deaths(data)
         dates = [timer.date]

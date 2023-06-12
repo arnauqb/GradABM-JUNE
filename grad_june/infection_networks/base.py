@@ -47,7 +47,7 @@ class InfectionNetwork(MessagePassing):
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * torch.ones(len(data[self.name]["id"]), device=self.device)
+        beta = beta * torch.ones(1, len(data[self.name]["id"]), device=self.device)
         return beta
 
     def _get_people_per_group(self, data):
@@ -59,8 +59,6 @@ class InfectionNetwork(MessagePassing):
             infection_ids,
             num_classes=data["agent"].infection_parameters["n_infections"],
         ).transpose(0, 1)
-        # This creates a tensor of size M x N, where M is the number of infections and
-        # N the number of agents.
         transmissions = infection_ids_onehot * data["agent"].transmission
         if policies.quarantine_policies:
             mask = policies.quarantine_policies.quarantine_mask

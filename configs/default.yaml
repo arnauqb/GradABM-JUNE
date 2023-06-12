@@ -20,26 +20,26 @@ timer:
   step_activities:
     weekday:
       0:
-      - company
-      - school
-      - university
-      - pub 
-      - grocery
-      - gym
-      - cinema
-      - visit 
-      - care_visit
-      - care_home
+        #- company
+        #- school
+        #- university
+        #- pub 
+        #- grocery
+        #- gym
+        #- cinema
+        #- visit 
+        #- care_visit
+        #- care_home
       - household
     weekend:
       0:
-      - pub
-      - grocery
-      - gym
-      - cinema
-      - visit 
-      - care_visit
-      - care_home
+        #- pub
+        #- grocery
+        #- gym
+        #- cinema
+        #- visit 
+        #- care_visit
+        #- care_home
       - household
 
 infection_seed:
