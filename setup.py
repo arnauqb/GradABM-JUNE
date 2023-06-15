@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages, Extension
-from setuptools.command.install import install
-import subprocess
-import os
+from setuptools import setup, find_packages
 from os.path import abspath, dirname, join
 
 this_dir = abspath(dirname(__file__))
@@ -19,7 +16,7 @@ with open(join(this_dir, "requirements.txt")) as f:
 
 setup(
     name="grad_june",
-    version="0.1.2",
+    version="0.1.4",
     description="Differentiable implementation of the JUNE model.",
     url="https://github.com/arnauqb/GradABM-JUNE",
     long_description_content_type="text/markdown",
