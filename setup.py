@@ -6,6 +6,7 @@ import os
 from os.path import abspath, dirname, join
 
 this_dir = abspath(dirname(__file__))
+
 with open(join(this_dir, "LICENSE")) as f:
     license = f.read()
 

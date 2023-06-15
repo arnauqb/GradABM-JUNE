@@ -7,23 +7,10 @@ Implementation of the JUNE model using the GradABM framework.
 
 # Setup 
 
-Install requirements
+The easiest way is to install the package from the PyPI package repository
 
-```bash
-pip install -r requirements.txt
 ```
-
-and install PyTorch geometric, manually for now:
-
-```bash
-pip install torch-scatter torch-sparse torch-cluster torch-geometric -f https://data.pyg.org/whl/torch-1.13.0+cpu.html
-```
-
-Then install the GradABM-JUNE package
-
-```bash
-pip install -e .
-```
+pip install 
 
 
 # Usage
