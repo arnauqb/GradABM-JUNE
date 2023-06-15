@@ -10,8 +10,8 @@ Implementation of the JUNE model using the GradABM framework.
 The easiest way is to install the package from the PyPI package repository
 
 ```
-pip install 
-
+pip install grad-june
+```
 
 # Usage
 
