@@ -1,6 +1,5 @@
 from pytest import fixture
 import numpy as np
-import pyro
 import torch
 
 from grad_june.symptoms import SymptomsSampler, SymptomsUpdater
@@ -213,10 +212,7 @@ class TestSymptomsUpdater:
         )
         beta = torch.nn.Parameter(torch.tensor(10.0))
         probs = 1 - torch.exp(-beta) * torch.ones(data["agent"].id.shape)
-        new_infected = pyro.distributions.RelaxedBernoulliStraightThrough(
-            temperature=torch.tensor(0.1),
-            probs=probs,
-        ).rsample()
+        new_infected = torch.nn.functional.gumbel_softmax(probs, tau=0.1, hard=True)
         symptoms = su(data=data, timer=timer, new_infected=new_infected)
         new_infected_2 = torch.zeros(new_infected.shape)
         for _ in range(100):

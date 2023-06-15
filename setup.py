@@ -19,7 +19,7 @@ with open(join(this_dir, "requirements.txt")) as f:
 setup(
     name="grad_june",
     version="0.1.0",
-    description="Implementation of JUNE using Graph Neural Networks in PyTorch.",
+    description="Differentiable implementation of the JUNE model.",
     url="https://github.com/arnauqb/GradABM-JUNE",
     long_description_content_type="text/markdown",
     long_description=long_description,

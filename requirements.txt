@@ -2,5 +2,6 @@ h5py==3.8
 pytest==7.2
 pytest-cov==4.0
 torch==2.0
+torch-geometric==2.3
 pandas==1.5
 pyyaml==6.0
