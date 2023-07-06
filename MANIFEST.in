@@ -1,1 +1,3 @@
 include requirements.txt
+include grad_june/configs/default.yaml
+include test/data/data.pkl
