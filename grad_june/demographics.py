@@ -10,5 +10,5 @@ def get_people_per_area(agent_ids: torch.Tensor, area_ids: torch.Tensor):
     """
     people_per_area = {}
     for area_id in torch.unique(area_ids):
-        people_per_area[area_id] = agent_ids[area_ids == area_id]
+        people_per_area[area_id.item()] = agent_ids[area_ids == area_id]
     return people_per_area

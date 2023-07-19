@@ -1,4 +1,7 @@
 import torch
+import torch_geometric
+
+from grad_june.demographics import get_people_per_area
 
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):
@@ -61,5 +64,20 @@ def infect_people_at_indices(data, indices, device="cpu"):
     )
     return data
 
-def infect_people_at_districts():
-    pass
+def infect_people_at_districts(data: torch_geometric.data.HeteroData, cases_per_district: dict):
+    """
+    Infects people at districts. The number of cases per district is given in the `cases_per_district` dictionary.
+
+    **Arguments:**
+
+    - `data`: The data object containing the agent data.
+    - `cases_per_district`: A dictionary mapping district ids to the number of cases in that district.
+    """
+    people_per_district = get_people_per_area(data["agent"].id, data["agent"].district_id)
+    ids_to_infect = []
+    for district in people_per_district:
+        n_to_infect = cases_per_district.get(district, 0)
+        random_idcs = torch.randperm(len(people_per_district[district]))[:n_to_infect]
+        agent_ids = people_per_district[district][random_idcs]
+        ids_to_infect.extend(list(agent_ids.cpu().numpy()))
+    infect_people_at_indices(data, ids_to_infect)
