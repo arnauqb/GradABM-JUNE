@@ -138,3 +138,7 @@ example_scripts/**/*
 !example_scripts/*
 !example_scripts/**/*.py
 configs/tests.yaml
+build_pip.sh
+.DS_Store
+**/*pkl
+**/*yaml
