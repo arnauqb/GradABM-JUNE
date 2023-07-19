@@ -9,7 +9,6 @@ from pathlib import Path
 from grad_june.paths import default_config_path
 from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
-from grad_june.infection import infect_fraction_of_people
 from grad_june.demographics import get_people_by_age, get_cases_by_age, store_differentiable_deaths
 
 
@@ -136,18 +135,17 @@ class Runner(torch.nn.Module):
         self.data["results"] = {}
         self.data["results"]["deaths_per_timestep"] = None
 
-    def set_initial_cases(self):
-        fraction_initial_cases = 10.0**self.log_fraction_initial_cases
-        new_infected = infect_fraction_of_people(
-            data=self.data,
-            timer=self.timer,
-            symptoms_updater=self.model.symptoms_updater,
-            device=self.device,
-            fraction=fraction_initial_cases,
-        )
-        self.model.symptoms_updater(
-            data=self.data, timer=self.timer, new_infected=new_infected
-        )
+    #def set_initial_cases(self):
+    #    fraction_initial_cases = 10.0**self.log_fraction_initial_cases
+    #    new_infected = infect_fraction_of_people(
+    #        data=self.data,
+    #        timer=self.timer,
+    #        device=self.device,
+    #        fraction=fraction_initial_cases,
+    #    )
+    #    self.model.symptoms_updater(
+    #        data=self.data, timer=self.timer, new_infected=new_infected
+    #    )
 
     def forward(self):
         timer = self.timer
@@ -155,7 +153,7 @@ class Runner(torch.nn.Module):
         data = self.data
         timer.reset()
         self.restore_initial_data()
-        self.set_initial_cases()
+        #self.set_initial_cases()
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = get_cases_by_age(data, self.age_bins)
         store_differentiable_deaths(data, self.model.symptoms_updater.stages_ids[-1])

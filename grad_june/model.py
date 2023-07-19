@@ -1,6 +1,5 @@
 import torch
 import yaml
-from torch.utils.checkpoint import checkpoint
 
 from grad_june import (
     TransmissionUpdater,
@@ -8,8 +7,9 @@ from grad_june import (
     SymptomsUpdater,
     InfectionNetworks,
 )
+from grad_june.infection_seed import InfectionSeedByFraction
+from grad_june.infection import infect_people
 from grad_june.policies import Policies
-from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
 
 
@@ -31,6 +31,7 @@ class GradJune(torch.nn.Module):
         symptoms_updater=None,
         policies=None,
         infection_networks=None,
+        infection_seed=None,
         device="cpu",
     ):
         super().__init__()
@@ -44,6 +45,7 @@ class GradJune(torch.nn.Module):
         self.policies = policies
         if infection_networks is None:
             infection_networks = InfectionNetworks.from_file()
+        self.infection_seed = infection_seed
         self.infection_networks = infection_networks
 
         # Initializes transmission updater, is_infected_sampler, and device.
@@ -87,28 +89,6 @@ class GradJune(torch.nn.Module):
             device=params["system"]["device"],
         )
 
-    def infect_people(self, data, timer, new_infected):
-        """
-        This method infects people based on the given parameters.
-
-        Args:
-            data: A dictionary containing simulation data.
-            timer: An integer representing the current simulation time.
-            new_infected: A tensor representing which agents will be infected.
-
-        Returns:
-            None.
-        """
-        # Updates agent susceptibility, infection status, and infection time based on new_infected tensor.
-        data["agent"].susceptibility = torch.maximum(
-            torch.tensor(0.0, device=self.device),
-            data["agent"].susceptibility - new_infected,
-        )
-        data["agent"].is_infected = data["agent"].is_infected + new_infected
-        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
-            timer.now - data["agent"].infection_time
-        )
-
     def forward(self, data, timer):
         """
         This function represents a forward pass through the epidemiological simulation model.
@@ -120,6 +100,8 @@ class GradJune(torch.nn.Module):
         Returns:
             A A PyTorch geometric data object containing updated simulation data.
         """
+        if self.infection_seed is not None:
+            self.infection_seed(data, timer.now)
 
         # Updates agent transmission based on current transmission updater values.
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
@@ -135,7 +117,7 @@ class GradJune(torch.nn.Module):
         new_infected = self.is_infected_sampler(not_infected_probs)
 
         # Infects agents who were sampled as new_infected.
-        self.infect_people(data, timer, new_infected)
+        infect_people(data, timer.now, new_infected)
 
         # Updates agents' symptoms based on their infection status.
         self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)

@@ -1,5 +1,4 @@
 import torch
-import torch_geometric
 from torch_geometric.data import HeteroData
 
 def store_differentiable_deaths(data: HeteroData, dead_idx: int):
