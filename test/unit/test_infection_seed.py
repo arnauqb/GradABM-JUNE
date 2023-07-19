@@ -29,7 +29,7 @@ class TestInfectionSeed:
     def test__differentiable_seed(self, data):
         su = SymptomsUpdater.from_file()
         timer = Timer.from_file()
-        seed = InfectionSeedByFraction(0.2, device="cpu")
+        seed = InfectionSeedByFraction(np.log10(0.2), device="cpu")
         seed(data, 0)
         assert torch.isclose(
             data["agent"].is_infected.sum(), torch.tensor(0.2 * data["agent"].id.shape[0]), rtol=2e-1

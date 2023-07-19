@@ -70,17 +70,17 @@ class InfectionSeedByDistrict(torch.nn.Module):
         infect_people_at_indices(data, ids_to_infect)
 
 class InfectionSeedByFraction(torch.nn.Module):
-    def __init__(self, fraction: float, device: str):
+    def __init__(self, log_fraction: float, device: str):
         """
         Infects a fraction of the population at random
 
         **Arguments:**
 
-        - `fraction`: the fraction of the population to infect
+        - `log_fraction`: the fraction of the population to infect in log10
         - `device`: the device to use for the tensor operations
         """
         super().__init__()
-        self.fraction = fraction
+        self.log_fraction = log_fraction
         self.device = device
 
     def forward(
@@ -89,7 +89,8 @@ class InfectionSeedByFraction(torch.nn.Module):
         if time_step > 0:
             return
         n_agents = data["agent"].id.shape[0]
-        probs = self.fraction * torch.ones(n_agents, device=self.device)
+        fraction = 10 ** self.log_fraction
+        probs = fraction * torch.ones(n_agents, device=self.device)
         sampler = IsInfectedSampler()
         new_infected = sampler(1.0 - probs)  # sampler takes not inf probs
         infect_people(data, time_step, new_infected)
