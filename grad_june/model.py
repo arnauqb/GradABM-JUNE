@@ -7,10 +7,10 @@ from grad_june import (
     SymptomsUpdater,
     InfectionNetworks,
 )
-from grad_june.infection_seed import InfectionSeedByFraction
 from grad_june.infection import infect_people
 from grad_june.policies import Policies
 from grad_june.paths import default_config_path
+from grad_june.infection_seed import get_seed_from_parameters
 
 
 class GradJune(torch.nn.Module):
@@ -82,10 +82,14 @@ class GradJune(torch.nn.Module):
         symptoms_updater = SymptomsUpdater.from_parameters(params)
         policies = Policies.from_parameters(params)
         infection_networks = InfectionNetworks.from_parameters(params)
+        infection_seed = get_seed_from_parameters(
+            params, device=params["system"]["device"]
+        )
         return cls(
             symptoms_updater=symptoms_updater,
             policies=policies,
             infection_networks=infection_networks,
+            infection_seed=infection_seed,
             device=params["system"]["device"],
         )
 

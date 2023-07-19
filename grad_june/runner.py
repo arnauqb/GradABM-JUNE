@@ -18,7 +18,6 @@ class Runner(torch.nn.Module):
         model,
         data,
         timer,
-        log_fraction_initial_cases,
         save_path,
         parameters,
         age_bins=(0, 18, 65, 100),
@@ -28,7 +27,6 @@ class Runner(torch.nn.Module):
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
-        self.log_fraction_initial_cases = log_fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
@@ -54,9 +52,6 @@ class Runner(torch.nn.Module):
             model=model,
             data=data,
             timer=timer,
-            log_fraction_initial_cases=params["infection_seed"][
-                "log_fraction_initial_cases"
-            ],
             save_path=params["save_path"],
             parameters=params,
             age_bins = age_bins_to_save
@@ -135,18 +130,6 @@ class Runner(torch.nn.Module):
         self.data["results"] = {}
         self.data["results"]["deaths_per_timestep"] = None
 
-    #def set_initial_cases(self):
-    #    fraction_initial_cases = 10.0**self.log_fraction_initial_cases
-    #    new_infected = infect_fraction_of_people(
-    #        data=self.data,
-    #        timer=self.timer,
-    #        device=self.device,
-    #        fraction=fraction_initial_cases,
-    #    )
-    #    self.model.symptoms_updater(
-    #        data=self.data, timer=self.timer, new_infected=new_infected
-    #    )
-
     def forward(self):
         timer = self.timer
         model = self.model
@@ -154,6 +137,7 @@ class Runner(torch.nn.Module):
         timer.reset()
         self.restore_initial_data()
         #self.set_initial_cases()
+        model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         cases_by_age = get_cases_by_age(data, self.age_bins)
         store_differentiable_deaths(data, self.model.symptoms_updater.stages_ids[-1])
@@ -162,7 +146,7 @@ class Runner(torch.nn.Module):
         while timer.date < timer.final_date:
             i += 1
             next(timer)
-            data = model(data, timer)
+            model(data, timer)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
             store_differentiable_deaths(data, self.model.symptoms_updater.stages_ids[-1])
@@ -179,7 +163,7 @@ class Runner(torch.nn.Module):
         }
         for (i, key) in enumerate(self.age_bins[1:]):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        return results, data["agent"].is_infected
+        return results
 
     def save_results(self, results, is_infected):
         self.save_path.mkdir(exist_ok=True, parents=True)

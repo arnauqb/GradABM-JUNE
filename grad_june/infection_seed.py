@@ -94,3 +94,8 @@ class InfectionSeedByFraction(torch.nn.Module):
         sampler = IsInfectedSampler()
         new_infected = sampler(1.0 - probs)  # sampler takes not inf probs
         infect_people(data, time_step, new_infected)
+
+def get_seed_from_parameters(params: dict, device: str):
+    seed_type = params["infection_seed"]["type"]
+    params = params["infection_seed"]["params"]
+    return eval(seed_type)(**params, device=device)

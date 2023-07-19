@@ -43,31 +43,33 @@ timer:
       - household
 
 infection_seed:
-  log_fraction_initial_cases: -1
+  type: InfectionSeedByFraction
+  params:
+    log_fraction: -1.5
 
 networks:
   household:
-    log_beta: -0.4
+    log_beta: 0.4
   company:
-    log_beta: -0.3
+    log_beta: 0.3
   school:
-    log_beta: -0.3
+    log_beta: 0.3
   pub:
-    log_beta: -1.2
+    log_beta: 0.2
   gym:
-    log_beta: -1.2
+    log_beta: 0.2
   grocery:
-    log_beta: -1.2
+    log_beta: 0.2
   visit:
-    log_beta: -1.2
+    log_beta: 0.2
   cinema:
-    log_beta: -1.2
+    log_beta: 0.2
   university:
-    log_beta: -0.5
+    log_beta: 0.5
   care_visit:
-    log_beta: -0.4
+    log_beta: 0.4
   care_home:
-    log_beta: -0.4
+    log_beta: 0.4
 
 policies:
   interaction:
