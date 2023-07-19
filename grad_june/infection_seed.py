@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 from torch_geometric.data import HeteroData
 
 from grad_june.demographics import get_people_per_area
@@ -49,6 +50,20 @@ class InfectionSeedByDistrict(torch.nn.Module):
         self.cases_per_district = cases_per_district
         self.device = device
 
+    def _read_cases_df(self, cases_per_district_path):
+        ret = {}
+        df = pd.read_csv(cases_per_district_path)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date")
+        df = df.set_index("district_id")
+        for district_id in df.index.unique():
+            ret[district_id] = df.loc[district_id]["cases"].values
+        return ret
+
+    def from_params(self, params: dict, device: str):
+        cases_per_district = self._read_cases_df(params["cases_per_district_path"])
+        return self.__init__(cases_per_district, device)
+
     def forward(
         self, data: HeteroData, time_step: int
     ):
@@ -83,6 +98,10 @@ class InfectionSeedByFraction(torch.nn.Module):
         self.log_fraction = log_fraction
         self.device = device
 
+    @classmethod
+    def from_params(cls, params: dict, device: str):
+        return cls(**params, device=device)
+
     def forward(
         self, data: HeteroData, time_step: int
     ):
@@ -98,4 +117,4 @@ class InfectionSeedByFraction(torch.nn.Module):
 def get_seed_from_parameters(params: dict, device: str):
     seed_type = params["infection_seed"]["type"]
     params = params["infection_seed"]["params"]
-    return eval(seed_type)(**params, device=device)
+    return eval(seed_type).from_params(params, device=device)

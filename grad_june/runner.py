@@ -165,7 +165,7 @@ class Runner(torch.nn.Module):
             results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
         return results
 
-    def save_results(self, results, is_infected):
+    def save_results(self, results):
         self.save_path.mkdir(exist_ok=True, parents=True)
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
@@ -174,6 +174,3 @@ class Runner(torch.nn.Module):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
-        df = pd.DataFrame()
-        df["is_infected"] = is_infected
-        df.to_csv(self.save_path / "results_is_infected.csv")
