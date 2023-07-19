@@ -142,3 +142,4 @@ build_pip.sh
 .DS_Store
 **/*pkl
 **/*yaml
+.vscode/settings.json

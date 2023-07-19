@@ -31,7 +31,6 @@ def infect_people(data, timer, new_infected):
 def infect_fraction_of_people(
     data, timer, symptoms_updater, fraction, device
 ):
-    n_infections = data["agent"].susceptibility.shape[0]
     n_agents = data["agent"].id.shape[0]
     probs = fraction * torch.ones(n_agents, device=device)
     sampler = IsInfectedSampler()
@@ -61,3 +60,6 @@ def infect_people_at_indices(data, indices, device="cpu"):
         current_stage, device=device
     )
     return data
+
+def infect_people_at_districts():
+    pass

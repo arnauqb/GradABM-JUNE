@@ -158,8 +158,7 @@ class TestModel:
         )
         log_likelihood.backward()
         parameters = [
-            model.infection_networks[name].log_beta
-            for name in ["company", "school"]
+            model.infection_networks[name].log_beta for name in ["company", "school"]
         ]
         grads = np.array([p.grad.cpu() for p in parameters])
         assert len(grads) == 2

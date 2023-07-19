@@ -3,6 +3,7 @@ import numpy as np
 from grad_june.infection import (
     infect_people_at_indices,
     infect_fraction_of_people,
+    infect_people_at_districts
 )
 from grad_june.timer import Timer
 from grad_june.symptoms import SymptomsUpdater
@@ -44,3 +45,8 @@ class TestInfectionSeed:
                 assert data["agent"]["is_infected"][i] == 0
                 assert data["agent"]["infection_time"][i] == 0.0
                 assert data["agent"]["symptoms"]["next_stage"][i] == 1.0
+
+    def test__seeding_by_district(self, data):
+        cases_per_district = {0: 10, 1: 20, 2: 30}
+
+
