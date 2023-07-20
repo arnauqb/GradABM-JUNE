@@ -8,6 +8,8 @@ data_path: '@grad_june/test/data/data.pkl'
 
 save_path: ./example
 age_bins_to_save: [0, 18, 65, 100]
+store_differentiable_deaths: true
+store_cases_by_age: true
 
 timer:
   total_days: 15

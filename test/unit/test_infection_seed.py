@@ -49,7 +49,7 @@ class TestInfectionSeed:
 
     def test__seeding_by_district(self, data):
         cases_per_district = {0: [3, 5, 2], 1: [7, 2, 4], 2: [2, 3, 4]}
-        seed = InfectionSeedByDistrict(cases_per_district, device="cpu")
+        seed = InfectionSeedByDistrict(cases_per_district, device="cpu", n_days_to_seed=3)
         seed(data, 0)
         assert data["agent"].is_infected.sum() == 12
         people_per_district = get_people_per_area(data["agent"].id, data["agent"].district_id)

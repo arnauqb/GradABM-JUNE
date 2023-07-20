@@ -9,7 +9,11 @@ from pathlib import Path
 from grad_june.paths import default_config_path
 from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
-from grad_june.demographics import get_people_by_age, get_cases_by_age, store_differentiable_deaths
+from grad_june.demographics import (
+    get_people_by_age,
+    get_cases_by_age,
+    store_differentiable_deaths,
+)
 
 
 class Runner(torch.nn.Module):
@@ -21,6 +25,8 @@ class Runner(torch.nn.Module):
         save_path,
         parameters,
         age_bins=(0, 18, 65, 100),
+        store_cases_by_age=False,
+        store_differentiable_deaths=False,
     ):
         super().__init__()
         self.model = model
@@ -35,6 +41,8 @@ class Runner(torch.nn.Module):
         self.save_path = Path(save_path)
         self.input_parameters = parameters
         self.restore_initial_data()
+        self.store_cases_by_age = store_cases_by_age
+        self.store_differentiable_deaths = store_differentiable_deaths
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -48,13 +56,17 @@ class Runner(torch.nn.Module):
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         age_bins_to_save = params.get("age_bins_to_save", (0, 18, 65, 100))
+        store_differentiable_deaths = params.get("store_differentiable_deaths", False)
+        store_cases_by_age = params.get("store_cases_by_age", False)
         return cls(
             model=model,
             data=data,
             timer=timer,
             save_path=params["save_path"],
             parameters=params,
-            age_bins = age_bins_to_save
+            age_bins=age_bins_to_save,
+            store_cases_by_age=store_cases_by_age,
+            store_differentiable_deaths=store_differentiable_deaths,
         )
 
     @staticmethod
@@ -136,11 +148,15 @@ class Runner(torch.nn.Module):
         data = self.data
         timer.reset()
         self.restore_initial_data()
-        #self.set_initial_cases()
+        # self.set_initial_cases()
         model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
-        cases_by_age = get_cases_by_age(data, self.age_bins)
-        store_differentiable_deaths(data, self.model.symptoms_updater.stages_ids[-1])
+        if self.store_cases_by_age:
+            cases_by_age = get_cases_by_age(data, self.age_bins)
+        if self.store_differentiable_deaths:
+            store_differentiable_deaths(
+                data, self.model.symptoms_updater.stages_ids[-1]
+            )
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
@@ -149,9 +165,13 @@ class Runner(torch.nn.Module):
             model(data, timer)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
-            store_differentiable_deaths(data, self.model.symptoms_updater.stages_ids[-1])
-            cases_age = get_cases_by_age(data, self.age_bins)
-            cases_by_age = torch.vstack((cases_by_age, cases_age))
+            if self.store_cases_by_age:
+                cases_age = get_cases_by_age(data, self.age_bins)
+                cases_by_age = torch.vstack((cases_by_age, cases_age))
+            if self.store_differentiable_deaths:
+                store_differentiable_deaths(
+                    data, self.model.symptoms_updater.stages_ids[-1]
+                )
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -159,10 +179,12 @@ class Runner(torch.nn.Module):
             "daily_cases_per_timestep": torch.diff(
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
-            "deaths_per_timestep": data.results["deaths_per_timestep"],
         }
-        for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        if self.store_cases_by_age:
+            for i, key in enumerate(self.age_bins[1:]):
+                results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        if self.store_differentiable_deaths:
+            results["deaths_per_timestep"] = data["results"]["deaths_per_timestep"]
         return results
 
     def save_results(self, results):

@@ -13,6 +13,7 @@ import torch_geometric.transforms as T
 from grad_june.paths import grad_june_path
 
 
+
 def read_path(path_str):
     path = Path(path_str)
     if path.parts[0] == "@grad_june":
@@ -130,3 +131,13 @@ def create_simple_connected_graph(n_agents):
     )
     data = T.ToUndirected()(data)
     return data
+
+def detach_numpy(tensor):
+    """
+    Converts a tensor to numpy when using forward mode.
+    """
+    tensor = tensor.detach().cpu()
+    if torch._C._functorch.is_gradtrackingtensor(tensor):
+        tensor = torch._C._functorch.get_unwrapped(tensor)
+        return np.array(tensor.storage().tolist()).reshape(tensor.shape)
+    return tensor.numpy()
