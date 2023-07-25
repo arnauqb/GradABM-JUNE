@@ -37,8 +37,6 @@ class GradJune(torch.nn.Module):
         super().__init__()
 
         # Initializes symptoms updater, policies, and infection networks.
-        if symptoms_updater is None:
-            symptoms_updater = SymptomsUpdater.from_file()
         self.symptoms_updater = symptoms_updater
         if policies is None:
             policies = Policies.from_file()
@@ -124,7 +122,8 @@ class GradJune(torch.nn.Module):
         infect_people(data, timer.now, new_infected)
 
         # Updates agents' symptoms based on their infection status.
-        self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
+        if self.symptoms_updater is not None:
+            self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
 
         # Returns updated simulation data.
         return data
