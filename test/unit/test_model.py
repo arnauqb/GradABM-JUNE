@@ -4,6 +4,7 @@ import torch
 import torch_geometric.transforms as T
 
 from grad_june import GradJune, Timer
+from grad_june.symptoms import SymptomsUpdater
 from grad_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
@@ -19,7 +20,8 @@ class TestModel:
         hn = HouseholdNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         sn = SchoolNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         networks = InfectionNetworks(household=hn, company=cn, school=sn)
-        model = GradJune(infection_networks=networks)
+        symptoms_updater = SymptomsUpdater.from_file()
+        model = GradJune(infection_networks=networks, symptoms_updater=symptoms_updater)
         return model
 
     def test__run_model(self, model, inf_data, timer):

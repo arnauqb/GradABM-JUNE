@@ -55,8 +55,18 @@ class LeisureNetwork(InfectionNetwork):
         beta = beta * torch.ones(len(data["leisure"]["id"]), device=self.device)
         return beta
 
-    def _get_people_per_group(self, data):
-        return data["leisure"]["people"]
+    def _get_people_per_group(self, data, timer):
+        if self.weekday_probabilities is None:
+            self.initialize_leisure_probabilities(data)
+        if timer.day_type == "weekday":
+            leisure_mask = self.weekday_probabilities
+        else:
+            leisure_mask = self.weekend_probabilities
+        aux = torch.ones(len(data["leisure"]["id"]), device=self.device)
+        prob_leisure = leisure_mask
+        edge_index = self._get_edge_index(data)
+        people_per_group = self.propagate(edge_index, x=prob_leisure, y=aux)
+        return people_per_group
 
     def _get_transmissions(self, data, policies, timer):
         if self.weekday_probabilities is None:
