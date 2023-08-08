@@ -35,6 +35,11 @@ class LeisureNetworkLoader:
                 ret[super_area_id] = list(people_in_super_area)
         return ret
 
+    def _get_super_area_names(self):
+        with h5py.File(self.june_world_path, "r") as f:
+            super_area_names = f["geography"]["super_area_name"][:].astype("U")
+            return super_area_names
+
     def _generate_ball_tree(self):
         ball_tree = BallTree(self._super_area_coordinates, metric="haversine")
         return ball_tree
@@ -68,6 +73,8 @@ class LeisureNetworkLoader:
             ret = torch.hstack((ret, edges))
         data["agent", "attends_leisure", "leisure"].edge_index = ret
         data["leisure"].id = torch.tensor(list(close_people_per_super_area.keys()))
+        data["leisure"].super_area = self._get_super_area_names()
+        data["leisure"].beta_factor = torch.ones(len(data["leisure"].id))
         data["leisure"].people = torch.tensor(
             [len(close_people_per_super_area[sa]) for sa in close_people_per_super_area]
         )

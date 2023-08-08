@@ -126,6 +126,7 @@ class TestLeisureNetwork:
         assert len(data["leisure"]["id"]) == 3
         assert data["leisure"]["people"][0] == 769
         assert data["leisure"]["people"][2] == 769
+        assert (data["leisure"]["super_area"] == ['E02000978', 'E02003270', 'E02003353']).all()
 
 
 class TestLoadGraph:

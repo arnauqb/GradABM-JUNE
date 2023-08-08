@@ -29,7 +29,7 @@ class NetworkLoader:
 
     def _get_group_super_areas(self):
         with h5py.File(self.june_world_path, "r") as f:
-            super_area_names = f["geography"]["super_area_name"][:]
+            super_area_names = f["geography"]["super_area_name"][:].astype("U")
             group_super_area_ids = f[self.plural]["super_area"][:]
             return super_area_names[group_super_area_ids]
 
