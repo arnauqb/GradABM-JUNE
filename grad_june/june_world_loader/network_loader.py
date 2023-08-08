@@ -27,6 +27,12 @@ class NetworkLoader:
             group_ids = f[self.plural]["id"][:]
         return group_ids
 
+    def _get_group_super_areas(self):
+        with h5py.File(self.june_world_path, "r") as f:
+            super_area_names = f["geography"]["super_area_name"][:]
+            group_super_area_ids = f[self.plural]["super_area"][:]
+            return super_area_names[group_super_area_ids]
+
     def load_network(self, data):
         people_per_group = self._get_people_per_group()
         adjlist_i = []
@@ -36,6 +42,8 @@ class NetworkLoader:
                 adjlist_i.append(person)
                 adjlist_j.append(group_id)
         data[self.spec].id = self._get_group_ids()
+        data[self.spec].super_area = self._get_group_super_areas()
+        data[self.spec].beta_factor = torch.ones(len(data[self.spec].id))
         data[self.spec].people = torch.tensor(
             [len(people_per_group[i]) for i in data[self.spec].id]
         )

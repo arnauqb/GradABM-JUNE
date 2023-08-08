@@ -27,6 +27,7 @@ class TestInfectionNetworks:
 
         data["school"].id = torch.arange(2)
         data["school"].people = torch.tensor([2, 2])
+        data["school"].beta_factor = torch.ones(2)
 
         edges_1 = torch.arange(6)
         edges_2 = torch.tensor([0, 0, 0, 1, 1, 1])
@@ -41,6 +42,14 @@ class TestInfectionNetworks:
             data=small_data, timer=school_timer, policies=Policies()
         )
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
+        assert np.allclose(infection_probabilities.detach().numpy(), expected)
+
+    def test__beta_factors(self, networks, small_data, school_timer):
+        small_data["school"].beta_factor = torch.tensor([0.5, 1.0])
+        infection_probabilities = networks(
+            data=small_data, timer=school_timer, policies=Policies()
+        )
+        expected = np.exp(-np.array([0.6, 1.2, 1.8, 1.5, 2.1, 3]))
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
 
 
