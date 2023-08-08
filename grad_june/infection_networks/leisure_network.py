@@ -47,12 +47,16 @@ class LeisureNetwork(InfectionNetwork):
     def _get_reverse_edge_index(self, data):
         return data["rev_attends_leisure"].edge_index
 
+    def _get_beta_factor(self, data):
+        return data["leisure"].beta_factor
+
     def _get_beta(self, policies, timer, data):
+        beta_factor = self._get_beta_factor(data)
         interaction_policies = policies.interaction_policies
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * torch.ones(len(data["leisure"]["id"]), device=self.device)
+        beta = beta * beta_factor
         return beta
 
     def _get_people_per_group(self, data, timer):
