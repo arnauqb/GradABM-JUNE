@@ -102,8 +102,6 @@ class GradJune(torch.nn.Module):
         Returns:
             A A PyTorch geometric data object containing updated simulation data.
         """
-        if self.infection_seed is not None:
-            self.infection_seed(data, timer.now)
 
         # Updates agent transmission based on current transmission updater values.
         data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
@@ -124,6 +122,10 @@ class GradJune(torch.nn.Module):
         # Updates agents' symptoms based on their infection status.
         if self.symptoms_updater is not None:
             self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
+
+        # we seed at the end to avoid the seeded cases generating new ones
+        if self.infection_seed is not None:
+            self.infection_seed(data, timer.now)
 
         # Returns updated simulation data.
         return data
