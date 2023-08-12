@@ -48,7 +48,7 @@ class LeisureNetwork(InfectionNetwork):
         return data["rev_attends_leisure"].edge_index
 
     def _get_beta_factor(self, data):
-        return data["leisure"].beta_factor
+        return data["region"].beta_factor[data["leisure"].region]
 
     def _get_beta(self, policies, timer, data):
         beta_factor = self._get_beta_factor(data)

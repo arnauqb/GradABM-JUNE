@@ -34,7 +34,7 @@ class InfectionNetwork(MessagePassing):
         return data["rev_attends_" + self.name].edge_index
 
     def _get_beta_factor(self, data):
-        return data[self.name].beta_factor
+        return data["region"].beta_factor[data[self.name].region]
 
     def _get_beta(self, policies, timer, data):
         beta_factor = self._get_beta_factor(data)
