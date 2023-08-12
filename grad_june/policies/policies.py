@@ -42,6 +42,9 @@ class PolicyCollection(torch.nn.Module):
     def __getitem__(self, idx):
         return self.policies[idx]
 
+    def __len__(self):
+        return len(self.policies)
+
 
 class Policies(torch.nn.Module):
     def __init__(
@@ -120,7 +123,7 @@ class Policies(torch.nn.Module):
         return [policy for policy in policies if policy.spec == type]
 
     def apply(self, data, timer):
-        if self.quarantine_policies:
+        if len(self.quarantine_policies) > 0:
             self.quarantine_policies.apply(
                 timer=timer, symptom_stages=data["agent"]["symptoms"]["current_stage"]
             )
