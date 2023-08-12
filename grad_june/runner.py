@@ -148,7 +148,6 @@ class Runner(torch.nn.Module):
         data = self.data
         timer.reset()
         self.restore_initial_data()
-        # self.set_initial_cases()
         model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
         if self.store_cases_by_age:

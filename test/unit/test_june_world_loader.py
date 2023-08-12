@@ -1,4 +1,4 @@
-import torch
+import h5py
 import pytest
 from pytest import fixture
 from torch_geometric.data import HeteroData
@@ -11,6 +11,12 @@ from grad_june.june_world_loader.company_loader import CompanyNetworkLoader
 from grad_june.june_world_loader.school_loader import SchoolNetworkLoader
 from grad_june.june_world_loader.university_loader import UniversityNetworkLoader
 from grad_june.june_world_loader.leisure_loader import LeisureNetworkLoader
+from grad_june.paths import test_path
+
+
+@fixture(name="june_world")
+def get_june_world():
+    return h5py.File(test_path / "data/june_world.h5")
 
 
 class TestLoadAgentData:
@@ -18,26 +24,37 @@ class TestLoadAgentData:
     def make_agent_loader(self, june_world_path):
         return AgentDataLoader(june_world_path)
 
-    def test__agent_properties(self, agent_data_loader):
+    def test__agent_properties(self, agent_data_loader, june_world):
         data = HeteroData()
         agent_data_loader.load_agent_data(data)
-        assert len(data["agent"]["id"]) == 769
-        assert len(data["agent"]["area"]) == 769
-        assert len(data["agent"]["age"]) == 769
-        assert len(data["agent"]["sex"]) == 769
-        assert data["agent"]["age"][14] == 6
-        assert data["agent"]["sex"][14] == 1
-        assert data["agent"]["age"][22] == 8
-        assert data["agent"]["sex"][22] == 0
-        assert data["agent"]["area"][14] == "E00023664"
-        assert data["agent"]["area"][300] == "E00079478"
+        sex_d = {b"m": 0, b"f": 1}
+        assert len(data["agent"]["id"]) == len(june_world["population"]["id"])
+        assert len(data["agent"]["area"]) == len(june_world["population"]["area"])
+        assert len(data["agent"]["age"]) == len(june_world["population"]["id"])
+        assert len(data["agent"]["sex"]) == len(june_world["population"]["id"])
+        for agent_id in june_world["population"]["id"]:
+            assert data["agent"]["id"][agent_id] == agent_id
+            assert (
+                data["agent"]["age"][agent_id]
+                == june_world["population"]["age"][agent_id]
+            )
+            assert (
+                data["agent"]["sex"][agent_id]
+                == sex_d[june_world["population"]["sex"][agent_id]]
+            )
+            assert (
+                data["agent"]["area"][agent_id]
+                == june_world["geography"]["area_name"][
+                    june_world["population"]["area"][agent_id]
+                ].decode()
+            )
 
 
 class TestNetworks:
     @pytest.mark.parametrize(
         "loader_class, ids, expected",
         [
-            (HouseholdNetworkLoader, (0, 50), ([272], [220, 248])),
+            (HouseholdNetworkLoader, (0, 50), ([293], [254, 258])),
             (
                 CompanyNetworkLoader,
                 (0, 11),
@@ -57,7 +74,6 @@ class TestNetworks:
     )
     def test__get_people_per_group(self, june_world_path, loader_class, ids, expected):
         loader = loader_class(june_world_path)
-        print(loader)
         ret = loader._get_people_per_group()
         for id, exp in zip(ids, expected):
             assert set(exp).issubset(set(ret[id]))
@@ -126,7 +142,9 @@ class TestLeisureNetwork:
         assert len(data["leisure"]["id"]) == 3
         assert data["leisure"]["people"][0] == 769
         assert data["leisure"]["people"][2] == 769
-        assert (data["leisure"]["super_area"] == ['E02000978', 'E02003270', 'E02003353']).all()
+        assert (
+            data["leisure"]["super_area"] == ["E02000978", "E02003270", "E02003353"]
+        ).all()
 
 
 class TestLoadGraph:

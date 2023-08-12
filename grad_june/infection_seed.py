@@ -90,7 +90,7 @@ class InfectionSeedByDistrict(torch.nn.Module):
             people = people_per_district[district]
             infected_status = data["agent"].is_infected[people]
             infected_time = data["agent"].infection_time[people]
-            n_people_infected_in_this_timestep = len(infected_status[infected_time == 0.])
+            n_people_infected_in_this_timestep = sum((infected_status == 1.0) & (infected_time == time_step))
             n_to_infect = max(0, n_to_infect - n_people_infected_in_this_timestep)
             susceptible_people = people[~infected_status.bool()]
             random_idcs = torch.randperm(len(susceptible_people))[:n_to_infect]
