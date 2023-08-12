@@ -19,6 +19,16 @@ def infect_people(data: HeteroData, time: int, new_infected: torch.Tensor):
     )
 
 
+def recover_people(data: HeteroData, time: int, new_recovered: torch.Tensor):
+    data["agent"].susceptibility = torch.clamp(
+        data["agent"].susceptibility + new_recovered, max=1.0
+    )
+    data["agent"].is_infected = data["agent"].is_infected - new_recovered
+    data["agent"].infection_time = (
+        data["agent"].infection_time - new_recovered * data["agent"].infection_time
+    )
+
+
 def infect_people_at_indices(data, indices, device="cpu"):
     susc = data["agent"]["susceptibility"].cpu().numpy()
     is_inf = data["agent"]["is_infected"].cpu().numpy()
@@ -83,6 +93,7 @@ class InfectionSeedByDistrict(torch.nn.Module):
             data["agent"].id, data["agent"].district_id
         )
         ids_to_infect = torch.tensor([], dtype=torch.long, device=self.device)
+        ids_to_recover = torch.tensor([], dtype=torch.long, device=self.device)
         for district in people_per_district:
             if district in self.cases_per_district:
                 n_to_infect = self.cases_per_district[district][time_step]
@@ -91,15 +102,26 @@ class InfectionSeedByDistrict(torch.nn.Module):
             people = people_per_district[district]
             infected_status = data["agent"].is_infected[people]
             infected_time = data["agent"].infection_time[people]
-            n_people_infected_in_this_timestep = int((infected_status * (infected_time == time_step)).sum())
-            n_to_infect = max(0, n_to_infect - n_people_infected_in_this_timestep)
-            susceptible_people = people[~infected_status.bool()]
-            random_idcs = torch.randperm(len(susceptible_people))[:n_to_infect]
-            agent_ids = susceptible_people[random_idcs]
-            ids_to_infect = torch.cat((ids_to_infect, agent_ids))
+            n_people_infected_in_this_timestep = int(
+                (infected_status * (infected_time == time_step)).sum()
+            )
+            n_to_infect = n_to_infect - n_people_infected_in_this_timestep
+            if n_to_infect > 0:
+                susceptible_people = people[~infected_status.bool()]
+                random_idcs = torch.randperm(len(susceptible_people))[:n_to_infect]
+                agent_ids = susceptible_people[random_idcs]
+                ids_to_infect = torch.cat((ids_to_infect, agent_ids))
+            elif n_to_infect < 0:
+                infected_people = people[infected_status.bool()]
+                random_idcs = torch.randperm(len(infected_people))[:abs(n_to_infect)]
+                agent_ids = infected_people[random_idcs]
+                ids_to_recover = torch.cat((ids_to_recover, agent_ids))
         new_infected = torch.zeros(len(data["agent"].id), device=self.device)
         new_infected[ids_to_infect] = 1.0
-        infect_people(data, time_step, new_infeced)
+        infect_people(data, time_step, new_infected)
+        new_recovered = torch.zeros(len(data["agent"].id), device=self.device)
+        new_recovered[ids_to_recover] = 1.0
+        recover_people(data, time_step, new_recovered)
 
 
 class InfectionSeedByFraction(torch.nn.Module):
