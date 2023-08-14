@@ -30,6 +30,7 @@ class TransmissionSampler:
         ret = {}
         tparams = params["transmission"]
         device = params["system"]["device"]
+        assert tparams["shift"]["loc"] > 0
         for key in tparams:
             ret[key] = parse_distribution(tparams[key], device=device)
         return cls(**ret)
