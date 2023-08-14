@@ -104,7 +104,7 @@ class GradJune(torch.nn.Module):
         """
 
         # Updates agent transmission based on current transmission updater values.
-        data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
+        data["agent"].transmission = self.transmission_updater(data=data, time=timer.now)
 
         # Calculates probability of not being infected for each agent based on current policies.
         not_infected_probs = self.infection_networks(
