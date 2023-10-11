@@ -48,6 +48,8 @@ class LeisureNetwork(InfectionNetwork):
         return data["rev_attends_leisure"].edge_index
 
     def _get_beta_factor(self, data):
+        if not hasattr(data["region"], "beta_factor"):
+            return 1.0
         return data["region"].beta_factor[data["leisure"].region]
 
     def _get_beta(self, policies, timer, data):
