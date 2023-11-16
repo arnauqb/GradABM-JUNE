@@ -4,6 +4,28 @@ from torch_geometric.data import HeteroData
 from grad_june.demographics import get_people_per_area
 
 
+class Bernoulli(torch.autograd.Function):
+    generate_vmap_rule = True
+
+    @staticmethod
+    def forward(p):
+        result = torch.bernoulli(p)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        result, p = ctx.saved_tensors
+        w_minus = 1.0 / p
+        w_plus = 1.0 / (1.0 - p)
+        ws = torch.where(result == 1, w_minus, w_plus) / 2
+        return grad_output * ws
+
+    @staticmethod
+    def setup_context(ctx, inputs, output):
+        result = output
+        ctx.save_for_backward(result, inputs[0])
+
+
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):
         """
@@ -14,12 +36,15 @@ class IsInfectedSampler(torch.nn.Module):
         the agent not getting infected, so that it can be sampled as an outcome using
         the Gumbel-Softmax reparametrization of the categorical distribution.
         """
-        logits = torch.vstack((not_infected_probs, 1.0 - not_infected_probs)).log()
-        infection = torch.nn.functional.gumbel_softmax(
-            logits, dim=0, tau=0.1, hard=True
-        )
-        is_infected = 1.0 - infection[0, :]
-        return is_infected
+        probs = 1.0 - not_infected_probs
+        return Bernoulli.apply(probs)
+        # logits = torch.vstack((not_infected_probs, 1.0 - not_infected_probs)).log()
+        # infection = torch.nn.functional.gumbel_softmax(
+        #    logits, dim=0, tau=0.1, hard=True
+        # )
+        # is_infected = 1.0 - infection[0, :]
+        # return is_infected
+
 
 def infect_people(data: HeteroData, time: int, new_infected: torch.Tensor):
     """
