@@ -14,7 +14,8 @@ class Bernoulli(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        result, p = ctx.saved_tensors
+        result = ctx.result
+        p = ctx.p
         w_minus = 1.0 / p
         w_plus = 1.0 / (1.0 - p)
         ws = torch.where(result == 1, w_minus, w_plus) / 2
@@ -23,7 +24,17 @@ class Bernoulli(torch.autograd.Function):
     @staticmethod
     def setup_context(ctx, inputs, output):
         result = output
-        ctx.save_for_backward(result, inputs[0])
+        ctx.result = result
+        ctx.p = inputs[0]
+
+    @staticmethod
+    def jvp(ctx, gI):
+        result = ctx.result
+        p = ctx.p
+        w_minus = 1.0 / p
+        w_plus = 1.0 / (1.0 - p)
+        ws = torch.where(result == 1, w_minus, w_plus) / 2
+        return gI * ws
 
 
 class IsInfectedSampler(torch.nn.Module):
