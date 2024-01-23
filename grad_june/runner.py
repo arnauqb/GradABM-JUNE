@@ -88,13 +88,13 @@ class Runner(torch.nn.Module):
         data["agent"].susceptibility = torch.ones(n_agents, device=device)
         data["agent"].is_infected = torch.zeros(n_agents, device=device)
         data["agent"].infection_time = torch.zeros(n_agents, device=device)
-        #symptoms = {}
-        #symptoms["current_stage"] = torch.ones(
-        #    n_agents, dtype=torch.long, device=device
-        #)
-        #symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long, device=device)
-        #symptoms["time_to_next_stage"] = torch.zeros(n_agents, device=device)
-        #data["agent"].symptoms = symptoms
+        symptoms = {}
+        symptoms["current_stage"] = torch.ones(
+            n_agents, dtype=torch.long, device=device
+        )
+        symptoms["next_stage"] = torch.ones(n_agents, dtype=torch.long, device=device)
+        symptoms["time_to_next_stage"] = torch.zeros(n_agents, device=device)
+        data["agent"].symptoms = symptoms
         return data
 
     def backup_infection_data(self, data):
@@ -103,17 +103,17 @@ class Runner(torch.nn.Module):
         ret["is_infected"] = data["agent"].is_infected.detach().clone()
         ret["infection_time"] = data["agent"].infection_time.detach().clone()
         ret["transmission"] = data["agent"].transmission.detach().clone()
-        #symptoms = {}
-        #symptoms["current_stage"] = (
-        #    data["agent"]["symptoms"]["current_stage"].detach().clone()
-        #)
-        #symptoms["next_stage"] = (
-        #    data["agent"]["symptoms"]["next_stage"].detach().clone()
-        #)
-        #symptoms["time_to_next_stage"] = (
-        #    data["agent"]["symptoms"]["time_to_next_stage"].detach().clone()
-        #)
-        #ret["symptoms"] = symptoms
+        symptoms = {}
+        symptoms["current_stage"] = (
+            data["agent"]["symptoms"]["current_stage"].detach().clone()
+        )
+        symptoms["next_stage"] = (
+            data["agent"]["symptoms"]["next_stage"].detach().clone()
+        )
+        symptoms["time_to_next_stage"] = (
+            data["agent"]["symptoms"]["time_to_next_stage"].detach().clone()
+        )
+        ret["symptoms"] = symptoms
         return ret
 
     def restore_initial_data(self):
@@ -129,15 +129,15 @@ class Runner(torch.nn.Module):
         self.data["agent"].infection_time = (
             self.data_backup["infection_time"].detach().clone()
         )
-        #self.data["agent"].symptoms["current_stage"] = (
-        #    self.data_backup["symptoms"]["current_stage"].detach().clone()
-        #)
-        #self.data["agent"].symptoms["next_stage"] = (
-        #    self.data_backup["symptoms"]["next_stage"].detach().clone()
-        #)
-        #self.data["agent"].symptoms["time_to_next_stage"] = (
-        #    self.data_backup["symptoms"]["time_to_next_stage"].detach().clone()
-        #)
+        self.data["agent"].symptoms["current_stage"] = (
+            self.data_backup["symptoms"]["current_stage"].detach().clone()
+        )
+        self.data["agent"].symptoms["next_stage"] = (
+            self.data_backup["symptoms"]["next_stage"].detach().clone()
+        )
+        self.data["agent"].symptoms["time_to_next_stage"] = (
+            self.data_backup["symptoms"]["time_to_next_stage"].detach().clone()
+        )
         # reset results
         self.data["results"] = {}
         self.data["results"]["deaths_per_timestep"] = None
@@ -150,6 +150,7 @@ class Runner(torch.nn.Module):
         self.restore_initial_data()
         model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
+        daily_new_cases = data["agent"].is_infected.sum()
         if self.store_cases_by_age:
             cases_by_age = get_cases_by_age(data, self.age_bins)
         if self.store_differentiable_deaths:
@@ -164,6 +165,9 @@ class Runner(torch.nn.Module):
             model(data, timer)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
+            daily_new_cases = torch.hstack(
+                (daily_new_cases, cases - cases_per_timestep[-2])
+            )
             if self.store_cases_by_age:
                 cases_age = get_cases_by_age(data, self.age_bins)
                 cases_by_age = torch.vstack((cases_by_age, cases_age))
@@ -178,6 +182,7 @@ class Runner(torch.nn.Module):
             "daily_cases_per_timestep": torch.diff(
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
+            "daily_new_cases": daily_new_cases,
         }
         if self.store_cases_by_age:
             for i, key in enumerate(self.age_bins[1:]):

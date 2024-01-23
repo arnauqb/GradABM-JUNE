@@ -1,5 +1,6 @@
 import torch
 from torch_geometric.data import HeteroData
+from torch.distributions.utils import probs_to_logits
 
 from grad_june.demographics import get_people_per_area
 
@@ -20,6 +21,7 @@ class Bernoulli(torch.autograd.Function):
         w_plus = 1.0 / (1.0 - p)
         ws = torch.where(result == 1, w_minus, w_plus) / 2
         return grad_output * ws
+        #return grad_output * torch.ones_like(p)
 
     @staticmethod
     def setup_context(ctx, inputs, output):
@@ -35,6 +37,24 @@ class Bernoulli(torch.autograd.Function):
         w_plus = 1.0 / (1.0 - p)
         ws = torch.where(result == 1, w_minus, w_plus) / 2
         return gI * ws
+        return gI * torch.ones_like(p)
+
+class STBernoulli(torch.autograd.Function):
+    generate_vmap_rule = True
+
+    @staticmethod
+    def forward(p):
+        result = torch.bernoulli(p)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output 
+
+    @staticmethod
+    def setup_context(ctx, inputs, output):
+        pass
+
 
 
 class IsInfectedSampler(torch.nn.Module):
@@ -48,13 +68,18 @@ class IsInfectedSampler(torch.nn.Module):
         the Gumbel-Softmax reparametrization of the categorical distribution.
         """
         probs = 1.0 - not_infected_probs
-        return Bernoulli.apply(probs)
-        # logits = torch.vstack((not_infected_probs, 1.0 - not_infected_probs)).log()
-        # infection = torch.nn.functional.gumbel_softmax(
-        #    logits, dim=0, tau=0.1, hard=True
-        # )
-        # is_infected = 1.0 - infection[0, :]
-        # return is_infected
+        return STBernoulli.apply(probs)
+        #logits = probs_to_logits(
+        #    torch.vstack((not_infected_probs, 1.0 - not_infected_probs))
+        #)
+        logits = torch.log(
+            torch.vstack((not_infected_probs, 1.0 - not_infected_probs))
+        )
+        infection = torch.nn.functional.gumbel_softmax(
+            logits, dim=0, tau=0.1, hard=True
+        )
+        is_infected = 1.0 - infection[0, :]
+        return is_infected
 
 
 def infect_people(data: HeteroData, time: int, new_infected: torch.Tensor):
