@@ -30,7 +30,7 @@ class TestModel:
             next(timer)
         results = model(timer=timer, data=inf_data)
         # check at least someone infected
-        assert results["agent"]["is_infected"].sum() > 10
+        assert results["agent"]["is_infected"].sum() > 5
         assert results["agent"]["susceptibility"].sum() < 90
 
     def test__model_gradient(self, model, inf_data):

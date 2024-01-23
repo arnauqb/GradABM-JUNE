@@ -77,5 +77,7 @@ class TestRunner:
         data_results = data["results"]
         daily_deaths = data_results["deaths_per_timestep"]
         assert (results["deaths_per_timestep"] == daily_deaths).all()
-        assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
+        assert (
+            daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
+        )
         assert daily_deaths.requires_grad

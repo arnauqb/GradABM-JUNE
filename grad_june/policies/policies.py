@@ -49,9 +49,9 @@ class PolicyCollection(torch.nn.Module):
 class Policies(torch.nn.Module):
     def __init__(
         self,
-        interaction_policies=None,
-        quarantine_policies=None,
-        close_venue_policies=None,
+        interaction_policies=(),
+        quarantine_policies=(),
+        close_venue_policies=(),
     ):
         super().__init__()
         self.interaction_policies = interaction_policies

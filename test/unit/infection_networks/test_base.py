@@ -45,7 +45,7 @@ class TestInfectionNetworks:
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
 
     def test__beta_factors(self, networks, small_data, school_timer):
-        small_data["school"].beta_factor = torch.tensor([0.5, 1.0])
+        small_data["region"].beta_factor = torch.tensor([0.5, 1.0])
         infection_probabilities = networks(
             data=small_data, timer=school_timer, policies=Policies()
         )
