@@ -30,22 +30,23 @@ class TransmissionSampler:
         ret = {}
         tparams = params["transmission"]
         device = params["system"]["device"]
+        assert tparams["shift"]["loc"] > 0
         for key in tparams:
             ret[key] = parse_distribution(tparams[key], device=device)
         return cls(**ret)
 
 
 class TransmissionUpdater(torch.nn.Module):
-    def forward(self, data, timer):
+    def forward(self, data, time):
         shape = data["agent"]["infection_parameters"]["shape"]
         shift = data["agent"]["infection_parameters"]["shift"]
         rate = data["agent"]["infection_parameters"]["rate"]
         max_infectiousness = data["agent"]["infection_parameters"]["max_infectiousness"]
-        time_from_infection = timer.now - data["agent"].infection_time
-        sign = (torch.sign(time_from_infection - shift + 1e-10) + 1) / 2
-        aux = torch.exp(-torch.lgamma(shape)) * torch.pow(
-            (time_from_infection - shift) * rate, shape - 1.0
-        )
-        aux2 = torch.exp((shift - time_from_infection) * rate) * rate
-        ret = max_infectiousness * sign * aux * aux2 * data["agent"].is_infected
-        return ret
+        time_from_infection = time - data["agent"].infection_time
+        ret = (rate / torch.exp(torch.lgamma(shape)))
+        ret *= torch.pow(rate * (time_from_infection - shift), shape -1.0)
+        ret *= torch.exp(-rate * (time_from_infection - shift))
+        ret *= data["agent"].is_infected * max_infectiousness
+        return torch.where(time_from_infection < shift, torch.zeros_like(ret), ret)
+
+

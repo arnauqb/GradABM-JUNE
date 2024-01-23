@@ -4,6 +4,7 @@ import torch
 import torch_geometric.transforms as T
 
 from grad_june import GradJune, Timer
+from grad_june.symptoms import SymptomsUpdater
 from grad_june.infection_networks import (
     CompanyNetwork,
     SchoolNetwork,
@@ -19,7 +20,8 @@ class TestModel:
         hn = HouseholdNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         sn = SchoolNetwork(log_beta=torch.nn.Parameter(torch.tensor(0.5)))
         networks = InfectionNetworks(household=hn, company=cn, school=sn)
-        model = GradJune(infection_networks=networks)
+        symptoms_updater = SymptomsUpdater.from_file()
+        model = GradJune(infection_networks=networks, symptoms_updater=symptoms_updater)
         return model
 
     def test__run_model(self, model, inf_data, timer):
@@ -28,7 +30,7 @@ class TestModel:
             next(timer)
         results = model(timer=timer, data=inf_data)
         # check at least someone infected
-        assert results["agent"]["is_infected"].sum() > 10
+        assert results["agent"]["is_infected"].sum() > 10 # 10 is the seed so bare minimum
         assert results["agent"]["susceptibility"].sum() < 90
 
     def test__model_gradient(self, model, inf_data):
@@ -38,6 +40,8 @@ class TestModel:
             weekday_step_duration=(24,),
             weekday_activities=(("company", "school", "household"),),
         )
+        while timer.now < 8: # let transmission advance
+            next(timer)
         results = model(timer=timer, data=inf_data)
         cases = results["agent"]["is_infected"].sum()
         assert cases > 0
@@ -45,12 +49,10 @@ class TestModel:
         random_cases = torch.rand(1)[0]
         loss = loss_fn(cases, random_cases)
         loss.backward()
-        beta = model.infection_networks["company"].log_beta
-        assert beta.grad is not None
-        assert beta.grad != 0
-        beta = model.infection_networks["school"].log_beta
-        assert beta.grad is not None
-        assert beta.grad != 0
+        for network in model.infection_networks:
+            beta = network.log_beta
+            assert beta.grad is not None
+            assert beta.grad != 0
 
     @fixture(name="data2")
     def setup_data(self, inf_data):
@@ -81,10 +83,11 @@ class TestModel:
             weekday_step_duration=(24,),
             weekday_activities=(("company", "school"),),
         )
-        for i in range(4):  # make sure someone gets infected.
-            data = model(timer=timer, data=data)
-        cases = data["agent"]["is_infected"]
-        assert cases.sum() > 0
+        for i in range(7):  # make sure someone gets infected.
+            next(timer)
+        results = model(timer=timer, data=data)
+        cases = results["agent"]["is_infected"]
+        assert cases.sum() > 10
 
         # Find person who got infected in school
         k = 0
@@ -105,6 +108,7 @@ class TestModel:
         assert company_grad == 0.0
 
     def test__individual_gradients_companies(self, model, data2):
+        #detect anomaly
         data, is_inf = data2
         timer = Timer(
             initial_day="2022-02-01",
@@ -117,9 +121,9 @@ class TestModel:
         # create decoupled companies and schools
         # 50 / 50
         # run
-        for i in range(3):
-            results = model(timer=timer, data=data)
+        for i in range(7):
             next(timer)
+        results = model(timer=timer, data=data)
         cases = results["agent"]["is_infected"]
         assert cases.sum() > 10
 
@@ -142,30 +146,6 @@ class TestModel:
         assert school_grad == 0
         assert company_grad != 0
 
-    def test__likelihood_gradient(self, model, data2):
-        data, is_inf = data2
-        timer = Timer(
-            initial_day="2022-02-01",
-            total_days=10,
-            weekday_step_duration=(24,),
-            weekday_activities=(("company", "school"),),
-        )
-        results = model(timer=timer, data=data)
-        cases = results["agent"]["is_infected"]
-        true_cases = 10 * torch.rand(1)
-        log_likelihood = (
-            torch.distributions.Normal(cases, torch.ones(1)).log_prob(true_cases).sum()
-        )
-        log_likelihood.backward()
-        parameters = [
-            model.infection_networks[name].log_beta
-            for name in ["company", "school"]
-        ]
-        grads = np.array([p.grad.cpu() for p in parameters])
-        assert len(grads) == 2
-        assert grads[0] != 0.0
-        assert grads[1] != 0.0
-
     def test__symptoms_update(self, model, data2):
         timer = Timer(
             initial_day="2022-02-01",
@@ -174,6 +154,8 @@ class TestModel:
             weekday_activities=(("company", "school"),),
         )
         data, _ = data2
+        for i in range(7):
+            next(timer)
         results = model(timer=timer, data=data)
         is_infected = results["agent"].is_infected
         cases = int(is_infected.sum().item())

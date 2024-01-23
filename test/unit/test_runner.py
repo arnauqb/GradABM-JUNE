@@ -34,14 +34,6 @@ class TestRunner:
         assert inf_params["rate"].shape == n_agents
         assert inf_params["shift"].shape == n_agents
 
-    def test__seed(self, runner):
-        runner.set_initial_cases()
-        assert np.isclose(
-            runner.data["agent"].is_infected.sum().item(),
-            0.10 * runner.n_agents,
-            rtol=3e-1,
-        )
-
     def test__restore_data(self, runner):
         n_agents = runner.data["agent"].id.shape
         runner.data["agent"].transmission = torch.rand(n_agents)
@@ -59,7 +51,7 @@ class TestRunner:
         assert runner.data["agent"].symptoms["time_to_next_stage"].sum().item() == 0
 
     def test__run_model(self, runner):
-        results, is_infected = runner()
+        results = runner()
         n_timesteps = 16
         assert len(results["dates"]) == n_timesteps
         assert len(results["cases_per_timestep"]) == n_timesteps
@@ -67,12 +59,11 @@ class TestRunner:
         assert len(results["cases_by_age_18"]) == n_timesteps
         assert len(results["cases_by_age_65"]) == n_timesteps
         assert len(results["cases_by_age_100"]) == n_timesteps
-        assert len(is_infected) == runner.n_agents
 
     def test__save_results(self, runner):
         with torch.no_grad():
-            results, is_infected = runner()
-        runner.save_results(results, is_infected)
+            results = runner()
+        runner.save_results(results)
         loaded_results = pd.read_csv("./example/results.csv", index_col=0)
         for key in results:
             if key in ("dates"):
@@ -80,11 +71,13 @@ class TestRunner:
             assert np.allclose(loaded_results[key], results[key].numpy())
 
     def test__deaths_gradient(self, runner):
-        results, is_infected = runner()
+        results = runner()
         assert results["cases_per_timestep"].requires_grad
         data = runner.data
         data_results = data["results"]
         daily_deaths = data_results["deaths_per_timestep"]
         assert (results["deaths_per_timestep"] == daily_deaths).all()
-        assert daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
+        assert (
+            daily_deaths.shape[0] == runner.input_parameters["timer"]["total_days"] + 1
+        )
         assert daily_deaths.requires_grad

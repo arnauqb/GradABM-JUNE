@@ -1,6 +1,5 @@
 import torch
 import yaml
-from torch.utils.checkpoint import checkpoint
 
 from grad_june import (
     TransmissionUpdater,
@@ -8,9 +7,10 @@ from grad_june import (
     SymptomsUpdater,
     InfectionNetworks,
 )
+from grad_june.infection import infect_people
 from grad_june.policies import Policies
-from grad_june.cuda_utils import get_fraction_gpu_used
 from grad_june.paths import default_config_path
+from grad_june.infection_seed import get_seed_from_parameters
 
 
 class GradJune(torch.nn.Module):
@@ -31,19 +31,19 @@ class GradJune(torch.nn.Module):
         symptoms_updater=None,
         policies=None,
         infection_networks=None,
+        infection_seed=None,
         device="cpu",
     ):
         super().__init__()
 
         # Initializes symptoms updater, policies, and infection networks.
-        if symptoms_updater is None:
-            symptoms_updater = SymptomsUpdater.from_file()
         self.symptoms_updater = symptoms_updater
         if policies is None:
             policies = Policies.from_file()
         self.policies = policies
         if infection_networks is None:
             infection_networks = InfectionNetworks.from_file()
+        self.infection_seed = infection_seed
         self.infection_networks = infection_networks
 
         # Initializes transmission updater, is_infected_sampler, and device.
@@ -80,33 +80,15 @@ class GradJune(torch.nn.Module):
         symptoms_updater = SymptomsUpdater.from_parameters(params)
         policies = Policies.from_parameters(params)
         infection_networks = InfectionNetworks.from_parameters(params)
+        infection_seed = get_seed_from_parameters(
+            params, device=params["system"]["device"]
+        )
         return cls(
             symptoms_updater=symptoms_updater,
             policies=policies,
             infection_networks=infection_networks,
+            infection_seed=infection_seed,
             device=params["system"]["device"],
-        )
-
-    def infect_people(self, data, timer, new_infected):
-        """
-        This method infects people based on the given parameters.
-
-        Args:
-            data: A dictionary containing simulation data.
-            timer: An integer representing the current simulation time.
-            new_infected: A tensor representing which agents will be infected.
-
-        Returns:
-            None.
-        """
-        # Updates agent susceptibility, infection status, and infection time based on new_infected tensor.
-        data["agent"].susceptibility = torch.maximum(
-            torch.tensor(0.0, device=self.device),
-            data["agent"].susceptibility - new_infected,
-        )
-        data["agent"].is_infected = data["agent"].is_infected + new_infected
-        data["agent"].infection_time = data["agent"].infection_time + new_infected * (
-            timer.now - data["agent"].infection_time
         )
 
     def forward(self, data, timer):
@@ -122,7 +104,7 @@ class GradJune(torch.nn.Module):
         """
 
         # Updates agent transmission based on current transmission updater values.
-        data["agent"].transmission = self.transmission_updater(data=data, timer=timer)
+        data["agent"].transmission = self.transmission_updater(data=data, time=timer.now)
 
         # Calculates probability of not being infected for each agent based on current policies.
         not_infected_probs = self.infection_networks(
@@ -135,10 +117,15 @@ class GradJune(torch.nn.Module):
         new_infected = self.is_infected_sampler(not_infected_probs)
 
         # Infects agents who were sampled as new_infected.
-        self.infect_people(data, timer, new_infected)
+        infect_people(data, timer.now, new_infected)
 
         # Updates agents' symptoms based on their infection status.
-        self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
+        if self.symptoms_updater is not None:
+            self.symptoms_updater(data=data, timer=timer, new_infected=new_infected)
+
+        # we seed at the end to avoid the seeded cases generating new ones
+        if self.infection_seed is not None:
+            self.infection_seed(data, timer.now)
 
         # Returns updated simulation data.
         return data

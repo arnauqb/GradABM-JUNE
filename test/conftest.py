@@ -7,7 +7,7 @@ from pytest import fixture
 from torch_geometric.data import HeteroData
 
 from grad_june.transmission import TransmissionSampler
-from grad_june.infection import infect_people_at_indices
+from grad_june.infection_seed import infect_people_at_indices
 from grad_june.timer import Timer
 
 
@@ -40,6 +40,8 @@ def make_agent_data(sampler):
     data["agent"].id = torch.arange(0, n_agents)
     data["agent"].age = torch.randint(0, 100, (n_agents,))
     data["agent"].sex = torch.randint(0, 2, (n_agents,))
+    data["agent"].area_id = torch.randint(0, 10, (n_agents,))
+    data["agent"].district_id = torch.randint(0, 3, (n_agents,))
     inf_params = {}
     inf_params_values = sampler(n_agents)
     inf_params["max_infectiousness"] = inf_params_values[0]

@@ -8,6 +8,8 @@ data_path: '@grad_june/test/data/data.pkl'
 
 save_path: ./example
 age_bins_to_save: [0, 18, 65, 100]
+store_differentiable_deaths: true
+store_cases_by_age: true
 
 timer:
   total_days: 15
@@ -43,31 +45,33 @@ timer:
       - household
 
 infection_seed:
-  log_fraction_initial_cases: -1
+  type: InfectionSeedByFraction
+  params:
+    log_fraction: -1.5
 
 networks:
   household:
-    log_beta: -0.4
+    log_beta: 0.4
   company:
-    log_beta: -0.3
+    log_beta: 0.3
   school:
-    log_beta: -0.3
+    log_beta: 0.3
   pub:
-    log_beta: -1.2
+    log_beta: 0.2
   gym:
-    log_beta: -1.2
+    log_beta: 0.2
   grocery:
-    log_beta: -1.2
+    log_beta: 0.2
   visit:
-    log_beta: -1.2
+    log_beta: 0.2
   cinema:
-    log_beta: -1.2
+    log_beta: 0.2
   university:
-    log_beta: -0.5
+    log_beta: 0.5
   care_visit:
-    log_beta: -0.4
+    log_beta: 0.4
   care_home:
-    log_beta: -0.4
+    log_beta: 0.4
 
 policies:
   interaction:
@@ -112,7 +116,7 @@ transmission:
     scale: 0.03
   shift:
     dist: Normal
-    loc: -2.12
+    loc: 2.12
     scale: 0.1
 
 symptoms:

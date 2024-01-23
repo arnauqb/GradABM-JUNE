@@ -9,7 +9,11 @@ from pathlib import Path
 from grad_june.paths import default_config_path
 from grad_june import GradJune, Timer, TransmissionSampler
 from grad_june.utils import read_path
-from grad_june.infection import infect_fraction_of_people
+from grad_june.demographics import (
+    get_people_by_age,
+    get_cases_by_age,
+    store_differentiable_deaths,
+)
 
 
 class Runner(torch.nn.Module):
@@ -18,25 +22,27 @@ class Runner(torch.nn.Module):
         model,
         data,
         timer,
-        log_fraction_initial_cases,
         save_path,
         parameters,
         age_bins=(0, 18, 65, 100),
+        store_cases_by_age=False,
+        store_differentiable_deaths=False,
     ):
         super().__init__()
         self.model = model
         self.data = data
         self.data_backup = self.backup_infection_data(data)
         self.timer = timer
-        self.log_fraction_initial_cases = log_fraction_initial_cases
         self.device = model.device
         self.age_bins = torch.tensor(age_bins, device=self.device)
         self.ethnicities = np.sort(np.unique(data["agent"].ethnicity))
         self.n_agents = data["agent"].id.shape[0]
-        self.population_by_age = self.get_people_by_age()
+        self.population_by_age = get_people_by_age(data["agent"].age, self.age_bins)
         self.save_path = Path(save_path)
         self.input_parameters = parameters
         self.restore_initial_data()
+        self.store_cases_by_age = store_cases_by_age
+        self.store_differentiable_deaths = store_differentiable_deaths
 
     @classmethod
     def from_file(cls, fpath=default_config_path):
@@ -50,16 +56,17 @@ class Runner(torch.nn.Module):
         data = cls.get_data(params)
         timer = Timer.from_parameters(params)
         age_bins_to_save = params.get("age_bins_to_save", (0, 18, 65, 100))
+        store_differentiable_deaths = params.get("store_differentiable_deaths", False)
+        store_cases_by_age = params.get("store_cases_by_age", False)
         return cls(
             model=model,
             data=data,
             timer=timer,
-            log_fraction_initial_cases=params["infection_seed"][
-                "log_fraction_initial_cases"
-            ],
             save_path=params["save_path"],
             parameters=params,
-            age_bins = age_bins_to_save
+            age_bins=age_bins_to_save,
+            store_cases_by_age=store_cases_by_age,
+            store_differentiable_deaths=store_differentiable_deaths,
         )
 
     @staticmethod
@@ -135,40 +142,35 @@ class Runner(torch.nn.Module):
         self.data["results"] = {}
         self.data["results"]["deaths_per_timestep"] = None
 
-    def set_initial_cases(self):
-        fraction_initial_cases = 10.0**self.log_fraction_initial_cases
-        new_infected = infect_fraction_of_people(
-            data=self.data,
-            timer=self.timer,
-            symptoms_updater=self.model.symptoms_updater,
-            device=self.device,
-            fraction=fraction_initial_cases,
-        )
-        self.model.symptoms_updater(
-            data=self.data, timer=self.timer, new_infected=new_infected
-        )
-
     def forward(self):
         timer = self.timer
         model = self.model
         data = self.data
         timer.reset()
         self.restore_initial_data()
-        self.set_initial_cases()
+        model(data, timer)
         cases_per_timestep = data["agent"].is_infected.sum()
-        cases_by_age = self.get_cases_by_age(data)
-        self.store_differentiable_deaths(data)
+        if self.store_cases_by_age:
+            cases_by_age = get_cases_by_age(data, self.age_bins)
+        if self.store_differentiable_deaths:
+            store_differentiable_deaths(
+                data, self.model.symptoms_updater.stages_ids[-1]
+            )
         dates = [timer.date]
         i = 0
         while timer.date < timer.final_date:
             i += 1
             next(timer)
-            data = model(data, timer)
+            model(data, timer)
             cases = data["agent"].is_infected.sum()
             cases_per_timestep = torch.hstack((cases_per_timestep, cases))
-            self.store_differentiable_deaths(data)
-            cases_age = self.get_cases_by_age(data)
-            cases_by_age = torch.vstack((cases_by_age, cases_age))
+            if self.store_cases_by_age:
+                cases_age = get_cases_by_age(data, self.age_bins)
+                cases_by_age = torch.vstack((cases_by_age, cases_age))
+            if self.store_differentiable_deaths:
+                store_differentiable_deaths(
+                    data, self.model.symptoms_updater.stages_ids[-1]
+                )
             dates.append(timer.date)
         results = {
             "dates": dates,
@@ -176,13 +178,15 @@ class Runner(torch.nn.Module):
             "daily_cases_per_timestep": torch.diff(
                 cases_per_timestep, prepend=torch.tensor([0.0], device=self.device)
             ),
-            "deaths_per_timestep": data.results["deaths_per_timestep"],
         }
-        for (i, key) in enumerate(self.age_bins[1:]):
-            results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
-        return results, data["agent"].is_infected
+        if self.store_cases_by_age:
+            for i, key in enumerate(self.age_bins[1:]):
+                results[f"cases_by_age_{key:02d}"] = cases_by_age[:, i]
+        if self.store_differentiable_deaths:
+            results["deaths_per_timestep"] = data["results"]["deaths_per_timestep"]
+        return results
 
-    def save_results(self, results, is_infected):
+    def save_results(self, results):
         self.save_path.mkdir(exist_ok=True, parents=True)
         df = pd.DataFrame(index=results["dates"])
         df.index.name = "date"
@@ -191,52 +195,3 @@ class Runner(torch.nn.Module):
                 continue
             df[key] = results[key].detach().cpu().numpy()
         df.to_csv(self.save_path / "results.csv")
-        df = pd.DataFrame()
-        df["is_infected"] = is_infected
-        df.to_csv(self.save_path / "results_is_infected.csv")
-
-    def store_differentiable_deaths(self, data):
-        """
-        Returns differentiable deaths. The results are stored
-        in data["results"]
-        """
-        symptoms = data["agent"].symptoms
-        dead_idx = self.model.symptoms_updater.stages_ids[-1]
-        deaths = (
-            (symptoms["current_stage"] == dead_idx)
-            * symptoms["current_stage"]
-            / dead_idx
-        )
-        if data["results"]["deaths_per_timestep"] is not None:
-            data["results"]["deaths_per_timestep"] = torch.hstack(
-                (data["results"]["deaths_per_timestep"], deaths.sum())
-            )
-        else:
-            data["results"]["deaths_per_timestep"] = deaths.sum()
-
-    def get_cases_by_age(self, data):
-        ret = torch.zeros(self.age_bins.shape[0] - 1, device=self.device)
-        for i in range(1, self.age_bins.shape[0]):
-            mask1 = data["agent"].age < self.age_bins[i]
-            mask2 = data["agent"].age > self.age_bins[i - 1]
-            mask = mask1 * mask2
-            ret[i - 1] = (data["agent"].is_infected * mask).sum()
-        return ret
-
-    def get_people_by_age(self):
-        ret = {}
-        for i in range(1, self.age_bins.shape[0]):
-            mask1 = self.data["agent"].age < self.age_bins[i]
-            mask2 = self.data["agent"].age > self.age_bins[i - 1]
-            mask = mask1 * mask2
-            ret[int(self.age_bins[i].item())] = mask.sum()
-        return ret
-
-    def get_cases_by_ethnicity(self, data):
-        ret = torch.zeros(len(self.ethnicities), device=self.device)
-        for i, ethnicity in enumerate(self.ethnicities):
-            mask = torch.tensor(
-                self.data["agent"].ethnicity == ethnicity, device=self.device
-            )
-            ret[i] = (mask * data["agent"].is_infected).sum()
-        return ret

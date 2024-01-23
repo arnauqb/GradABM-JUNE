@@ -10,7 +10,7 @@ import grad_june.infection_networks
 
 class InfectionNetwork(MessagePassing):
     def __init__(self, log_beta, device="cpu"):
-        super().__init__( aggr="add", node_dim=-1)
+        super().__init__(aggr="add", node_dim=-1)
         self.device = device
         if type(log_beta) != torch.nn.Parameter:
             self.log_beta = torch.tensor(float(log_beta))
@@ -38,11 +38,10 @@ class InfectionNetwork(MessagePassing):
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * torch.ones(len(data[self.name]["id"]), device=self.device)
-        return beta
+        return beta 
 
-    def _get_people_per_group(self, data):
-        return data[self.name]["people"]
+    def _get_people_per_group(self, data, timer):
+        return data[self.name].people
 
     def _get_transmissions(self, data, policies, timer):
         if policies.quarantine_policies:
@@ -60,7 +59,7 @@ class InfectionNetwork(MessagePassing):
 
     def forward(self, data, timer, policies):
         beta = self._get_beta(policies=policies, timer=timer, data=data)
-        people_per_group = self._get_people_per_group(data)
+        people_per_group = self._get_people_per_group(data, timer)
         p_contact = torch.maximum(
             torch.minimum(
                 1.0 / (people_per_group - 1), torch.tensor(1.0, device=self.device)
@@ -134,11 +133,15 @@ class InfectionNetworks(torch.nn.Module):
             network = self.networks[activity]
             trans_susc += network(data=data, timer=timer, policies=policies)
         trans_susc = torch.clamp(
-            trans_susc, min=1e-6, max = 100
+            trans_susc, min=1e-6, max=100
         )  # this is necessary to avoid gradient nans
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         not_infected_probs = torch.clamp(not_infected_probs, min=0.0, max=1.0)
         return not_infected_probs
+
+    def __iter__(self):
+        for network in self.networks.values():
+            yield network
 
 
 class HouseholdNetwork(InfectionNetwork):
@@ -147,8 +150,6 @@ class HouseholdNetwork(InfectionNetwork):
 
     def _get_susceptibilities(self, data, policies, timer):
         return data["agent"].susceptibility
-
-    pass
 
 
 class CareHomeNetwork(InfectionNetwork):
@@ -165,4 +166,3 @@ class CompanyNetwork(InfectionNetwork):
 
 class UniversityNetwork(InfectionNetwork):
     pass
-

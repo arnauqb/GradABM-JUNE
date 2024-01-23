@@ -27,6 +27,7 @@ class TestInfectionNetworks:
 
         data["school"].id = torch.arange(2)
         data["school"].people = torch.tensor([2, 2])
+        data["school"].beta_factor = torch.ones(2)
 
         edges_1 = torch.arange(6)
         edges_2 = torch.tensor([0, 0, 0, 1, 1, 1])
@@ -42,7 +43,6 @@ class TestInfectionNetworks:
         )
         expected = np.exp(-np.array([1.2, 2.4, 3.6, 1.5, 2.1, 3]))
         assert np.allclose(infection_probabilities.detach().numpy(), expected)
-
 
 # def test__people_only_active_once(self, timer, inf_data):
 #     data = inf_data

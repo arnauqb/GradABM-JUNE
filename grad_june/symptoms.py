@@ -143,20 +143,10 @@ class SymptomsUpdater(torch.nn.Module):
         from_parameters(cls, params): Class method for creating a SymptomsUpdater instance from a dictionary of parameters.
         forward(self, data, timer, new_infected): Method for updating symptoms of agents based on current symptoms and other factors.
         stages_ids(self): Property for getting the IDs of all possible symptom stages.
-
-    Raises:
-        TypeError: If symptoms_sampler is not an instance of SymptomsSampler.
-        KeyError: If data does not contain the "agent" key.
-        KeyError: If symptoms does not contain the "current_stage", "next_stage", or "time_to_next_stage" keys.
-
-    Returns:
-        A SymptomsUpdater instance.
     """
 
     def __init__(self, symptoms_sampler):
         super().__init__()
-        if not isinstance(symptoms_sampler, SymptomsSampler):
-            raise TypeError("symptoms_sampler must be an instance of SymptomsSampler.")
         self.symptoms_sampler = symptoms_sampler
 
     @classmethod
@@ -198,6 +188,8 @@ class SymptomsUpdater(torch.nn.Module):
         Returns:
             A SymptomsUpdater instance.
         """
+        if "symptoms" not in params:
+            return None
         ss = SymptomsSampler.from_parameters(params)
         return cls(symptoms_sampler=ss)
 

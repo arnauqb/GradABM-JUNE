@@ -1,11 +1,14 @@
 import numpy as np
+import torch
 
-from grad_june.infection import (
+from grad_june.infection_seed import (
     infect_people_at_indices,
-    infect_fraction_of_people,
+    InfectionSeedByDistrict,
+    InfectionSeedByFraction
 )
 from grad_june.timer import Timer
 from grad_june.symptoms import SymptomsUpdater
+from grad_june.demographics import get_people_per_area
 
 
 class TestInfectionSeed:
@@ -26,11 +29,10 @@ class TestInfectionSeed:
     def test__differentiable_seed(self, data):
         su = SymptomsUpdater.from_file()
         timer = Timer.from_file()
-        infect_fraction_of_people(
-            data=data, timer=timer, symptoms_updater=su, fraction=0.2, device="cpu"
-        )
-        assert np.isclose(
-            data["agent"].is_infected.sum(), 0.2 * data["agent"].id.shape[0], rtol=1e-1
+        seed = InfectionSeedByFraction(np.log10(0.2), device="cpu")
+        seed(data, 0)
+        assert torch.isclose(
+            data["agent"].is_infected.sum(), torch.tensor(0.2 * data["agent"].id.shape[0]), rtol=2e-1
         )
         for i in range(len(data["agent"].id)):
             if data["agent"].is_infected[i]:
@@ -44,3 +46,33 @@ class TestInfectionSeed:
                 assert data["agent"]["is_infected"][i] == 0
                 assert data["agent"]["infection_time"][i] == 0.0
                 assert data["agent"]["symptoms"]["next_stage"][i] == 1.0
+
+    def test__seeding_by_district(self, data):
+        cases_per_district = {0: [3, 5, 2], 1: [7, 2, 4], 2: [2, 3, 4]}
+        seed = InfectionSeedByDistrict(cases_per_district, device="cpu", n_days_to_seed=3)
+        seed(data, 0)
+        assert data["agent"].is_infected.sum() == 12
+        people_per_district = get_people_per_area(data["agent"].id, data["agent"].district_id)
+        for i, district in enumerate(people_per_district):
+            infected = 0
+            for person_id in people_per_district[district]:
+                if data["agent"].is_infected[person_id]:
+                    infected += 1
+            assert infected == cases_per_district[i][0]
+        seed(data, 1)
+        assert data["agent"].is_infected.sum() == 12 + 10
+        for i, district in enumerate(people_per_district):
+            infected = 0
+            for person_id in people_per_district[district]:
+                if data["agent"].is_infected[person_id]:
+                    infected += 1
+            assert infected == sum(cases_per_district[i][:2])
+        seed(data, 2)
+        assert data["agent"].is_infected.sum() == 12 + 10 + 10
+        for i, district in enumerate(people_per_district):
+            infected = 0
+            for person_id in people_per_district[district]:
+                if data["agent"].is_infected[person_id]:
+                    infected += 1
+            assert infected == sum(cases_per_district[i])
+
