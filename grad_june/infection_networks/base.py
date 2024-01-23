@@ -33,18 +33,11 @@ class InfectionNetwork(MessagePassing):
     def _get_reverse_edge_index(self, data):
         return data["rev_attends_" + self.name].edge_index
 
-    def _get_beta_factor(self, data):
-        if not hasattr(data["region"], "beta_factor"):
-            return 1.0
-        return data["region"].beta_factor[data[self.name].region]
-
     def _get_beta(self, policies, timer, data):
-        beta_factor = self._get_beta_factor(data)
         interaction_policies = policies.interaction_policies
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * beta_factor
         return beta 
 
     def _get_people_per_group(self, data, timer):
@@ -145,6 +138,10 @@ class InfectionNetworks(torch.nn.Module):
         not_infected_probs = torch.exp(-trans_susc * delta_time)
         not_infected_probs = torch.clamp(not_infected_probs, min=0.0, max=1.0)
         return not_infected_probs
+
+    def __iter__(self):
+        for network in self.networks.values():
+            yield network
 
 
 class HouseholdNetwork(InfectionNetwork):

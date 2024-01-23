@@ -1,9 +1,6 @@
 import torch
 from torch_geometric.data import HeteroData
 
-from grad_june.demographics import get_people_per_area
-
-
 class IsInfectedSampler(torch.nn.Module):
     def forward(self, not_infected_probs):
         """
@@ -18,8 +15,7 @@ class IsInfectedSampler(torch.nn.Module):
         infection = torch.nn.functional.gumbel_softmax(
             logits, dim=0, tau=0.1, hard=True
         )
-        is_infected = 1.0 - infection[0, :]
-        return is_infected
+        return infection[1, :]
 
 def infect_people(data: HeteroData, time: int, new_infected: torch.Tensor):
     """

@@ -47,18 +47,12 @@ class LeisureNetwork(InfectionNetwork):
     def _get_reverse_edge_index(self, data):
         return data["rev_attends_leisure"].edge_index
 
-    def _get_beta_factor(self, data):
-        if not hasattr(data["region"], "beta_factor"):
-            return 1.0
-        return data["region"].beta_factor[data["leisure"].region]
-
     def _get_beta(self, policies, timer, data):
-        beta_factor = self._get_beta_factor(data)
         interaction_policies = policies.interaction_policies
         beta = 10.0**self.log_beta
         if interaction_policies:
             beta = interaction_policies.apply(beta=beta, name=self.name, timer=timer)
-        beta = beta * beta_factor
+        beta = beta
         return beta
 
     def _get_people_per_group(self, data, timer):
